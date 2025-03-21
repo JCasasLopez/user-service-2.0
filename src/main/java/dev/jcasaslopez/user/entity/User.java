@@ -1,6 +1,7 @@
 package dev.jcasaslopez.user.entity;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import jakarta.persistence.Column;
@@ -39,9 +40,8 @@ public class User {
 	        inverseJoinColumns=@JoinColumn(name="rol_id", referencedColumnName="idRole"))
 		private Set<Role> roles;
 		
-		@OneToMany
-		@JoinColumn(name="idUser", referencedColumnName="idUser")
-		private Set<LoginAttempt> loginAttempts;
+		@OneToMany(mappedBy="user")
+		private List<LoginAttempt> loginAttempts;
 
 		public User(int idUser, String username, String password, String fullName, String email,
 				LocalDate dateOfBirth) {
@@ -113,11 +113,12 @@ public class User {
 			this.roles = roles;
 		}
 
-		public Set<LoginAttempt> getLoginAttempts() {
+		public List<LoginAttempt> getLoginAttempts() {
 			return loginAttempts;
 		}
 
-		public void setLoginAttempts(Set<LoginAttempt> loginAttempts) {
+		public void setLoginAttempts(List<LoginAttempt> loginAttempts) {
 			this.loginAttempts = loginAttempts;
 		}
+
 }
