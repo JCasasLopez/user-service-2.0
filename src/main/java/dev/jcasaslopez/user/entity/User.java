@@ -37,7 +37,7 @@ public class User {
 		@ManyToMany(fetch = FetchType.EAGER) 
 	    @JoinTable(name="user_roles",
 	        joinColumns=@JoinColumn(name="user_id", referencedColumnName="idUser"),
-	        inverseJoinColumns=@JoinColumn(name="rol_id", referencedColumnName="idRole"))
+	        inverseJoinColumns=@JoinColumn(name="role_id", referencedColumnName="idRole"))
 		private Set<Role> roles;
 		
 		@OneToMany(mappedBy="user")
