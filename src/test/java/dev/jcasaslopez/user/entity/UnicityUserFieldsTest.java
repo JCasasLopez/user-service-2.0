@@ -15,7 +15,7 @@ import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
 @DataJpaTest
-class UnicityEntityTest {
+class UnicityUserFieldsTest {
 	
 	@Autowired
 	private UserRepository userRepository;
