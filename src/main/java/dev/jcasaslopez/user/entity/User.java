@@ -6,8 +6,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -44,14 +47,19 @@ public class User {
 		
 		@OneToMany(mappedBy="user")
 		private List<LoginAttempt> loginAttempts = new ArrayList<>();
+		
+		@Enumerated(EnumType.STRING)
+		private AccountStatus accountStatus;
 
-		public User(String username, String password, String fullName, String email,
-				LocalDate dateOfBirth) {
+		public User(int idUser, String username, String password, String fullName, String email, 
+				LocalDate dateOfBirth, AccountStatus accountStatus) {
+			this.idUser = idUser;
 			this.username = username;
 			this.password = password;
 			this.fullName = fullName;
 			this.email = email;
 			this.dateOfBirth = dateOfBirth;
+			this.accountStatus = accountStatus;
 		}
 
 		public User() {
@@ -122,4 +130,12 @@ public class User {
 			this.loginAttempts = loginAttempts;
 		}
 
+		public AccountStatus getAccountStatus() {
+			return accountStatus;
+		}
+
+		public void setAccountStatus(AccountStatus accountStatus) {
+			this.accountStatus = accountStatus;
+		}
+		
 }
