@@ -35,7 +35,6 @@ public class UserLoginAttemptRelationshipTest {
 	@BeforeEach
 	private void setUp() {
 		User user1 = new User(
-			    0,
 			    "Johnny",
 			    "securePassword123",
 			    "John Doe",
@@ -45,13 +44,13 @@ public class UserLoginAttemptRelationshipTest {
 		
 		persistedUser1 = userRepository.save(user1);
 		
-		LoginAttempt attempt1 = new LoginAttempt(0, 
+		LoginAttempt attempt1 = new LoginAttempt(
 				LocalDateTime.of(2025, 3, 23, 9, 15), 
 				false, 
 				"192.168.1.10",
 				LoginFailureReason.INCORRECT_PASSWORD);
 
-		LoginAttempt attempt2 = new LoginAttempt(0, 
+		LoginAttempt attempt2 = new LoginAttempt(
 				LocalDateTime.of(2025, 3, 23, 10, 42), 
 				false, 
 				"192.168.1.23",

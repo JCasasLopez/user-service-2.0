@@ -26,7 +26,6 @@ class UnicityUserFieldsTest {
 	@BeforeEach
 	private void setUp() {
 		User user1 = new User(
-			    0,
 			    "Johnny",
 			    "securePassword123",
 			    "John Doe",
@@ -43,7 +42,6 @@ class UnicityUserFieldsTest {
 	void userEntity_WhenUsernameUnicityViolated_ShouldThrowException() {
 		// Arrange
 		User user2 = new User(
-			    0,
 			    "Johnny",
 			    "anotherPassword456",
 			    "Jane Doe",
@@ -60,7 +58,7 @@ class UnicityUserFieldsTest {
 	@DisplayName("User entity throws exception when 2 users have the same email")
 	void userEntity_WhenEmailUnicityViolated_ShouldThrowException() {
 		// Arrange
-		User user2 = new User(0, 
+		User user2 = new User(
 				"Laura", 
 				"anotherPassword456", 
 				"Jane Doe", 
