@@ -1,6 +1,8 @@
 package dev.jcasaslopez.user.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -38,10 +40,10 @@ public class User {
 	    @JoinTable(name="user_roles",
 	        joinColumns=@JoinColumn(name="user_id", referencedColumnName="idUser"),
 	        inverseJoinColumns=@JoinColumn(name="role_id", referencedColumnName="idRole"))
-		private Set<Role> roles;
+		private Set<Role> roles = new HashSet<>();
 		
 		@OneToMany(mappedBy="user")
-		private List<LoginAttempt> loginAttempts;
+		private List<LoginAttempt> loginAttempts = new ArrayList<>();
 
 		public User(int idUser, String username, String password, String fullName, String email,
 				LocalDate dateOfBirth) {

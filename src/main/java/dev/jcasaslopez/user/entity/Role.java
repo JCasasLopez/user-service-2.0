@@ -1,5 +1,6 @@
 package dev.jcasaslopez.user.entity;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import dev.jcasaslopez.user.enums.RoleName;
@@ -26,7 +27,7 @@ public class Role {
 	private RoleName roleName;
 	
 	@ManyToMany(mappedBy="roles")
-	private Set<User> users;
+	private Set<User> users = new HashSet<>();
 
 	public Role(int idRole, RoleName roleName) {
 		this.idRole = idRole;
