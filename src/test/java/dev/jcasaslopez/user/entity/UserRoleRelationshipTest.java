@@ -111,7 +111,7 @@ public class UserRoleRelationshipTest {
 
 	        for (User user : users) {
 	            assertTrue(
-	                user.getIdUser() == persistedUser1.getIdUser() || user.getIdUser() == 						persistedUser2.getIdUser(),
+	                user.getIdUser() == persistedUser1.getIdUser() || user.getIdUser() == persistedUser2.getIdUser(),
 	                "User linked to role should be one of the expected persisted users"
 	            );
 	        }
