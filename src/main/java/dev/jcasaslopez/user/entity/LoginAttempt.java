@@ -27,9 +27,8 @@ public class LoginAttempt {
 	@JoinColumn(name="idUser", referencedColumnName="idUser")
 	private User user;
 
-	public LoginAttempt(long idLoginAttempt, LocalDateTime timestamp, boolean successful, String ipAddress,
+	public LoginAttempt(LocalDateTime timestamp, boolean successful, String ipAddress,
 			LoginFailureReason loginFailureReason) {
-		this.idLoginAttempt = idLoginAttempt;
 		this.timestamp = timestamp;
 		this.successful = successful;
 		this.ipAddress = ipAddress;

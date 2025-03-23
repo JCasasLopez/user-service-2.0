@@ -45,9 +45,8 @@ public class User {
 		@OneToMany(mappedBy="user")
 		private List<LoginAttempt> loginAttempts = new ArrayList<>();
 
-		public User(int idUser, String username, String password, String fullName, String email,
+		public User(String username, String password, String fullName, String email,
 				LocalDate dateOfBirth) {
-			this.idUser = idUser;
 			this.username = username;
 			this.password = password;
 			this.fullName = fullName;
