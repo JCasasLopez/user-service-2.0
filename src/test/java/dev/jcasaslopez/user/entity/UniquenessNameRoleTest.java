@@ -12,7 +12,7 @@ import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
 
 @DataJpaTest
-public class UnicityNameRoleTest {
+public class UniquenessNameRoleTest {
 	
 	@Autowired
 	private RoleRepository roleRepository;
