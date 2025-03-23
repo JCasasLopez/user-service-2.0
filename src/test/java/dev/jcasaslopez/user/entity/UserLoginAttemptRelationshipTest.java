@@ -72,11 +72,9 @@ public class UserLoginAttemptRelationshipTest {
 		// Arrange
 		
 		// Act
-		// ⚠️ Necesitamos recargar el usuario desde la base de datos porque 
-		// la colección loginAttempts no se actualiza automáticamente en memoria.
+		// Necesitamos recargar el usuario desde la base de datos.
 		//
-		// ⚠️ We need to reload the user from the database because the 
-		// loginAttempts collection is not automatically updated in memory.
+		// We need to reload the user from the database.
 		User userReloaded = userRepository.findById(persistedUser1.getIdUser()).get();
 		
 		// Assert
