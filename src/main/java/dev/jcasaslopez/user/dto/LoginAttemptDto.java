@@ -8,11 +8,13 @@ import jakarta.validation.constraints.NotNull;
 
 public class LoginAttemptDto {
 	
+	private Long idLoginAttempt;
+	
 	@NotNull
 	private LocalDateTime timestamp;
 	
 	@NotNull
-	private boolean successful;
+	private Boolean successful;
 	
 	@NotNull
 	private String ipAddress;
@@ -23,8 +25,26 @@ public class LoginAttemptDto {
 	@NotNull
 	private User user;
 
-	public LoginAttemptDto(LocalDateTime timestamp, boolean successful, String ipAddress,
+	// LoginAttemptDto -> LoginAttempt. Sirve para crear un nuevo LoginAttempt. No tiene idLoginAttempt
+	// puesto que no se ha creado aún.
+	//
+	// LoginAttemptDto -> LoginAttemp. To create a new LoginAttempt. No idLoginAttempt since it has 
+	// been created yet.
+	public LoginAttemptDto(LocalDateTime timestamp, Boolean successful, String ipAddress,
 			LoginFailureReason loginFailureReason, User user) {
+		this.timestamp = timestamp;
+		this.successful = successful;
+		this.ipAddress = ipAddress;
+		this.loginFailureReason = loginFailureReason;
+		this.user = user;
+	}
+	
+	// LoginAttempt -> LoginAttemptDto. Sirve para enviar información sobre LoginAttempt al front-end.
+	//
+	// LoginAttempt -> LoginAttemptDto. To send LoginAttempt info to the front-end.
+	public LoginAttemptDto(Long idLoginAttempt, LocalDateTime timestamp, Boolean successful, String ipAddress,
+			LoginFailureReason loginFailureReason, User user) {
+		this.idLoginAttempt = idLoginAttempt;
 		this.timestamp = timestamp;
 		this.successful = successful;
 		this.ipAddress = ipAddress;
@@ -35,6 +55,14 @@ public class LoginAttemptDto {
 	public LoginAttemptDto() {
 	}
 
+	public Long getIdLoginAttempt() {
+		return idLoginAttempt;
+	}
+
+	public void setIdLoginAttempt(Long idLoginAttempt) {
+		this.idLoginAttempt = idLoginAttempt;
+	}
+
 	public LocalDateTime getTimestamp() {
 		return timestamp;
 	}
@@ -43,11 +71,11 @@ public class LoginAttemptDto {
 		this.timestamp = timestamp;
 	}
 
-	public boolean isSuccessful() {
+	public Boolean getSuccessful() {
 		return successful;
 	}
 
-	public void setSuccessful(boolean successful) {
+	public void setSuccessful(Boolean successful) {
 		this.successful = successful;
 	}
 
