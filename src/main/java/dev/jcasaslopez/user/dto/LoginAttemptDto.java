@@ -2,7 +2,6 @@ package dev.jcasaslopez.user.dto;
 
 import java.time.LocalDateTime;
 
-import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
 import jakarta.validation.constraints.NotNull;
 
@@ -23,7 +22,7 @@ public class LoginAttemptDto {
 	private LoginFailureReason loginFailureReason;
 	
 	@NotNull
-	private User user;
+	private UserDto user;
 
 	// LoginAttemptDto -> LoginAttempt. Sirve para crear un nuevo LoginAttempt. No tiene idLoginAttempt
 	// puesto que no se ha creado aún.
@@ -31,7 +30,7 @@ public class LoginAttemptDto {
 	// LoginAttemptDto -> LoginAttemp. To create a new LoginAttempt. No idLoginAttempt since it has 
 	// been created yet.
 	public LoginAttemptDto(LocalDateTime timestamp, Boolean successful, String ipAddress,
-			LoginFailureReason loginFailureReason, User user) {
+			LoginFailureReason loginFailureReason, UserDto user) {
 		this.timestamp = timestamp;
 		this.successful = successful;
 		this.ipAddress = ipAddress;
@@ -43,7 +42,7 @@ public class LoginAttemptDto {
 	//
 	// LoginAttempt -> LoginAttemptDto. To send LoginAttempt info to the front-end.
 	public LoginAttemptDto(Long idLoginAttempt, LocalDateTime timestamp, Boolean successful, String ipAddress,
-			LoginFailureReason loginFailureReason, User user) {
+			LoginFailureReason loginFailureReason, UserDto user) {
 		this.idLoginAttempt = idLoginAttempt;
 		this.timestamp = timestamp;
 		this.successful = successful;
@@ -95,11 +94,11 @@ public class LoginAttemptDto {
 		this.loginFailureReason = loginFailureReason;
 	}
 
-	public User getUser() {
+	public UserDto getUser() {
 		return user;
 	}
 
-	public void setUser(User user) {
+	public void setUser(UserDto user) {
 		this.user = user;
 	}
 	
