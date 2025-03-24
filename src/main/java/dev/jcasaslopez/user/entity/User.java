@@ -38,7 +38,7 @@ public class User {
 		@Column(unique=true)
 		private String email;
 		private LocalDate dateOfBirth;
-		
+	
 		@ManyToMany(fetch = FetchType.EAGER) 
 	    @JoinTable(name="user_roles",
 	        joinColumns=@JoinColumn(name="user_id", referencedColumnName="idUser"),
@@ -51,14 +51,14 @@ public class User {
 		@Enumerated(EnumType.STRING)
 		private AccountStatus accountStatus;
 
-		public User(int idUser, String username, String password, String fullName, String email, 
-				LocalDate dateOfBirth, AccountStatus accountStatus) {
-			this.idUser = idUser;
+		public User(String username, String password, String fullName, String email, LocalDate dateOfBirth,
+				Set<Role> roles, AccountStatus accountStatus) {
 			this.username = username;
 			this.password = password;
 			this.fullName = fullName;
 			this.email = email;
 			this.dateOfBirth = dateOfBirth;
+			this.roles = roles;
 			this.accountStatus = accountStatus;
 		}
 
