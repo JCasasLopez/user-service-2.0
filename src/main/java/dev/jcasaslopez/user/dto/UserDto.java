@@ -9,12 +9,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public class UserDto {
 	
 	private int idUser;
 	
 	@NotBlank(message = "Username field is required")
+	@Size(min=6, max=20)
 	private String username;
 	
 	@NotBlank(message = "Password field is required")
@@ -25,6 +27,7 @@ public class UserDto {
 	private String password;
 	
 	@NotBlank(message = "Full name field is required")
+	@Size(max=30)
 	private String fullName;
 	
 	@NotBlank(message = "Email field is required")
