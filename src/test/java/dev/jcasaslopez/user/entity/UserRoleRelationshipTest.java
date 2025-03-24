@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -38,12 +41,20 @@ public class UserRoleRelationshipTest {
 	
 	@BeforeEach
 	private void setUp() {
+		Role roleUser = new Role(RoleName.ROLE_USER);
+		Role roleAdmin = new Role(RoleName.ROLE_ADMIN);
+		
+		roleRepository.save(roleUser);
+		roleRepository.save(roleAdmin);
+		
 		User user1 = new User(
 			    "Johnny",
 			    "securePassword123",
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15)
+			    LocalDate.of(1990, 5, 15), 
+			    new HashSet<>(Arrays.asList(roleUser, roleAdmin)),
+			    AccountStatus.ACTIVE
 			);
 		
 		User user2 = new User(
@@ -51,21 +62,13 @@ public class UserRoleRelationshipTest {
 			    "securePassword456",
 			    "Laura Smith",
 			    "laura92@example.com",
-			    LocalDate.of(1992, 6, 11)
+			    LocalDate.of(1992, 6, 11), 
+			    new HashSet<>(Arrays.asList(roleUser)),
+			    AccountStatus.ACTIVE
 			);
 		
 		persistedUser1 = userRepository.save(user1);
 		persistedUser2 = userRepository.save(user2);
-		
-		Role roleUser = new Role(RoleName.ROLE_USER);
-		Role roleAdmin = new Role(RoleName.ROLE_ADMIN);
-		
-		roleRepository.save(roleUser);
-		roleRepository.save(roleAdmin);
-		
-		persistedUser1.getRoles().add(roleUser);
-		persistedUser1.getRoles().add(roleAdmin);
-		persistedUser2.getRoles().add(roleUser);
 		
 		userRepository.save(persistedUser1);
 		userRepository.save(persistedUser2);
@@ -88,8 +91,10 @@ public class UserRoleRelationshipTest {
 
 		// Assert
 		assertAll(
-				() -> assertEquals(2, userReloaded1.getRoles().size(), "User 1 has " + 					userReloaded1.getRoles().size() + " but should have 2"),
-				() -> assertEquals(1, userReloaded2.getRoles().size(), "User 2 has " + 					userReloaded2.getRoles().size() + " but should have 1")
+				() -> assertEquals(2, userReloaded1.getRoles().size(), "User 1 has " + 
+										userReloaded1.getRoles().size() + " but should have 2"),
+				() -> assertEquals(1, userReloaded2.getRoles().size(), "User 2 has " + 					
+										userReloaded2.getRoles().size() + " but should have 1")
 				);
 	}
 	

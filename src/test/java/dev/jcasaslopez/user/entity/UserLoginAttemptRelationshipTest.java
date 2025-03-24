@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
 import dev.jcasaslopez.user.repository.LoginAttemptRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -39,7 +40,9 @@ public class UserLoginAttemptRelationshipTest {
 			    "securePassword123",
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15)
+			    LocalDate.of(1990, 5, 15), 
+			    null, 
+			    AccountStatus.ACTIVE
 			);
 		
 		persistedUser1 = userRepository.save(user1);

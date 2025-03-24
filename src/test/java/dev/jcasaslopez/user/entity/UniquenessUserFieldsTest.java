@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
@@ -30,7 +31,9 @@ class UniquenessUserFieldsTest {
 			    "securePassword123",
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15)
+			    LocalDate.of(1990, 5, 15), 
+			    null, 
+			    AccountStatus.ACTIVE
 			);
 		
 		userRepository.save(user1);
@@ -46,7 +49,9 @@ class UniquenessUserFieldsTest {
 			    "anotherPassword456",
 			    "Jane Doe",
 			    "laura92@example.com",
-			    LocalDate.of(1992, 8, 22)
+			    LocalDate.of(1992, 8, 22), 
+			    null, 
+			    AccountStatus.ACTIVE
 			);
 		
 		// Act & Assert
@@ -63,7 +68,10 @@ class UniquenessUserFieldsTest {
 				"anotherPassword456", 
 				"Jane Doe", 
 				"123@example.com",
-				LocalDate.of(1992, 8, 22));
+				LocalDate.of(1992, 8, 22), 
+				null, 
+			    AccountStatus.ACTIVE
+			    );
 
 		// Act & Assert
 		assertThrows(DataIntegrityViolationException.class, () -> userRepository.save(user2),
