@@ -44,8 +44,26 @@ public class UserDto {
 	@NotNull(message = "Account status field is required")
 	private AccountStatus accountStatus;
 	
+	// UserDto -> User. Sirve para crear un nuevo User. No tiene idUser puesto que no se ha creado aún.
+	//
+	// UserDto -> User. To create a new User. No idUser since it has been created yet.
 	public UserDto(String username, String password, String fullName, String email, LocalDate dateOfBirth, Set<RoleDto> roles,
 			AccountStatus accountStatus) {
+		this.username = username;
+		this.password = password;
+		this.fullName = fullName;
+		this.email = email;
+		this.dateOfBirth = dateOfBirth;
+		this.roles = roles;
+		this.accountStatus = accountStatus;
+	}
+	
+	// User -> UserDto. Sirve para enviar inforamación sobre User al front-end.
+	//
+	// User -> UserDto. To send User info to the front-end.
+	public UserDto(int idUser,String username, String password, String fullName, String email, 
+			LocalDate dateOfBirth, Set<RoleDto> roles, AccountStatus accountStatus) {
+		this.idUser = idUser;
 		this.username = username;
 		this.password = password;
 		this.fullName = fullName;
