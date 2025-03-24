@@ -31,14 +31,14 @@ public class UserDto {
 	@Email
 	private String email;
 	
-	@NotBlank(message = "Date of birth field is required")
+	@NotNull(message = "Date of birth field is required")
 	@Past
 	private LocalDate dateOfBirth;
 	
-	@NotNull
+	@NotNull(message = "Roles field is required")
 	private Set<RoleDto> roles;
 	
-	@NotNull
+	@NotNull(message = "Account status field is required")
 	private AccountStatus accountStatus;
 	
 	public UserDto(String username, String password, String fullName, String email, LocalDate dateOfBirth, Set<RoleDto> roles,
