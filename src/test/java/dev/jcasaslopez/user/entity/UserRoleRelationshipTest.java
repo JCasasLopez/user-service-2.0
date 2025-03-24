@@ -53,6 +53,11 @@ public class UserRoleRelationshipTest {
 			    "John Doe",
 			    "123@example.com",
 			    LocalDate.of(1990, 5, 15), 
+			    // No se debe usar Set.of() porque crea una colección inmutable, y Hibernate 
+			    // necesita modificarla internamente.
+			    //
+			    // Set.of() should not be used because it creates an immutable collection, and 
+			    // Hibernate needs to modify it internally.
 			    new HashSet<>(Arrays.asList(roleUser, roleAdmin)),
 			    AccountStatus.ACTIVE
 			);
