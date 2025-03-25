@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.enums.AccountStatus;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
 	
@@ -33,5 +34,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     void updatePassword(String username, String newPassword);
 	
 	boolean existsByUsername(String username);
+	
+	@Modifying
+	@Query("UPDATE User u SET u.accountStatus = ?2 WHERE u.username = ?1")
+	void updateAccountStatus(String username, AccountStatus accountStatus);
 
 }
