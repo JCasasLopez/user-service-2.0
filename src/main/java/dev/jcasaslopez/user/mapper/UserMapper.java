@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.security.CustomUserDetails;
 
 @Component
 public class UserMapper {
@@ -39,5 +40,14 @@ public class UserMapper {
 						.collect(Collectors.toSet()),
 				user.getAccountStatus()
 				);
+	}
+	
+	public CustomUserDetails userToCustomUserDetailsMapper(User user) {
+		return new CustomUserDetails(user);
+	}
+	
+	public CustomUserDetails userDtoToCustomUserDetailsMapper(UserDto userDto) {
+		User user = userDtoToUserMapper(userDto);
+		return userToCustomUserDetailsMapper(user);
 	}
 }
