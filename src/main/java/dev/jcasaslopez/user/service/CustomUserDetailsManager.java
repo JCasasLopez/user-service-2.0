@@ -28,6 +28,6 @@ public interface CustomUserDetailsManager extends UserDetailsManager {
 	// Allows changing the status of an account, either by temporarily suspending it or 
 	// permanently deactivating it. This method is typically used in cases such as administrative 
 	// issues, suspicious activity, etc.
-	public void changeAccountStatus(String username, AccountStatus accountStatus);
+	public void updateAccountStatus(String username, AccountStatus accountStatus);
 
 }
