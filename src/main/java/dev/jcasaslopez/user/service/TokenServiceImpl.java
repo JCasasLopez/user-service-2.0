@@ -7,6 +7,8 @@ import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -20,24 +22,36 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class TokenServiceImpl implements TokenService {
 	
-	@Value("${jwt.secretKey}") 
-	private String secretKey;
-	
-	byte[] keyBytes = Base64.getDecoder().decode(secretKey);
-    SecretKey key = Keys.hmacShaKeyFor(keyBytes);
-    
-    @Autowired
-    private TokensLifetimes tokensLifetimes;
-    
-    @Autowired
-    private TokenBlacklistService tokenBlacklistService;
+	private static final Logger logger = LoggerFactory.getLogger(TokenServiceImpl.class);
 
+	@Value("${jwt.secretKey}")
+	private String secretKey;
+
+	private byte[] keyBytes;
+	private SecretKey key;
+
+	@Autowired
+	private TokensLifetimes tokensLifetimes;
+
+	@Autowired
+	private TokenBlacklistService tokenBlacklistService;
+	
+	@PostConstruct
+	public void init() {
+		keyBytes = Base64.getDecoder().decode(secretKey);
+		key = Keys.hmacShaKeyFor(keyBytes);
+		logger.info("TokenService initialized with decoded secret key");
+	}
+    
 	@Override
 	public String createToken(TokenType tokenType) {
+		logger.info("Creating token for type: {}", tokenType);
+		
 		// tokensLifetimes.getTokensLifetimes() devuelve un Map<TokenType, Integer>.
 		//
 		// tokensLifetimes.getTokensLifetimes() returns a Map<TokenType, Integer>.
@@ -48,6 +62,7 @@ public class TokenServiceImpl implements TokenService {
 		//
 		// Unique ID to identify the token (more practical than the token itself).
 		String jti = UUID.randomUUID().toString();
+		logger.debug("Authenticated user: {}, JTI: {}", authenticated.getName(), jti);
 		
 		String token = Jwts.builder().header().type("JWT").and().subject(authenticated.getName())
 				.id(jti)
@@ -58,11 +73,14 @@ public class TokenServiceImpl implements TokenService {
 				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds)).signWith(key, Jwts.SIG.HS256)
 				.compact();
 		
+		logger.info("Token created successfully for user: {}", authenticated.getName());
 		return token;
 	}
 
 	private Claims parseClaims(String token) {
 		try {
+			logger.debug("Parsing token claims...");
+			
 			// Configura cómo queremos verificar el token.
 			//
 			// Configures how we want to verify the token.
@@ -83,23 +101,31 @@ public class TokenServiceImpl implements TokenService {
 
 		} catch (JwtException ex) {
 			if (ex instanceof io.jsonwebtoken.ExpiredJwtException) {
+				logger.warn("Token has expired");
 				throw new JwtException("Expired token");
 			} else if (ex instanceof io.jsonwebtoken.MalformedJwtException) {
+				logger.error("Malformed token");
 				throw new JwtException("Malformed token");
 			} else if (ex instanceof io.jsonwebtoken.security.SecurityException) {
+				logger.error("Invalid token signature");
 				throw new JwtException("Invalid signature");
 			}
+			logger.error("Error verifying the token: {}", ex.getMessage());
 			throw new JwtException("Error verifying the token: " + ex.getMessage());
 		}
 	} 
 	
 	@Override
 	public String logOut(String token) {
+		logger.info("Processing logout...");
+
 		if (tokenBlacklistService.isTokenBlacklisted(getJtiFromToken(token))) {
+	        logger.info("Token already blacklisted");
 	        return "The user is already logged out";
 	    }
 
 	    if (!isTokenValid(token)) {
+	        logger.info("Token is not valid (probably expired)");
 	        return "The session has expired";
 	    }
 
@@ -112,9 +138,12 @@ public class TokenServiceImpl implements TokenService {
 	    //
 	    // Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
 	    long expirationInSeconds = Math.max(1, remainingMillis / 1000); 
+		logger.debug("Blacklisting token with JTI {} for {} seconds", jti, expirationInSeconds);
+
 	 	tokenBlacklistService.blacklistToken(jti, expirationInSeconds);
 
 	    SecurityContextHolder.getContext().setAuthentication(null);
+		logger.info("User has been logged out");
 	    return "The user has logged out";
 	}
 
@@ -124,16 +153,21 @@ public class TokenServiceImpl implements TokenService {
 			// Si este método no lanza excepción, el token es válido.
 			//
 			// If this method does not throw an exception, then the token is valid.
+			logger.debug("Validating token...");
 			parseClaims(token); 
+			logger.debug("Token is valid");
 			return true;
 		} catch (JwtException ex) {
+			logger.warn("Token validation failed: {}", ex.getMessage());
 			throw ex; 
 		}
 	}
 
 	@Override
 	public String getJtiFromToken(String token) {
-		return parseClaims(token).getId();
+		String jti = parseClaims(token).getId();
+		logger.debug("Extracted JTI from token: {}", jti);
+		return jti;
 	}
 	
 }
