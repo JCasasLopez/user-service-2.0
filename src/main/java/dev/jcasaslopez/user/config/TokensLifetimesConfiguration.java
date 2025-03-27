@@ -17,10 +17,14 @@ public class TokensLifetimesConfiguration {
 	
 	private static final Logger logger = LoggerFactory.getLogger(TokensLifetimesConfiguration.class);
 	
-	@Value("${jwt.lifetimes.verifyEmailToken}") int verifyEmailToken;
-    @Value("${jwt.lifetimes.passwordResetToken}") int passwordResetToken;
-    @Value("${jwt.lifetimes.accessToken}") int accessToken;
-    @Value("${jwt.lifetimes.refreshToken}") int refreshToken;
+	@Value("${jwt.lifetimes.verifyEmailToken}") 
+	private int verifyEmailToken;
+    @Value("${jwt.lifetimes.passwordResetToken}") 
+    private int passwordResetToken;
+    @Value("${jwt.lifetimes.accessToken}") 
+    private int accessToken;
+    @Value("${jwt.lifetimes.refreshToken}") 
+    private int refreshToken;
 	
 	private Map<TokenType, Integer> tokensLifetimes;
 
