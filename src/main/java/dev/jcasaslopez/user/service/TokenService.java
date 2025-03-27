@@ -6,7 +6,7 @@ public interface TokenService {
 	
 	String createToken(TokenType tokenType);
 	boolean isTokenValid(String token);
-	void logOut(String token);
+	String logOut(String token);
 	String getJtiFromToken(String token);
 	
 }
