@@ -1,6 +1,5 @@
 package dev.jcasaslopez.user.service;
 
-import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
