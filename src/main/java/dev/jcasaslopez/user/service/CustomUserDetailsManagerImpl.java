@@ -1,5 +1,6 @@
 package dev.jcasaslopez.user.service;
 
+import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -210,5 +211,14 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
         }
         logger.debug("The provided password meets the requirements");
         return isValid;
+	}
+	
+	@Override
+	public UserDto findUserByEmail(String email) {
+		Optional<User> optionalUser = userRepository.findByEmail(email);
+		if(optionalUser.isEmpty()) {
+			throw new UsernameNotFoundException("User not found in the database");
+		}
+		return userMapper.userToUserDtoMapper(optionalUser.get());
 	}
 }

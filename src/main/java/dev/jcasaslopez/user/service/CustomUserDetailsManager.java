@@ -29,5 +29,7 @@ public interface CustomUserDetailsManager extends UserDetailsManager {
 	// permanently deactivating it. This method is typically used in cases such as administrative 
 	// issues, suspicious activity, etc.
 	public void updateAccountStatus(String username, AccountStatus accountStatus);
+	
+	public UserDto findUserByEmail(String email);
 
 }
