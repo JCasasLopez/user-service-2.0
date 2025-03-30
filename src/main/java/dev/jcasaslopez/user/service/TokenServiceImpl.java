@@ -77,7 +77,7 @@ public class TokenServiceImpl implements TokenService {
 		return token;
 	}
 
-	private Claims parseClaims(String token) {
+	public Claims parseClaims(String token) {
 		try {
 			logger.debug("Parsing token claims...");
 			
