@@ -1,27 +1,22 @@
 package dev.jcasaslopez.user.event;
 
+import dev.jcasaslopez.user.dto.UserDto;
+
 public class VerifyEmailEvent {
 	
-	private final String username;
-	private final String email;
+	private final UserDto user;
 	private final String token;
 	
-	public VerifyEmailEvent(String username, String email, String token) {
-		this.username = username;
-		this.email = email;
+	public VerifyEmailEvent(UserDto user, String token) {
+		this.user = user;
 		this.token = token;
 	}
 
-	public String getUsername() {
-		return username;
-	}
-
-	public String getEmail() {
-		return email;
+	public UserDto getUser() {
+		return user;
 	}
 
 	public String getToken() {
 		return token;
 	}
-	
 }
