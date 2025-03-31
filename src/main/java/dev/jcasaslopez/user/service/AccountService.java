@@ -1,13 +1,14 @@
 package dev.jcasaslopez.user.service;
 
 import dev.jcasaslopez.user.dto.UserDto;
+import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
 public interface AccountService {
 
-	UserDto findUser(String username);
+	User findUser(String username);
 
-	UserDto findUserByEmail(String email);
+	User findUserByEmail(String email);
 
 	// Asciende a un usuario con el rol ROLE_USER al rol ROLE_ADMIN.
 	// Esta operación solo puede ser realizada por usuarios con el rol SUPER_ADMIN.
