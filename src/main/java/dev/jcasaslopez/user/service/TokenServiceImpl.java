@@ -83,7 +83,7 @@ public class TokenServiceImpl implements TokenService {
 	
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
 		String jti = UUID.randomUUID().toString();
-		logger.debug("Authenticated user: {}, JTI: {}", username, jti);
+		logger.debug("Username: {}, JTI: {}", username, jti);
 		
 		String token = Jwts.builder().header().type("JWT").and().subject(username)
 				.id(jti)
