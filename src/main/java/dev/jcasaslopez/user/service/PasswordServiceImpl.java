@@ -20,7 +20,7 @@ import dev.jcasaslopez.user.repository.UserRepository;
 @Service
 public class PasswordServiceImpl implements PasswordService {
 	
-	private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsManagerImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(PasswordServiceImpl.class);
 	// Requisitos: Al menos 8 caracteres, una letra mayúscula, una minúscula, un número y un símbolo
 	//
 	// requirements: At least 8 characters, one capital letter, one lowercase letter, one number and one symbol.
