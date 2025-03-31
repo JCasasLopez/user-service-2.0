@@ -5,7 +5,8 @@ import io.jsonwebtoken.Claims;
 
 public interface TokenService {
 	
-	String createToken(TokenType tokenType);
+	String createTokenUserAuthenticated(TokenType tokenType);
+	String createTokenUserNotAuthenticated(TokenType tokenType, String username);
 	boolean isTokenValid(String token);
 	String logOut(String token);
 	String getJtiFromToken(String token);

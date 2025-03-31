@@ -49,7 +49,7 @@ public class TokenServiceImpl implements TokenService {
 	}
     
 	@Override
-	public String createToken(TokenType tokenType) {
+	public String createTokenUserAuthenticated(TokenType tokenType) {
 		logger.info("Creating token for type: {}", tokenType);
 		
 		// tokensLifetimes.getTokensLifetimes() devuelve un Map<TokenType, Integer>.
@@ -74,6 +74,24 @@ public class TokenServiceImpl implements TokenService {
 				.compact();
 		
 		logger.info("Token created successfully for user: {}", authenticated.getName());
+		return token;
+	}
+	
+	@Override
+	public String createTokenUserNotAuthenticated(TokenType tokenType, String username) {
+		logger.info("Creating token for type: {}", tokenType);
+	
+		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
+		String jti = UUID.randomUUID().toString();
+		logger.debug("Authenticated user: {}, JTI: {}", username, jti);
+		
+		String token = Jwts.builder().header().type("JWT").and().subject(username)
+				.id(jti)
+				.issuedAt(new Date(System.currentTimeMillis()))
+				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds)).signWith(key, Jwts.SIG.HS256)
+				.compact();
+		
+		logger.info("Token created successfully for user: {}", username);
 		return token;
 	}
 
