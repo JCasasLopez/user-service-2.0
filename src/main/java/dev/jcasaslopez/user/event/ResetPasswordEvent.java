@@ -1,21 +1,17 @@
 package dev.jcasaslopez.user.event;
 
+import dev.jcasaslopez.user.dto.UserDto;
+
 public class ResetPasswordEvent {
 	
-	private String newPassword;
-	private String token;
-	
-	public ResetPasswordEvent(String newPassword, String token) {
-		this.newPassword = newPassword;
-		this.token = token;
+	private UserDto user;
+
+	public ResetPasswordEvent(UserDto user) {
+		this.user = user;
 	}
 
-	public String getNewPassword() {
-		return newPassword;
-	}
-
-	public String getToken() {
-		return token;
+	public UserDto getUser() {
+		return user;
 	}
 
 }
