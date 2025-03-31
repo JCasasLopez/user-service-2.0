@@ -1,42 +1,38 @@
 package dev.jcasaslopez.user.service;
 
-import java.util.Optional;
-import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
 
-import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
 
 @Service
-public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
+public class CustomUserDetailsManagerImpl implements UserDetailsManager {
 	
 	private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsManagerImpl.class);
 	
 	private UserRepository userRepository;
 	private UserMapper userMapper;
 	private PasswordEncoder passwordEncoder;
+	private AccountService accountService;
+	private PasswordService passwordService;
 	
 	public CustomUserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
-			PasswordEncoder passwordEncoder) {
+			PasswordEncoder passwordEncoder, AccountService accountService) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
+		this.accountService = accountService;
 	}
 
 	// Las excepciones por violaciones de restricciones de base de datos (como valores duplicados)
@@ -78,7 +74,7 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 	@Override
 	@PreAuthorize("#username == authentication.principal.username")
 	public void deleteUser(String username) {
-		findUser(username);
+		accountService.findUser(username);
 		userRepository.deleteByUsername(username);
 		logger.info("User {} deleted", username);
 	}
@@ -96,6 +92,18 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 	// Should not be exposed directly to users.
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		logger.debug("Attempting to load user details for username: {}", username);
-		return userMapper.userDtoToCustomUserDetailsMapper(findUser(username));
+		return userMapper.userDtoToCustomUserDetailsMapper(accountService.findUser(username));
+	}
+
+	// Este método se define aquí porque forma parte de la interfaz UserDetailsManager, que Spring Security requiere.
+	// Sin embargo, la lógica real del cambio de contraseña se delega a PasswordService para mantener la separación 
+	// de responsabilidades y facilitar las pruebas y el mantenimiento.
+	//
+	// This method is defined here because it is part of the UserDetailsManager interface, which is required by Spring Security.
+	// However, the actual password change logic is delegated to PasswordService to preserve separation of concerns 
+	// and improve testability and maintainability.
+	@Override
+	public void changePassword(String oldPassword, String newPassword) {
+		passwordService.changePassword(oldPassword, newPassword);
 	}
 }
