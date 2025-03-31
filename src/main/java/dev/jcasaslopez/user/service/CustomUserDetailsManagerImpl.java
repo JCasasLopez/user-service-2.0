@@ -5,7 +5,6 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,7 +18,6 @@ import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.event.ResetPasswordEvent;
 import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -28,27 +26,17 @@ import dev.jcasaslopez.user.security.CustomUserDetails;
 @Service
 public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 	
-	// Requisitos: Al menos 8 caracteres, una letra mayúscula, una minúscula, un número y un símbolo
-	//
-	// requirements: At least 8 characters, one capital letter, one lowercase letter, one number and one symbol.
-	String PASSWORD_PATTERN =
-			"^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>])[A-Za-z\\d!@#$%^&*(),.?\":{}|<>]{8,}$";
-	Pattern pattern = Pattern.compile(PASSWORD_PATTERN);
 	private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsManagerImpl.class);
 	
 	private UserRepository userRepository;
 	private UserMapper userMapper;
 	private PasswordEncoder passwordEncoder;
-	private TokenService tokenService;
-	private ApplicationEventPublisher eventPublisher;
-
+	
 	public CustomUserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
-			PasswordEncoder passwordEncoder, TokenService tokenService, ApplicationEventPublisher eventPublisher) {
+			PasswordEncoder passwordEncoder) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
-		this.tokenService = tokenService;
-		this.eventPublisher = eventPublisher;
 	}
 
 	// Las excepciones por violaciones de restricciones de base de datos (como valores duplicados)
@@ -109,135 +97,5 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		logger.debug("Attempting to load user details for username: {}", username);
 		return userMapper.userDtoToCustomUserDetailsMapper(findUser(username));
-	}
-
-	@Override
-	public UserDto findUser(String username) {
-		if (username == null || username.trim().isEmpty()) {
-			logger.warn("Invalid username received: '{}'", username); 
-		    throw new IllegalArgumentException("Username cannot be null or empty");
-		}
-		
-		Optional<User> userOptional = userRepository.findByUsername(username);
-		if (userOptional.isEmpty()) {
-		    throw new UsernameNotFoundException("User " + username + " not found in the database");
-		}
-		
-		UserDto foundUser = userMapper.userToUserDtoMapper(userOptional.get());
-		logger.info("User {} retrieved from database successfully", username);
-		return foundUser;
-	}
-
-	// Este método, solo accesible para usuarios con ROLE_SUPERADMIN, añade el rol 
-	// ROLE_ADMIN a los roles de un usuario.
-	//
-	// This method, accessible only to users with ROLE_SUPERADMIN, adds the ROLE_ADMIN 
-	// role to a user's existing roles.
-	@Override
-	@PreAuthorize("hasRole('ROLE_SUPERADMIN')")
-	public void upgradeUser(UserDto user) {
-		// Se asigna ROLE_USER por defecto; si hay otro rol, tiene que ser ROLE_ADMIN.
-		// 
-		// ROLE_USER is assigned by default; if there's another role, it must be ROLE_ADMIN.
-		if (user.getRoles().size() > 1) {
-			logger.warn("User {} is already admin; upgrade user ignored.", user.getUsername());
-			throw new IllegalArgumentException("User is already ADMIN");
-		}
-		// Validamos que exista el usuario.
-		//
-		// We validate there is such user.
-		findUser(user.getUsername());
-		User userJPA = userRepository.findByUsername(user.getUsername()).get();
-		userJPA.getRoles().add(new Role(RoleName.ROLE_ADMIN));
-		userRepository.save(userJPA);
-		logger.info("User {} upgraded to ADMIN", user.getUsername());
-	}
-	
-	@Override
-	public void changePassword(String oldPassword, String newPassword) {
-		passwordIsValid(newPassword);
-		
-		// Obtenemos el objeto user de Security Context, sabemos tiene que estar en ahí porque 
-		// este método sólo es accesible para usuarios autenticados.
-		// 
-		// We retrieve the user object from the Security Context. We know it must be there because 
-		// this method is only accessible to authenticated users.
-		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
-		String username = currentUser.getName();
-		logger.info("User {} found in Security Context", username);
-		if (!passwordEncoder.matches(oldPassword, findUser(username).getPassword())) {
-			logger.info("Provided old password does not match the one in the database");
-			throw new IllegalArgumentException
-				("The provided password does not match the one in the database");
-		}
-		userRepository.updatePassword(username, passwordEncoder.encode(newPassword));
-		logger.info("Password updated successfully");
-	}
-	
-	// Aunque resetPassword() y changePassword() son superficialmente similares, este último opera
-	// con el usuario ya autenticado. Además, sus firmas son distintas: resetPassword() no necesita
-	// verificar si la contraseña antigua coincide.
-	//
-	// While resetPassword() and changePassword() are superficially similar, the latter operates
-	// with the user already authenticated. Also, their method signatures differ: resetPassword()
-	// does not need to verify if the old password matches.
-	@Override
-	public void resetPassword(String newPassword, String token) {
-		String username = tokenService.parseClaims(token).getSubject();
-		Optional<User> optionalUser = userRepository.findByUsername(username);
-		if(optionalUser.isEmpty()) {
-		    throw new UsernameNotFoundException("User " + username + " not found in the database");
-		}
-	    logger.debug("User {} found. Encoding new password...", username);
-		User user = optionalUser.get();
-		String encodedPassword = passwordEncoder.encode(newPassword);
-		user.setPassword(encodedPassword);
-		userRepository.save(user);
-		logger.info("Password reset successfully");
-		eventPublisher.publishEvent(new ResetPasswordEvent(userMapper.userToUserDtoMapper(user)));
-		logger.debug("ResetPasswordEvent published for user: {}", username);
-	}
-
-	@Override
-	public void updateAccountStatus(String username, AccountStatus accountStatus) {
-		if (accountStatus == null) {
-			logger.warn("Received null account status for user '{}'", username);
-		    throw new IllegalArgumentException("Account status cannot be null");
-		}
-		
-		UserDto foundUser = findUser(username);
-		if(foundUser.getAccountStatus() == AccountStatus.PERMANENTLY_SUSPENDED) {
-	        logger.info("User '{}' has a permanently suspended account; status change ignored", username);
-			throw new AccountStatusException("Cannot change status: the account is permanently suspended");
-		}
-		
-		if(foundUser.getAccountStatus() == accountStatus) {
-			logger.debug("No status change needed for user '{}': status already '{}'", 
-                    username, accountStatus);
-			throw new AccountStatusException("The account already has the specified status");
-		}
-		
-		userRepository.updateAccountStatus(username, accountStatus);
-		logger.info("Account status updated from {} to {} for user {} ", foundUser.getAccountStatus(), 
-				accountStatus, username);
-	}
-	
-	public boolean passwordIsValid(String newPassword) {
-		boolean isValid = pattern.matcher(newPassword).matches();
-        if(!isValid) {
-        	logger.warn("The provided password does not meet the requirements");
-        	throw new IllegalArgumentException("The provided password does not meet the requirements");
-        }
-        logger.debug("The provided password meets the requirements");
-        return isValid;
-	}
-	
-	@Override
-	public UserDto findUserByEmail(String email) {
-		Optional<User> optionalUser = userRepository.findByEmail(email);
-		if(optionalUser.isEmpty()) {
-			throw new UsernameNotFoundException("User not found in the database");
-		}
-		return userMapper.userToUserDtoMapper(optionalUser.get());
 	}
 }
