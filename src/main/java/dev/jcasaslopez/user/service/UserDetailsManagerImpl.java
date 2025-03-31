@@ -17,9 +17,9 @@ import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
 
 @Service
-public class CustomUserDetailsManagerImpl implements UserDetailsManager {
+public class UserDetailsManagerImpl implements UserDetailsManager {
 	
-	private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsManagerImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(UserDetailsManagerImpl.class);
 	
 	private UserRepository userRepository;
 	private UserMapper userMapper;
@@ -27,7 +27,7 @@ public class CustomUserDetailsManagerImpl implements UserDetailsManager {
 	private AccountService accountService;
 	private PasswordService passwordService;
 	
-	public CustomUserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
+	public UserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
 			PasswordEncoder passwordEncoder, AccountService accountService) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
@@ -92,7 +92,7 @@ public class CustomUserDetailsManagerImpl implements UserDetailsManager {
 	// Should not be exposed directly to users.
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		logger.debug("Attempting to load user details for username: {}", username);
-		return userMapper.userDtoToCustomUserDetailsMapper(accountService.findUser(username));
+		return userMapper.userToCustomUserDetailsMapper(accountService.findUser(username));
 	}
 
 	// Este método se define aquí porque forma parte de la interfaz UserDetailsManager, que Spring Security requiere.
