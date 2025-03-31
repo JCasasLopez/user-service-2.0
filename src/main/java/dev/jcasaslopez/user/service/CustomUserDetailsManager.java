@@ -15,12 +15,7 @@ public interface CustomUserDetailsManager extends UserDetailsManager {
 	// Promotes a user with the ROLE_USER role to ROLE_ADMIN.
 	// This action can only be performed by users with the SUPER_ADMIN role.
 	public void upgradeUser(UserDto user);
-	
-	// Implementa la funcionalidad de "recuperación de contraseña olvidada".
-	//
-	// Implements the "forgot password" functionality.
-	public void forgotPassword(String email);
-	
+		
 	// Permite cambiar el estado de una cuenta, ya sea para suspenderla temporalmente o 
 	// desactivarla de forma definitiva. Este método se utiliza en situaciones como problemas 
 	// administrativos, detección de actividad sospechosa, etc.
@@ -31,5 +26,7 @@ public interface CustomUserDetailsManager extends UserDetailsManager {
 	public void updateAccountStatus(String username, AccountStatus accountStatus);
 	
 	public UserDto findUserByEmail(String email);
+	
+	public void resetPassword(String newPassword, String token);
 
 }
