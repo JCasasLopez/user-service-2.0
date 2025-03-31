@@ -95,12 +95,14 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 		return userMapper.userToCustomUserDetailsMapper(accountService.findUser(username));
 	}
 
-	// Este método se define aquí porque forma parte de la interfaz UserDetailsManager, que Spring Security requiere.
-	// Sin embargo, la lógica real del cambio de contraseña se delega a PasswordService para mantener la separación 
-	// de responsabilidades y facilitar las pruebas y el mantenimiento.
+	// Este método se define aquí porque forma parte de la interfaz UserDetailsManager, que  
+	// Spring Security requiere. Sin embargo, la lógica real del cambio de contraseña se 
+	// delega a PasswordService para mantener la separación de responsabilidades y facilitar 
+	// las pruebas y el mantenimiento.
 	//
-	// This method is defined here because it is part of the UserDetailsManager interface, which is required by Spring Security.
-	// However, the actual password change logic is delegated to PasswordService to preserve separation of concerns 
+	// This method is defined here because it is part of the UserDetailsManager interface, 
+	// which is required by Spring Security. However, the actual password change logic is 
+	// delegated to PasswordService to preserve separation of concerns 
 	// and improve testability and maintainability.
 	@Override
 	public void changePassword(String oldPassword, String newPassword) {
