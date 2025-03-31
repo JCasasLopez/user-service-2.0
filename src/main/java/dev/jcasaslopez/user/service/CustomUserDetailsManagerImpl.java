@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,7 @@ import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
+import dev.jcasaslopez.user.event.ResetPasswordEvent;
 import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -37,12 +39,16 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 	private UserRepository userRepository;
 	private UserMapper userMapper;
 	private PasswordEncoder passwordEncoder;
-	
+	private TokenService tokenService;
+	private ApplicationEventPublisher eventPublisher;
+
 	public CustomUserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
-			PasswordEncoder passwordEncoder) {
+			PasswordEncoder passwordEncoder, TokenService tokenService, ApplicationEventPublisher eventPublisher) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
+		this.tokenService = tokenService;
+		this.eventPublisher = eventPublisher;
 	}
 
 	// Las excepciones por violaciones de restricciones de base de datos (como valores duplicados)
@@ -87,27 +93,6 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 		findUser(username);
 		userRepository.deleteByUsername(username);
 		logger.info("User {} deleted", username);
-	}
-
-	@Override
-	public void changePassword(String oldPassword, String newPassword) {
-		passwordIsValid(newPassword);
-		
-		// Obtenemos el objeto user de Security Context, sabemos tiene que estar en ahí porque 
-		// este método sólo es accesible para usuarios autenticados.
-		// 
-		// We retrieve the user object from the Security Context. We know it must be there because 
-		// this method is only accessible to authenticated users.
-		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
-		String username = currentUser.getName();
-		logger.info("User {} found in Security Context", username);
-		if (!passwordEncoder.matches(oldPassword, findUser(username).getPassword())) {
-			logger.info("Provided old password does not match the one in the database");
-			throw new IllegalArgumentException
-				("The provided password does not match the one in the database");
-		}
-		userRepository.updatePassword(username, passwordEncoder.encode(newPassword));
-		logger.info("Password updated successfully");
 	}
 
 	@Override
@@ -167,15 +152,50 @@ public class CustomUserDetailsManagerImpl implements CustomUserDetailsManager {
 		userRepository.save(userJPA);
 		logger.info("User {} upgraded to ADMIN", user.getUsername());
 	}
-
+	
 	@Override
-	public void forgotPassword(String email) {
-		// ****************************************************************
-		// A implementar cuando el sistema de gestión de tokens esté listo.
-		//
-		// To be implemented when the tokens manager is ready.
-		// ****************************************************************
-		throw new UnsupportedOperationException("Method not yet implemented");
+	public void changePassword(String oldPassword, String newPassword) {
+		passwordIsValid(newPassword);
+		
+		// Obtenemos el objeto user de Security Context, sabemos tiene que estar en ahí porque 
+		// este método sólo es accesible para usuarios autenticados.
+		// 
+		// We retrieve the user object from the Security Context. We know it must be there because 
+		// this method is only accessible to authenticated users.
+		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
+		String username = currentUser.getName();
+		logger.info("User {} found in Security Context", username);
+		if (!passwordEncoder.matches(oldPassword, findUser(username).getPassword())) {
+			logger.info("Provided old password does not match the one in the database");
+			throw new IllegalArgumentException
+				("The provided password does not match the one in the database");
+		}
+		userRepository.updatePassword(username, passwordEncoder.encode(newPassword));
+		logger.info("Password updated successfully");
+	}
+	
+	// Aunque resetPassword() y changePassword() son superficialmente similares, este último opera
+	// con el usuario ya autenticado. Además, sus firmas son distintas: resetPassword() no necesita
+	// verificar si la contraseña antigua coincide.
+	//
+	// While resetPassword() and changePassword() are superficially similar, the latter operates
+	// with the user already authenticated. Also, their method signatures differ: resetPassword()
+	// does not need to verify if the old password matches.
+	@Override
+	public void resetPassword(String newPassword, String token) {
+		String username = tokenService.parseClaims(token).getSubject();
+		Optional<User> optionalUser = userRepository.findByUsername(username);
+		if(optionalUser.isEmpty()) {
+		    throw new UsernameNotFoundException("User " + username + " not found in the database");
+		}
+	    logger.debug("User {} found. Encoding new password...", username);
+		User user = optionalUser.get();
+		String encodedPassword = passwordEncoder.encode(newPassword);
+		user.setPassword(encodedPassword);
+		userRepository.save(user);
+		logger.info("Password reset successfully");
+		eventPublisher.publishEvent(new ResetPasswordEvent(userMapper.userToUserDtoMapper(user)));
+		logger.debug("ResetPasswordEvent published for user: {}", username);
 	}
 
 	@Override
