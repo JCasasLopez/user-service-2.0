@@ -1,6 +1,5 @@
 package dev.jcasaslopez.user.service;
 
-import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
@@ -15,7 +14,7 @@ public interface AccountService {
 	//
 	// Promotes a user with the ROLE_USER role to ROLE_ADMIN.
 	// This action can only be performed by users with the SUPER_ADMIN role.
-	void upgradeUser(UserDto user);
+	void upgradeUser(String email);
 
 	// Permite cambiar el estado de una cuenta, ya sea para suspenderla temporalmente o 
 	// desactivarla de forma definitiva. Este método se utiliza en situaciones como problemas 

@@ -8,7 +8,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
@@ -22,9 +21,11 @@ public class AccountServiceImpl implements AccountService {
 	private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
 	
 	private UserRepository userRepository;
-	
-	public AccountServiceImpl(UserRepository userRepository) {
+	private AccountService accountService;
+
+	public AccountServiceImpl(UserRepository userRepository, AccountService accountService) {
 		this.userRepository = userRepository;
+		this.accountService = accountService;
 	}
 
 	@Override
@@ -55,18 +56,18 @@ public class AccountServiceImpl implements AccountService {
 
 	@Override
 	@PreAuthorize("hasRole('ROLE_SUPERADMIN')")
-	public void upgradeUser(UserDto userDto) {
+	public void upgradeUser(String email) {
 		// Se asigna ROLE_USER por defecto; si hay otro rol, tiene que ser ROLE_ADMIN.
 		// 
 		// ROLE_USER is assigned by default; if there's another role, it must be ROLE_ADMIN.
-		if (userDto.getRoles().size() > 1) {
-			logger.warn("User {} is already admin; upgrade user ignored.", userDto.getUsername());
+		User user = accountService.findUserByEmail(email);
+		if (user.getRoles().size() > 1) {
+			logger.warn("User {} is already admin; upgrade user ignored.", user.getUsername());
 			throw new IllegalArgumentException("User is already ADMIN");
 		}
 		// Validamos que exista el usuario.
 		//
 		// We validate there is such user.
-		User user = findUser(userDto.getUsername());
 		user.getRoles().add(new Role(RoleName.ROLE_ADMIN));
 		userRepository.save(user);
 		logger.info("User {} upgraded to ADMIN", user.getUsername());
