@@ -33,16 +33,17 @@ public class PasswordServiceImpl implements PasswordService {
 	private PasswordEncoder passwordEncoder;
 	private TokenService tokenService;
 	private ApplicationEventPublisher eventPublisher;
-	private UserAccountService accountService;
+	private UserAccountService userAccountService;
 	
 	public PasswordServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder,
-			TokenService tokenService, ApplicationEventPublisher eventPublisher, UserAccountService accountService) {
+			TokenService tokenService, ApplicationEventPublisher eventPublisher,
+			UserAccountService userAccountService) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
 		this.tokenService = tokenService;
 		this.eventPublisher = eventPublisher;
-		this.accountService = accountService;
+		this.userAccountService = userAccountService;
 	}
 
 	@Override
@@ -57,7 +58,7 @@ public class PasswordServiceImpl implements PasswordService {
 		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
 		String username = currentUser.getName();
 		logger.info("User {} found in Security Context", username);
-		if (!passwordEncoder.matches(oldPassword, accountService.findUser(username).getPassword())) {
+		if (!passwordEncoder.matches(oldPassword, userAccountService.findUser(username).getPassword())) {
 			logger.info("Provided old password does not match the one in the database");
 			throw new IllegalArgumentException
 				("The provided password does not match the one in the database");
@@ -75,13 +76,10 @@ public class PasswordServiceImpl implements PasswordService {
 	// resetPassword() does not need to verify if the old password matches.
 	@Override
 	public void resetPassword(String newPassword, String token) {
+		passwordIsValid(newPassword);
 		String username = tokenService.parseClaims(token).getSubject();
-		Optional<User> optionalUser = userRepository.findByUsername(username);
-		if (optionalUser.isEmpty()) {
-			throw new UsernameNotFoundException("User " + username + " not found in the database");
-		}
+		User user = userAccountService.findUser(username);
 		logger.debug("User {} found. Encoding new password...", username);
-		User user = optionalUser.get();
 		String encodedPassword = passwordEncoder.encode(newPassword);
 		user.setPassword(encodedPassword);
 		userRepository.save(user);
