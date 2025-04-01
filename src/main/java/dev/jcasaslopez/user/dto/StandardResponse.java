@@ -24,18 +24,14 @@ public class StandardResponse {
 
 	private LocalDateTime timestamp;
 	private String message;
-	private String details;
+	private Object details;
 	private HttpStatus status;
 	
-	public StandardResponse(LocalDateTime timestamp, String message, String details, HttpStatus status) {
+	public StandardResponse(LocalDateTime timestamp, String message, Object details, HttpStatus status) {
 		this.timestamp = timestamp;
 		this.message = message;
 		this.details = details;
 		this.status = status;
-	}
-
-	public StandardResponse() {
-		super();
 	}
 
 	public LocalDateTime getTimestamp() {
@@ -54,11 +50,11 @@ public class StandardResponse {
 		this.message = message;
 	}
 
-	public String getDetails() {
+	public Object getDetails() {
 		return details;
 	}
 
-	public void setDetails(String details) {
+	public void setDetails(Object details) {
 		this.details = details;
 	}
 
@@ -69,4 +65,5 @@ public class StandardResponse {
 	public void setStatus(HttpStatus status) {
 		this.status = status;
 	}
+	
 }
