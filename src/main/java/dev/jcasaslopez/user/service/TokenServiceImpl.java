@@ -3,14 +3,15 @@ package dev.jcasaslopez.user.service;
 import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,12 +36,14 @@ public class TokenServiceImpl implements TokenService {
 	private byte[] keyBytes;
 	private SecretKey key;
 
-	@Autowired
 	private TokensLifetimes tokensLifetimes;
+    private StringRedisTemplate redisTemplate;
 
-	@Autowired
-	private TokenBlacklistService tokenBlacklistService;
-	
+	public TokenServiceImpl(TokensLifetimes tokensLifetimes, StringRedisTemplate redisTemplate) {
+		this.tokensLifetimes = tokensLifetimes;
+		this.redisTemplate = redisTemplate;
+	}
+
 	@PostConstruct
 	public void init() {
 		keyBytes = Base64.getDecoder().decode(secretKey);
@@ -137,7 +140,7 @@ public class TokenServiceImpl implements TokenService {
 	public String logOut(String token) {
 		logger.info("Processing logout...");
 
-		if (tokenBlacklistService.isTokenBlacklisted(getJtiFromToken(token))) {
+		if (isTokenBlacklisted(getJtiFromToken(token))) {
 	        logger.info("Token already blacklisted");
 	        return "The user is already logged out";
 	    }
@@ -158,7 +161,7 @@ public class TokenServiceImpl implements TokenService {
 	    long expirationInSeconds = Math.max(1, remainingMillis / 1000); 
 		logger.debug("Blacklisting token with JTI {} for {} seconds", jti, expirationInSeconds);
 
-	 	tokenBlacklistService.blacklistToken(jti, expirationInSeconds);
+	 	blacklistToken(jti, expirationInSeconds);
 
 	    SecurityContextHolder.getContext().setAuthentication(null);
 		logger.info("User has been logged out");
@@ -188,4 +191,16 @@ public class TokenServiceImpl implements TokenService {
 		return jti;
 	}
 	
+	@Override
+	public void blacklistToken(String jti, long expirationInSeconds) {
+        logger.info("Blacklisting token with jti: {} for {} seconds", jti, expirationInSeconds);
+        redisTemplate.opsForValue().set(jti, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
+    }
+
+    @Override
+	public boolean isTokenBlacklisted(String jti) {
+        boolean isBlacklisted = redisTemplate.hasKey(jti);
+        logger.debug("Checking blacklist status for jti {}: {}", jti, isBlacklisted);
+        return isBlacklisted;
+    }
 }
