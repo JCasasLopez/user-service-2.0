@@ -1,5 +1,8 @@
 package dev.jcasaslopez.user.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
@@ -24,5 +27,7 @@ public interface UserAccountService {
 	// permanently deactivating it. This method is typically used in cases such as administrative 
 	// issues, suspicious activity, etc.
 	void updateAccountStatus(String username, AccountStatus accountStatus);
+	
+	void createAccount(String token) throws JsonMappingException, JsonProcessingException;
 
 }
