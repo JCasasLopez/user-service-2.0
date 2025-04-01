@@ -140,16 +140,6 @@ public class TokenServiceImpl implements TokenService {
 	public String logOut(String token) {
 		logger.info("Processing logout...");
 
-		if (isTokenBlacklisted(getJtiFromToken(token))) {
-	        logger.info("Token already blacklisted");
-	        return "The user is already logged out";
-	    }
-
-	    if (!isTokenValid(token)) {
-	        logger.info("Token is not valid (probably expired)");
-	        return "The session has expired";
-	    }
-
 	    String jti = getJtiFromToken(token);
 	    Date expirationTime = parseClaims(token).getExpiration();
 	    Date currentTime = new Date(System.currentTimeMillis());
@@ -169,22 +159,6 @@ public class TokenServiceImpl implements TokenService {
 	}
 
 	@Override
-	public boolean isTokenValid(String token) {
-		try {
-			// Si este método no lanza excepción, el token es válido.
-			//
-			// If this method does not throw an exception, then the token is valid.
-			logger.debug("Validating token...");
-			parseClaims(token); 
-			logger.debug("Token is valid");
-			return true;
-		} catch (JwtException ex) {
-			logger.warn("Token validation failed: {}", ex.getMessage());
-			throw ex; 
-		}
-	}
-
-	@Override
 	public String getJtiFromToken(String token) {
 		String jti = parseClaims(token).getId();
 		logger.debug("Extracted JTI from token: {}", jti);
@@ -194,13 +168,7 @@ public class TokenServiceImpl implements TokenService {
 	@Override
 	public void blacklistToken(String jti, long expirationInSeconds) {
         logger.info("Blacklisting token with jti: {} for {} seconds", jti, expirationInSeconds);
-        redisTemplate.opsForValue().set(jti, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
-    }
-
-    @Override
-	public boolean isTokenBlacklisted(String jti) {
-        boolean isBlacklisted = redisTemplate.hasKey(jti);
-        logger.debug("Checking blacklist status for jti {}: {}", jti, isBlacklisted);
-        return isBlacklisted;
-    }
+        redisTemplate.opsForValue().set("blacklist:" + jti, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
+    }	
+	
 }

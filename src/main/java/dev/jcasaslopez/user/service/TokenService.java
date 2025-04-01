@@ -7,11 +7,9 @@ public interface TokenService {
 	
 	String createTokenUserAuthenticated(TokenType tokenType);
 	String createTokenUserNotAuthenticated(TokenType tokenType, String username);
-	boolean isTokenValid(String token);
 	String logOut(String token);
 	String getJtiFromToken(String token);
 	Claims parseClaims(String token);
 	void blacklistToken(String jti, long expirationInSeconds);
-	boolean isTokenBlacklisted(String jti);
 	
 }
