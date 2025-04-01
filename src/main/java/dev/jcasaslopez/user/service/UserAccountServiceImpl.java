@@ -22,6 +22,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.event.CreateAccountEvent;
+import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.repository.UserRepository;
 
@@ -118,6 +119,9 @@ public class UserAccountServiceImpl implements UserAccountService {
 		userRepository.updateAccountStatus(username, accountStatus);
 		logger.info("Account status updated from {} to {} for user {} ", foundUser.getAccountStatus(), 
 				accountStatus, username);
+		
+		eventPublisher.publishEvent(new UpdateAccountStatusEvent(email, username));
+		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
 	
 	@Override
