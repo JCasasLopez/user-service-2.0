@@ -94,13 +94,16 @@ public class UserAccountServiceImpl implements UserAccountService {
 	}
 	
 	@Override
-	public void updateAccountStatus(String username, AccountStatus accountStatus) {
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	public void updateAccountStatus(String email, AccountStatus accountStatus) {
+		User foundUser = findUserByEmail(email);
+		String username = foundUser.getUsername();
+		
 		if (accountStatus == null) {
 			logger.warn("Received null account status for user '{}'", username);
 		    throw new IllegalArgumentException("Account status cannot be null");
 		}
 		
-		User foundUser = findUser(username);
 		if(foundUser.getAccountStatus() == AccountStatus.PERMANENTLY_SUSPENDED) {
 	        logger.info("User '{}' has a permanently suspended account; status change ignored", username);
 			throw new AccountStatusException("Cannot change status: the account is permanently suspended");
