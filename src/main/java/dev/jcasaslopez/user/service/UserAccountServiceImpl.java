@@ -48,6 +48,17 @@ public class UserAccountServiceImpl implements UserAccountService {
 		this.redisTemplate = redisTemplate;
 		this.eventPublisher = eventPublisher;
 	}
+	
+	@Override
+	public void createAccount(String token) throws JsonMappingException, JsonProcessingException {
+		String userJson = redisTemplate.opsForValue().get(tokenService.getJtiFromToken(token));
+	    UserDto user = objectMapper.readValue(userJson, UserDto.class);
+	    eventPublisher.publishEvent(new CreateAccountEvent(user));
+	    // Los atributos ya se han validado con la llamada al endpoint "initiateRegistration".
+	 	//
+	 	// The attributes have already been validated during the call to the "initiateRegistration" endpoint.
+		userDetailsManager.createUser((UserDetails) user);
+	}
 
 	@Override
 	public User findUser(String username) {
@@ -125,15 +136,4 @@ public class UserAccountServiceImpl implements UserAccountService {
 		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
 	
-	@Override
-	public void createAccount(String token) throws JsonMappingException, JsonProcessingException {
-		String userJson = redisTemplate.opsForValue().get(tokenService.getJtiFromToken(token));
-	    UserDto user = objectMapper.readValue(userJson, UserDto.class);
-	    eventPublisher.publishEvent(new CreateAccountEvent(user));
-	    // Los atributos ya se han validado con la llamada al endpoint "initiateRegistration".
-	 	//
-	 	// The attributes have already been validated during the call to the "initiateRegistration" endpoint.
-		userDetailsManager.createUser((UserDetails) user);
-	}
-
 }

@@ -7,6 +7,13 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
 public interface UserAccountService {
+	
+	// Crea una cuenta de usuario a partir de un token previamente generado en initiateRegistration.
+	// Recupera el usuario desde Redis, lanza un evento y registra al usuario en el sistema.
+	//
+	// Creates a user account from a token previously generated in initiateRegistration.
+	// Retrieves the user from Redis, publishes an event, and registers the user in the system.
+	void createAccount(String token) throws JsonMappingException, JsonProcessingException;
 
 	User findUser(String username);
 
@@ -27,11 +34,5 @@ public interface UserAccountService {
 	// permanently deactivating it. This method is typically used in cases such as administrative 
 	// issues, suspicious activity, etc.
 	void updateAccountStatus(String email, AccountStatus accountStatus);
-	
-	// Crea una cuenta de usuario a partir de un token previamente generado en initiateRegistration.
-	// Recupera el usuario desde Redis, lanza un evento y registra al usuario en el sistema.
-	//
-	// Creates a user account from a token previously generated in initiateRegistration.
-	// Retrieves the user from Redis, publishes an event, and registers the user in the system.
-	void createAccount(String token) throws JsonMappingException, JsonProcessingException;
+
 }
