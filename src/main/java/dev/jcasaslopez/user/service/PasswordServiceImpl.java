@@ -1,6 +1,5 @@
 package dev.jcasaslopez.user.service;
 
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -8,11 +7,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.event.ChangePasswordEvent;
 import dev.jcasaslopez.user.event.ResetPasswordEvent;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -65,6 +64,10 @@ public class PasswordServiceImpl implements PasswordService {
 		}
 		userRepository.updatePassword(username, passwordEncoder.encode(newPassword));
 		logger.info("Password updated successfully");
+		
+		String email = userAccountService.findUser(username).getEmail();
+		eventPublisher.publishEvent(new ChangePasswordEvent(email, username));
+		logger.debug("ChangePasswordEvent published for user: {}", username);
 	}
 
 	// Aunque resetPassword() y changePassword() son superficialmente similares,
