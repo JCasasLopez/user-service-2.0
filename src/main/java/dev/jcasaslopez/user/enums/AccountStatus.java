@@ -18,7 +18,7 @@ public enum AccountStatus {
     //
     // Account is permanently suspended and cannot be reactivated.
     // This typically results in data removal or deactivation.
-    PERMANENTLY_SUSPENDEDPERMANENTLY_SUSPENDED("Permanently Suspended");
+    PERMANENTLY_SUSPENDED("Permanently Suspended");
 
     private final String displayName;
 
