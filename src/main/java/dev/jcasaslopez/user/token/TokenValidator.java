@@ -1,10 +1,13 @@
 package dev.jcasaslopez.user.token;
 
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import dev.jcasaslopez.user.service.TokenService;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 
 public class TokenValidator {
@@ -19,30 +22,43 @@ public class TokenValidator {
 		this.tokenService = tokenService;
 	}
 
-	public boolean isTokenFullyValid(String token) {
+	// Verifica que el token sea técnicamente válido, esté en la whitelist y no en la blacklist.
+	// Devuelve las Claims si todo es correcto; de lo contrario, Optional.empty().
+	//
+	// Verifies that the token is technically valid, whitelisted, and not blacklisted.
+	// Returns the Claims if everything is valid; otherwise, Optional.empty().
+	public Optional<Claims> isTokenFullyValid(String token) {
 	    logger.debug("Validating token...");
 
-	    if (!isTokenTechnicallyValid(token)) {
-	        return false;
+	    Optional<Claims> optionalClaims = getValidClaims(token);
+	    if (optionalClaims.isEmpty()) {
+	        return Optional.empty();
 	    }
-	    String jti = tokenService.getJtiFromToken(token);
-	    return isTokenWhitelisted(jti) && !isTokenBlacklisted(jti);
+
+	    Claims claims = optionalClaims.get();
+	    String jti = claims.getId();
+
+	    if (isTokenWhitelisted(jti) && !isTokenBlacklisted(jti)) {
+	        return optionalClaims;
+	    }
+
+	    return Optional.empty();
 	}
 
-    // Verifica la validez técnica del token (firma, expiración, etc.).
-    // Throws JwtException si el token no es válido.
-    //
-    // Checks the token's technical validity (signature, expiration, etc.).
-    // Throws JwtException if the token is invalid.
-    public boolean isTokenTechnicallyValid(String token) {
-        try {
-        	tokenService.parseClaims(token);
-            return true;
-        } catch (JwtException ex) {
-            logger.warn("Token technical validation failed: {}", ex.getMessage());
-            return false;
-        }
-    }
+	// Parsea y valida las claims del token (firma, expiración, etc.).
+	// Devuelve Optional.empty() si el token no es técnicamente válido.
+	//
+	// Parses and validates the token claims (signature, expiration, etc.).
+	// Returns Optional.empty() if the token is not technically valid.
+	public Optional<Claims> getValidClaims(String token) {
+	    try {
+	        Claims claims = tokenService.parseClaims(token);
+	        return Optional.of(claims);
+	    } catch (JwtException ex) {
+	        logger.warn("Token technical validation failed: {}", ex.getMessage());
+	        return Optional.empty();
+	    }
+	}
 
     // Verifica si el token está en la whitelist (emitido por este servicio).
     //
