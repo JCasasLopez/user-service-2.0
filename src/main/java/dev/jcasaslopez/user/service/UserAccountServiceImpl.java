@@ -96,11 +96,11 @@ public class UserAccountServiceImpl implements UserAccountService {
 	
 	@Override
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public void updateAccountStatus(String email, AccountStatus accountStatus) {
+	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User foundUser = findUserByEmail(email);
 		String username = foundUser.getUsername();
 		
-		if (accountStatus == null) {
+		if (newAccountStatus == null) {
 			logger.warn("Received null account status for user '{}'", username);
 		    throw new IllegalArgumentException("Account status cannot be null");
 		}
@@ -110,17 +110,18 @@ public class UserAccountServiceImpl implements UserAccountService {
 			throw new AccountStatusException("Cannot change status: the account is permanently suspended");
 		}
 		
-		if(foundUser.getAccountStatus() == accountStatus) {
+		if(foundUser.getAccountStatus() == newAccountStatus) {
 			logger.debug("No status change needed for user '{}': status already '{}'", 
-                    username, accountStatus);
+                    username, newAccountStatus);
 			throw new AccountStatusException("The account already has the specified status");
 		}
 		
-		userRepository.updateAccountStatus(username, accountStatus);
+		userRepository.updateAccountStatus(username, newAccountStatus);
 		logger.info("Account status updated from {} to {} for user {} ", foundUser.getAccountStatus(), 
-				accountStatus, username);
+				newAccountStatus, username);
 		
-		eventPublisher.publishEvent(new UpdateAccountStatusEvent(email, username));
+		eventPublisher.publishEvent(new UpdateAccountStatusEvent(email, username,
+				newAccountStatus.getDisplayName()));
 		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
 	
