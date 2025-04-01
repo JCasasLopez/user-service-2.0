@@ -135,5 +135,5 @@ public class UserAccountServiceImpl implements UserAccountService {
 	 	// The attributes have already been validated during the call to the "initiateRegistration" endpoint.
 		userDetailsManager.createUser((UserDetails) user);
 	}
-	
+
 }

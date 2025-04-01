@@ -34,5 +34,4 @@ public interface UserAccountService {
 	// Creates a user account from a token previously generated in initiateRegistration.
 	// Retrieves the user from Redis, publishes an event, and registers the user in the system.
 	void createAccount(String token) throws JsonMappingException, JsonProcessingException;
-
 }
