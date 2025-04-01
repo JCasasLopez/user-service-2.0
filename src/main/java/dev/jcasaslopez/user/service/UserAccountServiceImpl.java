@@ -16,16 +16,14 @@ import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.repository.UserRepository;
 
 @Service
-public class AccountServiceImpl implements AccountService {
+public class UserAccountServiceImpl implements UserAccountService {
 	
-	private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(UserAccountServiceImpl.class);
 	
 	private UserRepository userRepository;
-	private AccountService accountService;
 
-	public AccountServiceImpl(UserRepository userRepository, AccountService accountService) {
+	public UserAccountServiceImpl(UserRepository userRepository) {
 		this.userRepository = userRepository;
-		this.accountService = accountService;
 	}
 
 	@Override
@@ -60,7 +58,7 @@ public class AccountServiceImpl implements AccountService {
 		// Se asigna ROLE_USER por defecto; si hay otro rol, tiene que ser ROLE_ADMIN.
 		// 
 		// ROLE_USER is assigned by default; if there's another role, it must be ROLE_ADMIN.
-		User user = accountService.findUserByEmail(email);
+		User user = findUserByEmail(email);
 		if (user.getRoles().size() > 1) {
 			logger.warn("User {} is already admin; upgrade user ignored.", user.getUsername());
 			throw new IllegalArgumentException("User is already ADMIN");
