@@ -24,11 +24,11 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 	private UserRepository userRepository;
 	private UserMapper userMapper;
 	private PasswordEncoder passwordEncoder;
-	private AccountService accountService;
+	private UserAccountService accountService;
 	private PasswordService passwordService;
 	
 	public UserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
-			PasswordEncoder passwordEncoder, AccountService accountService) {
+			PasswordEncoder passwordEncoder, UserAccountService accountService) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;

@@ -33,10 +33,10 @@ public class PasswordServiceImpl implements PasswordService {
 	private PasswordEncoder passwordEncoder;
 	private TokenService tokenService;
 	private ApplicationEventPublisher eventPublisher;
-	private AccountService accountService;
+	private UserAccountService accountService;
 	
 	public PasswordServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder,
-			TokenService tokenService, ApplicationEventPublisher eventPublisher, AccountService accountService) {
+			TokenService tokenService, ApplicationEventPublisher eventPublisher, UserAccountService accountService) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;

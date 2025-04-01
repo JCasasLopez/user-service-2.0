@@ -3,7 +3,7 @@ package dev.jcasaslopez.user.service;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
-public interface AccountService {
+public interface UserAccountService {
 
 	User findUser(String username);
 
