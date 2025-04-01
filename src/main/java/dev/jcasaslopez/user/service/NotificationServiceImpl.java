@@ -69,7 +69,7 @@ public class NotificationServiceImpl implements NotificationService {
         String userJson = objectMapper.writeValueAsString(event.getUser());
 
         logger.debug("Storing token JTI {} in Redis with TTL {} seconds", tokenJti, expirationInSeconds);
-        redisTemplate.opsForValue().set(tokenJti, userJson, expirationInSeconds, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set("whitelist:" + tokenJti, userJson, expirationInSeconds, TimeUnit.SECONDS);
         
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
         logger.info("Verification email sent to {}", event.getUser().getEmail()); 
@@ -103,7 +103,7 @@ public class NotificationServiceImpl implements NotificationService {
         
         String userJson = objectMapper.writeValueAsString(event.getUser());
         logger.debug("Storing token JTI {} in Redis with TTL {} seconds", tokenJti, expirationInSeconds);
-        redisTemplate.opsForValue().set(tokenJti, userJson, expirationInSeconds, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set("whitelist:" + tokenJti, userJson, expirationInSeconds, TimeUnit.SECONDS);
         
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
         logger.info("Password reset email sent to {}", event.getUser().getEmail()); 
