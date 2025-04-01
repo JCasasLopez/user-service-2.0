@@ -22,7 +22,7 @@ import dev.jcasaslopez.user.event.VerifyEmailEvent;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 
 @Service
-public class NotificationServiceImpl {
+public class NotificationServiceImpl implements NotificationService {
 	
 	private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
 
@@ -45,6 +45,7 @@ public class NotificationServiceImpl {
 		this.passwordEncoder = passwordEncoder;
 	}
 
+	@Override
 	@EventListener
     public void handleVerifyEmail(VerifyEmailEvent event) throws JsonProcessingException {
 		logger.info("Starting email verification flow for user: {}", event.getUser().getUsername()); 
@@ -74,6 +75,7 @@ public class NotificationServiceImpl {
         logger.info("Verification email sent to {}", event.getUser().getEmail()); 
     }
 	
+	@Override
 	@EventListener
     public void handleCreateAccount(CreateAccountEvent event) {
         String subject = "Welcome to the platform!";
@@ -85,6 +87,7 @@ public class NotificationServiceImpl {
         logger.info("Account created successfully email sent to {}", event.getUser().getEmail()); 
 	}
 	
+	@Override
 	@EventListener
     public void handleForgotPassword(ForgotPasswordEvent event) throws JsonProcessingException {
 		logger.info("Starting password reset flow for user: {}", event.getUser().getUsername()); 
@@ -106,6 +109,7 @@ public class NotificationServiceImpl {
         logger.info("Password reset email sent to {}", event.getUser().getEmail()); 
 	}
 	
+	@Override
 	@EventListener
     public void handleResetPassword(ResetPasswordEvent event) {
 		String subject = "Password reset successfully";
@@ -117,6 +121,7 @@ public class NotificationServiceImpl {
         logger.info("Password reset successfully email sent to {}", event.getUser().getEmail()); 
 	}
 	
+	@Override
 	@EventListener
     public void handleChangePassword(ChangePasswordEvent event) {
 		String subject = "Password changed successfully";
@@ -128,6 +133,7 @@ public class NotificationServiceImpl {
         logger.info("Password changed successfully email sent to {}", event.getEmail()); 
 	}
 	
+	@Override
 	@EventListener
     public void handleUpdateAccountStatus(UpdateAccountStatusEvent event) {
 		String subject = "Account status updated successfully";
