@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -64,6 +65,15 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        return;
 	    }
 	    
+	    if (exception instanceof LockedException) {
+	        // La cuenta ya estaba bloqueada: registramos ACCOUNT_LOCKED como causa.
+	    	//
+	        // The account was already locked: log ACCOUNT_LOCKED as the reason.
+	        loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.ACCOUNT_LOCKED);
+	        standardResponseHandler.handleResponse(response, 403, "Account is locked", null);
+	        return;
+	    }
+
 	    User user;
 	    try {
 	        user = userAccountService.findUser(username);
