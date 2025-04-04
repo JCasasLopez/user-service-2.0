@@ -2,6 +2,7 @@ package dev.jcasaslopez.user.security.filter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -11,6 +12,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RedisKeyPrefix;
+import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.handler.CustomAuthenticationFailureHandler;
 import dev.jcasaslopez.user.service.UserAccountService;
@@ -24,14 +26,17 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
     private StringRedisTemplate redisTemplate;
 	private UserAccountService userAccountService;
     private UserRepository userRepository;
+	private ApplicationEventPublisher eventPublisher;
     
 	public CustomUsernamePasswordAuthenticationFilter(StringRedisTemplate redisTemplate,
-			UserAccountService userAccountService, UserRepository userRepository) {
+			UserAccountService userAccountService, UserRepository userRepository,
+			ApplicationEventPublisher eventPublisher) {
 		this.redisTemplate = redisTemplate;
 		this.userAccountService = userAccountService;
 		this.userRepository = userRepository;
+		this.eventPublisher = eventPublisher;
 	}
-
+	
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 	        throws AuthenticationException {
@@ -61,6 +66,8 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	                User user = userAccountService.findUser(username);
 	                
 	                if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
+	                	eventPublisher.publishEvent(new UpdateAccountStatusEvent
+	                			(user.getEmail(), username, AccountStatus.ACTIVE));
 	                    user.setAccountStatus(AccountStatus.ACTIVE);
 	                    userRepository.save(user);
 	                    logger.info("User {} reactivated after lock expiration", username);
