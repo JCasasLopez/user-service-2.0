@@ -20,6 +20,7 @@ import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
+import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.event.CreateAccountEvent;
 import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
@@ -51,7 +52,8 @@ public class UserAccountServiceImpl implements UserAccountService {
 	
 	@Override
 	public void createAccount(String token) throws JsonMappingException, JsonProcessingException {
-		String userJson = redisTemplate.opsForValue().get(tokenService.getJtiFromToken(token));
+		String redisKey = RedisKeyPrefix.WHITELIST.of(tokenService.getJtiFromToken(token));
+		String userJson = redisTemplate.opsForValue().get(redisKey);
 	    UserDto user = objectMapper.readValue(userJson, UserDto.class);
 	    eventPublisher.publishEvent(new CreateAccountEvent(user));
 	    // Los atributos ya se han validado con la llamada al endpoint "initiateRegistration".

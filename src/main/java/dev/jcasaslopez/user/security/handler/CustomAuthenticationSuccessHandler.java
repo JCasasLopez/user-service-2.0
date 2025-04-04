@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.service.LoginAttemptService;
 import jakarta.servlet.ServletException;
@@ -39,7 +40,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		// 
 		// Reset the failed login attempts counter by deleting its Redis entry.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		redisTemplate.delete("login_attempts:" + username);
+		String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
+		redisTemplate.delete(redisKey);
 		
 		loginAttemptService.recordAttempt(true, request.getRemoteAddr(), null);
 		

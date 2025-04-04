@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.service.TokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -64,7 +65,8 @@ public class TokenValidator {
     //
     // Checks if the token is in the whitelist (issued by this service).
     public boolean isTokenWhitelisted(String jti) {
-        boolean result = redisTemplate.hasKey("whitelist:" + jti);
+    	String redisKey = RedisKeyPrefix.WHITELIST.of(jti);
+        boolean result = redisTemplate.hasKey(redisKey);
         logger.debug("Whitelist check for jti {}: {}", jti, result);
         return result;
     }
@@ -73,7 +75,8 @@ public class TokenValidator {
     //
     // Checks if the token has been revoked (is in the blacklist).
     public boolean isTokenBlacklisted(String jti) {
-        boolean result = redisTemplate.hasKey("blacklist:" + jti);
+    	String redisKey = RedisKeyPrefix.BLACKLIST.of(jti);
+        boolean result = redisTemplate.hasKey(redisKey);
         logger.debug("Blacklist check for jti {}: {}", jti, result);
         return result;
     }

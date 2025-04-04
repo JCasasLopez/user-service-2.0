@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.event.ChangePasswordEvent;
 import dev.jcasaslopez.user.event.CreateAccountEvent;
@@ -69,7 +70,8 @@ public class NotificationServiceImpl implements NotificationService {
         String userJson = objectMapper.writeValueAsString(event.getUser());
 
         logger.debug("Storing token JTI {} in Redis with TTL {} seconds", tokenJti, expirationInSeconds);
-        redisTemplate.opsForValue().set("whitelist:" + tokenJti, userJson, expirationInSeconds, TimeUnit.SECONDS);
+        String redisKey = RedisKeyPrefix.WHITELIST.of(tokenJti);
+        redisTemplate.opsForValue().set(redisKey, userJson, expirationInSeconds, TimeUnit.SECONDS);
         
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
         logger.info("Verification email sent to {}", event.getUser().getEmail()); 
@@ -103,7 +105,8 @@ public class NotificationServiceImpl implements NotificationService {
         
         String userJson = objectMapper.writeValueAsString(event.getUser());
         logger.debug("Storing token JTI {} in Redis with TTL {} seconds", tokenJti, expirationInSeconds);
-        redisTemplate.opsForValue().set("whitelist:" + tokenJti, userJson, expirationInSeconds, TimeUnit.SECONDS);
+        String redisKey = RedisKeyPrefix.WHITELIST.of(tokenJti);
+        redisTemplate.opsForValue().set(redisKey, userJson, expirationInSeconds, TimeUnit.SECONDS);
         
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
         logger.info("Password reset email sent to {}", event.getUser().getEmail()); 

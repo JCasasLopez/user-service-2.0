@@ -17,6 +17,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import io.jsonwebtoken.Claims;
@@ -168,7 +169,8 @@ public class TokenServiceImpl implements TokenService {
 	@Override
 	public void blacklistToken(String jti, long expirationInSeconds) {
         logger.info("Blacklisting token with jti: {} for {} seconds", jti, expirationInSeconds);
-        redisTemplate.opsForValue().set("blacklist:" + jti, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
+        String redisKey = RedisKeyPrefix.BLACKLIST.of(jti);
+        redisTemplate.opsForValue().set(redisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
     }	
 	
 }

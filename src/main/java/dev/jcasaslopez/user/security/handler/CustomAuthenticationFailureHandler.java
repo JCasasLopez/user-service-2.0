@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
+import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.LoginAttemptService;
@@ -88,7 +89,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
             return;
         }
 
-	    String redisKey = "login_attempts:" + username;
+	    String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
 
 	    if (!redisTemplate.hasKey(redisKey)) {
 	        redisTemplate.opsForValue().set(redisKey, "1", accountLockedDuration, TimeUnit.SECONDS);
