@@ -2,6 +2,7 @@ package dev.jcasaslopez.user.service;
 
 import java.util.Base64;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
+import dev.jcasaslopez.user.token.TokenValidator;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -39,10 +41,13 @@ public class TokenServiceImpl implements TokenService {
 
 	private TokensLifetimes tokensLifetimes;
     private StringRedisTemplate redisTemplate;
+    private TokenValidator tokenValidator;
 
-	public TokenServiceImpl(TokensLifetimes tokensLifetimes, StringRedisTemplate redisTemplate) {
+	public TokenServiceImpl(TokensLifetimes tokensLifetimes, StringRedisTemplate redisTemplate,
+			TokenValidator tokenValidator) {
 		this.tokensLifetimes = tokensLifetimes;
 		this.redisTemplate = redisTemplate;
+		this.tokenValidator = tokenValidator;
 	}
 
 	@PostConstruct
@@ -138,27 +143,37 @@ public class TokenServiceImpl implements TokenService {
 	} 
 	
 	@Override
-	public String logOut(String token) {
+	public void logOut(String token) {
 		logger.info("Processing logout...");
-
-	    String jti = getJtiFromToken(token);
-	    Date expirationTime = parseClaims(token).getExpiration();
-	    Date currentTime = new Date(System.currentTimeMillis());
-	    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
-	    // Asegura al menos 1 segundo para evitar que Redis rechace TTL cero o negativo 
-	    // (redondea hacia abajo).
-	    //
-	    // Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
-	    long expirationInSeconds = Math.max(1, remainingMillis / 1000); 
-		logger.debug("Blacklisting token with JTI {} for {} seconds", jti, expirationInSeconds);
-
-	 	blacklistToken(jti, expirationInSeconds);
-
+		
+		Optional<Claims> optionalClaims = tokenValidator.getValidClaims(token);
+		String tokenJti = getJtiFromToken(token);
+		
+		// Si el token es válido y está en la "whitelist", hay que revocarlo.
+		//
+		// If the token is valid and is in the "whitelist", it has to be blacklisted.
+		if(optionalClaims.isPresent() && tokenValidator.isTokenWhitelisted(tokenJti)) {
+		    Date expirationTime = optionalClaims.get().getExpiration();
+		    Date currentTime = new Date(System.currentTimeMillis());
+		    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
+		    // Asegura al menos 1 segundo para evitar que Redis rechace TTL cero o negativo 
+		    // (redondea hacia abajo).
+		    //
+		    // Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
+		    long expirationInSeconds = Math.max(1, remainingMillis / 1000); 
+			logger.debug("Blacklisting token with JTI {} for {} seconds", tokenJti, expirationInSeconds);
+		 	blacklistToken(tokenJti, expirationInSeconds);
+		}
+		
+		// Si el token no es válido o no está en la "whitelist", no se revoca, y se continúa con el 
+		// logout igualmente.
+		//
+		// If the token is not valid or is not in the whitelist, it does not have to revoked, 
+		// and we continue with the logout process.
 	    SecurityContextHolder.getContext().setAuthentication(null);
 		logger.info("User has been logged out");
-	    return "The user has logged out";
 	}
-
+	
 	@Override
 	public String getJtiFromToken(String token) {
 		String jti = parseClaims(token).getId();
