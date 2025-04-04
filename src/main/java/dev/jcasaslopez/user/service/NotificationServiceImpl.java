@@ -139,13 +139,13 @@ public class NotificationServiceImpl implements NotificationService {
 	@Override
 	@EventListener
     public void handleUpdateAccountStatus(UpdateAccountStatusEvent event) {
-		String subject = "Account status updated successfully";
+		String subject = "Change in account status";
 		String message = "Hi " + event.getUsername() + ",\n\n"
-                + "Your account status has been updated successfully to"
+                + "Your account status has been changed to"
 				+ event.getNewAccountStatus().getDisplayName()
                 + "Best regards,\n"
                 + "The Team";
         emailService.sendEmail(event.getEmail(), subject, message);
-        logger.info("Account status updated successfully email sent to {}", event.getEmail()); 
+        logger.info("Account status change successfully email sent to {}", event.getEmail()); 
 	}
 }
