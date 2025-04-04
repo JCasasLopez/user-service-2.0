@@ -142,7 +142,7 @@ public class NotificationServiceImpl implements NotificationService {
 		String subject = "Account status updated successfully";
 		String message = "Hi " + event.getUsername() + ",\n\n"
                 + "Your account status has been updated successfully to"
-				+ event.getNewAccountStatus()
+				+ event.getNewAccountStatus().getDisplayName()
                 + "Best regards,\n"
                 + "The Team";
         emailService.sendEmail(event.getEmail(), subject, message);

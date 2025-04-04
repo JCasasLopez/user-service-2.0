@@ -133,8 +133,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 		logger.info("Account status updated from {} to {} for user {} ", foundUser.getAccountStatus(), 
 				newAccountStatus, username);
 		
-		eventPublisher.publishEvent(new UpdateAccountStatusEvent(email, username,
-				newAccountStatus.getDisplayName()));
+		eventPublisher.publishEvent(new UpdateAccountStatusEvent(email, username, newAccountStatus));
 		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
 	
