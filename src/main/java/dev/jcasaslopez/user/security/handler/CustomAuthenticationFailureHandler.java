@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
@@ -17,6 +18,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
 import dev.jcasaslopez.user.enums.RedisKeyPrefix;
+import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.LoginAttemptService;
@@ -41,15 +43,17 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	private UserRepository userRepository;
 	private StandardResponseHandler standardResponseHandler;
 	private LoginAttemptService loginAttemptService;
+	private ApplicationEventPublisher eventPublisher;
 
 	public CustomAuthenticationFailureHandler(StringRedisTemplate redisTemplate, UserAccountService userAccountService,
 			UserRepository userRepository, StandardResponseHandler standardResponseHandler,
-			LoginAttemptService loginAttemptService) {
+			LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher) {
 		this.redisTemplate = redisTemplate;
 		this.userAccountService = userAccountService;
 		this.userRepository = userRepository;
 		this.standardResponseHandler = standardResponseHandler;
 		this.loginAttemptService = loginAttemptService;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Override
@@ -102,7 +106,9 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        	// Si se ha superado el número máximo de intentos fallidos, se bloquea la cuenta.
 	        	//
 	        	// If the maximum number of failed attempts is exceeded, the account is locked.
-	            user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
+	        	eventPublisher.publishEvent(new UpdateAccountStatusEvent
+            			(user.getEmail(), username, AccountStatus.TEMPORARILY_BLOCKED));
+	        	user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 	            userRepository.save(user);
 	            logger.warn("User {} account blocked due to too many failed attempts", username);
 	        } else {
