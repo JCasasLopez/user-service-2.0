@@ -1,12 +1,14 @@
 package dev.jcasaslopez.user.event;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
+
 public class UpdateAccountStatusEvent {
 	
 	private String email;
 	private String username;
-	private String newAccountStatus;
+	private AccountStatus newAccountStatus;
 	
-	public UpdateAccountStatusEvent(String email, String username, String newAccountStatus) {
+	public UpdateAccountStatusEvent(String email, String username, AccountStatus newAccountStatus) {
 		this.email = email;
 		this.username = username;
 		this.newAccountStatus = newAccountStatus;
@@ -20,7 +22,7 @@ public class UpdateAccountStatusEvent {
 		return username;
 	}
 
-	public String getNewAccountStatus() {
+	public AccountStatus getNewAccountStatus() {
 		return newAccountStatus;
 	}
 
