@@ -17,12 +17,12 @@ import org.springframework.stereotype.Component;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
-import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.LoginAttemptService;
 import dev.jcasaslopez.user.service.UserAccountService;
+import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -98,7 +98,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	    //
 	    // If the user has provided a username that is in the database, and that account 
 	    // is active, then the authentication has failed because the password was incorrect.
-	    String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
+	    String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 
 	    if (!redisTemplate.hasKey(redisKey)) {
 	        redisTemplate.opsForValue().set(redisKey, "1", accountLockedDuration, TimeUnit.SECONDS);

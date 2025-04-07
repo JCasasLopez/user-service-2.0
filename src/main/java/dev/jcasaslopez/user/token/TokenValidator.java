@@ -41,10 +41,9 @@ public class TokenValidator {
     // Verifica si el token ha sido revocado (está en la blacklist).
     //
     // Checks if the token has been revoked (is in the blacklist).
-    public boolean isTokenBlacklisted(String jti) {
-    	String redisKey = RedisKeyPrefix.BLACKLIST.of(jti);
+    public boolean isTokenBlacklisted(String redisKey) {
         boolean result = redisTemplate.hasKey(redisKey);
-        logger.debug("Blacklist check for jti {}: {}", jti, result);
+        logger.debug("Blacklist check for jti {}: {}", redisKey, result);
         return result;
     }
 

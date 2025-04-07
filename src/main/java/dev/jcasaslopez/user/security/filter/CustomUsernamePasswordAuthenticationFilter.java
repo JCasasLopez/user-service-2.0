@@ -11,11 +11,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.handler.CustomAuthenticationFailureHandler;
 import dev.jcasaslopez.user.service.UserAccountService;
+import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -54,7 +54,7 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	        logger.warn("Empty username received in login request");
 	        
 	    } else {
-	    	String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
+	    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 
 	        // Si no existe una entrada en Redis para este usuario (y su cuenta está bloqueada)
 	    	// significa que ha expirado el periodo de bloqueo y la cuenta puede ser 

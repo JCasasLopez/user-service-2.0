@@ -175,9 +175,8 @@ public class TokenServiceImpl implements TokenService {
 	}
 	
 	@Override
-	public void blacklistToken(String jti, long expirationInSeconds) {
-        logger.info("Blacklisting token with jti: {} for {} seconds", jti, expirationInSeconds);
-        String redisKey = RedisKeyPrefix.BLACKLIST.of(jti);
+	public void blacklistToken(String redisKey, long expirationInSeconds) {
+        logger.info("Blacklisting token with key: {} for {} seconds", redisKey, expirationInSeconds);
         redisTemplate.opsForValue().set(redisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
     }		
 }

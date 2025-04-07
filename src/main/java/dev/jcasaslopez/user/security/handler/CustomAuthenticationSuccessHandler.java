@@ -12,12 +12,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.service.LoginAttemptService;
 import dev.jcasaslopez.user.service.TokenService;
+import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -50,7 +50,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		// 
 		// Reset the failed login attempts counter by deleting its Redis entry.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
+		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		
 		// Si no existe esta entrada, no hay error.
 		//
@@ -66,7 +66,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		// Sube el token de refresco a Redis -> clave: refresh_token:username1.
 		//
 		// Persists refresh token in Redis -> key: refresh_token:username1.
-		String refreshTokenRedisKey = RedisKeyPrefix.REFRESH_TOKEN.of(username);
+		String refreshTokenJti = tokenService.getJtiFromToken(refreshToken);
+		String refreshTokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + refreshTokenJti;
 		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.REFRESH) * 60;		
 		redisTemplate.opsForValue().set(refreshTokenRedisKey, TokenType.REFRESH.prefix(), 
 				expirationInSeconds, TimeUnit.SECONDS);
