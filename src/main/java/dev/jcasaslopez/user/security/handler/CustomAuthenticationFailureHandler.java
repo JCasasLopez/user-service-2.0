@@ -93,6 +93,11 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
             return;
         }
 
+	    // Si el usuario ha proporcionado un username y este está en la base de datos, 
+	    // y la cuenta está activa, entonces el problema es que la contraseña es incorrecta.
+	    //
+	    // If the user has provided a username that is in the database, and that account 
+	    // is active, then the authentication has failed because the password was incorrect.
 	    String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
 
 	    if (!redisTemplate.hasKey(redisKey)) {
