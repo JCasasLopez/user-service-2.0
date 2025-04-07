@@ -56,20 +56,18 @@ public class TokenServiceImpl implements TokenService {
 		key = Keys.hmacShaKeyFor(keyBytes);
 		logger.info("TokenService initialized with decoded secret key");
 	}
-    
+	
+	// Se usa tanto para tokens de acceso como para los de refrescado.
+	//
+    // Used both for access and refreshed tokens.
 	@Override
-	public String createTokenUserAuthenticated(TokenType tokenType) {
-		logger.info("Creating token for type: {}", tokenType);
+	public String createAccessToken(TokenType tokenType) {
+		logger.info("Creating token type: {}", tokenType);
 		
-		// tokensLifetimes.getTokensLifetimes() devuelve un Map<TokenType, Integer>.
-		//
-		// tokensLifetimes.getTokensLifetimes() returns a Map<TokenType, Integer>.
+		// tokensLifetimes.getTokensLifetimes() -> Map<TokenType, Integer>.
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
 		Authentication authenticated = SecurityContextHolder.getContext().getAuthentication();
 		
-		// ID único que identifica el token (más práctico que el token completo).
-		//
-		// Unique ID to identify the token (more practical than the token itself).
 		String jti = UUID.randomUUID().toString();
 		logger.debug("Authenticated user: {}, JTI: {}", authenticated.getName(), jti);
 		
@@ -78,29 +76,29 @@ public class TokenServiceImpl implements TokenService {
 				.claim("roles",
 						authenticated.getAuthorities().stream().map(GrantedAuthority::getAuthority)
 								.collect(Collectors.toList()))
+				.claim("purpose", tokenType)
 				.issuedAt(new Date(System.currentTimeMillis()))
 				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds)).signWith(key, Jwts.SIG.HS256)
 				.compact();
 		
-		logger.info("Token created successfully for user: {}", authenticated.getName());
+		logger.info("Token issued successfully for user: {}", authenticated.getName());
 		return token;
 	}
 	
 	@Override
-	public String createTokenUserNotAuthenticated(TokenType tokenType, String username) {
-		logger.info("Creating token for type: {}", tokenType);
+	public String createVerificationToken() {
+		logger.debug("Creating verification token");
 	
-		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
-		String jti = UUID.randomUUID().toString();
-		logger.debug("Username: {}, JTI: {}", username, jti);
-		
-		String token = Jwts.builder().header().type("JWT").and().subject(username)
+		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60 * 1000;		
+		String jti = UUID.randomUUID().toString();		
+		String token = Jwts.builder().header().type("JWT").and().subject(null)
 				.id(jti)
+				.claim("purpose", TokenType.VERIFICATION)
 				.issuedAt(new Date(System.currentTimeMillis()))
 				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds)).signWith(key, Jwts.SIG.HS256)
 				.compact();
 		
-		logger.info("Token created successfully for user: {}", username);
+		logger.debug("Verification token issued successfully. jti: {}", jti);
 		return token;
 	}
 
