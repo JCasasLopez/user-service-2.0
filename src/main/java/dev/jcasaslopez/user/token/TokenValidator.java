@@ -23,29 +23,6 @@ public class TokenValidator {
 		this.tokenService = tokenService;
 	}
 
-	// Verifica que el token sea técnicamente válido, esté en la whitelist y no en la blacklist.
-	// Devuelve las Claims si todo es correcto; de lo contrario, Optional.empty().
-	//
-	// Verifies that the token is technically valid, whitelisted, and not blacklisted.
-	// Returns the Claims if everything is valid; otherwise, Optional.empty().
-	public Optional<Claims> isTokenFullyValid(String token) {
-	    logger.debug("Validating token...");
-
-	    Optional<Claims> optionalClaims = getValidClaims(token);
-	    if (optionalClaims.isEmpty()) {
-	        return Optional.empty();
-	    }
-
-	    Claims claims = optionalClaims.get();
-	    String jti = claims.getId();
-
-	    if (isTokenWhitelisted(jti) && !isTokenBlacklisted(jti)) {
-	        return optionalClaims;
-	    }
-
-	    return Optional.empty();
-	}
-
 	// Parsea y valida las claims del token (firma, expiración, etc.).
 	// Devuelve Optional.empty() si el token no es técnicamente válido.
 	//
@@ -61,16 +38,6 @@ public class TokenValidator {
 	    }
 	}
 
-    // Verifica si el token está en la whitelist (emitido por este servicio).
-    //
-    // Checks if the token is in the whitelist (issued by this service).
-    public boolean isTokenWhitelisted(String jti) {
-    	String redisKey = RedisKeyPrefix.WHITELIST.of(jti);
-        boolean result = redisTemplate.hasKey(redisKey);
-        logger.debug("Whitelist check for jti {}: {}", jti, result);
-        return result;
-    }
-    
     // Verifica si el token ha sido revocado (está en la blacklist).
     //
     // Checks if the token has been revoked (is in the blacklist).
