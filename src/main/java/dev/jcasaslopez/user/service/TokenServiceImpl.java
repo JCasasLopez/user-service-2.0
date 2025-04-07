@@ -61,7 +61,7 @@ public class TokenServiceImpl implements TokenService {
 	//
     // Used both for access and refreshed tokens.
 	@Override
-	public String createAccessToken(TokenType tokenType) {
+	public String createAuthToken(TokenType tokenType) {
 		logger.info("Creating token type: {}", tokenType);
 		
 		// tokensLifetimes.getTokensLifetimes() -> Map<TokenType, Integer>.
