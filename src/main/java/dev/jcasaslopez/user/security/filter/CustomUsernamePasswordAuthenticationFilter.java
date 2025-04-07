@@ -56,15 +56,16 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	    } else {
 	    	String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
 
-	        // Si no existe una entrada en Redis para este usuario, significa que ha expirado
-			// el periodo de bloqueo y la cuenta puede ser reactivada automáticamente.
+	        // Si no existe una entrada en Redis para este usuario (y su cuenta está bloqueada)
+	    	// significa que ha expirado el periodo de bloqueo y la cuenta puede ser 
+	    	// reactivada automáticamente.
 			//
-			// If there is no Redis entry for this user, it means the lock period has expired
-			// and the account can be automatically reactivated.
+			// If there is no Redis entry for this user (and his account is blocked)
+	    	// it means the lock period has expired and the account can be 
+	    	// automatically reactivated.
 	        if (!redisTemplate.hasKey(redisKey)) {
 	            try {
 	                User user = userAccountService.findUser(username);
-	                
 	                if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
 	                	eventPublisher.publishEvent(new UpdateAccountStatusEvent
 	                			(user.getEmail(), username, AccountStatus.ACTIVE));
