@@ -147,10 +147,7 @@ public class TokenServiceImpl implements TokenService {
 		Optional<Claims> optionalClaims = tokenValidator.getValidClaims(token);
 		String tokenJti = getJtiFromToken(token);
 		
-		// Si el token es válido y está en la "whitelist", hay que revocarlo.
-		//
-		// If the token is valid and is in the "whitelist", it has to be blacklisted.
-		if(optionalClaims.isPresent() && tokenValidator.isTokenWhitelisted(tokenJti)) {
+		if(optionalClaims.isPresent()) {
 		    Date expirationTime = optionalClaims.get().getExpiration();
 		    Date currentTime = new Date(System.currentTimeMillis());
 		    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
@@ -163,11 +160,9 @@ public class TokenServiceImpl implements TokenService {
 		 	blacklistToken(tokenJti, expirationInSeconds);
 		}
 		
-		// Si el token no es válido o no está en la "whitelist", no se revoca, y se continúa con el 
-		// logout igualmente.
+		// Si el token no es válido no hay que revocarlo, y se continúa con el logout igualmente.
 		//
-		// If the token is not valid or is not in the whitelist, it does not have to revoked, 
-		// and we continue with the logout process.
+		// If the token is not valid, does not have to revoked, and we continue with the logout process.
 	    SecurityContextHolder.getContext().setAuthentication(null);
 		logger.info("User has been logged out");
 	}
@@ -184,6 +179,5 @@ public class TokenServiceImpl implements TokenService {
         logger.info("Blacklisting token with jti: {} for {} seconds", jti, expirationInSeconds);
         String redisKey = RedisKeyPrefix.BLACKLIST.of(jti);
         redisTemplate.opsForValue().set(redisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
-    }	
-	
+    }		
 }
