@@ -17,10 +17,8 @@ public class TokensLifetimesConfiguration {
 	
 	private static final Logger logger = LoggerFactory.getLogger(TokensLifetimesConfiguration.class);
 	
-	@Value("${jwt.lifetimes.verifyEmailToken}") 
-	private int verifyEmailToken;
-    @Value("${jwt.lifetimes.passwordResetToken}") 
-    private int passwordResetToken;
+    @Value("${jwt.lifetimes.verificationToken}") 
+    private int verificationToken;
     @Value("${jwt.lifetimes.accessToken}") 
     private int accessToken;
     @Value("${jwt.lifetimes.refreshToken}") 
@@ -34,8 +32,7 @@ public class TokensLifetimesConfiguration {
     //
     // It is initialized here because the @Value values are assigned after dependency injection.
 		tokensLifetimes = Map.of(
-			    TokenType.VERIFY_EMAIL, verifyEmailToken,
-			    TokenType.PASSWORD_RESET, passwordResetToken,
+			    TokenType.VERIFICATION, verificationToken,
 			    TokenType.ACCESS, accessToken,
 			    TokenType.REFRESH, refreshToken
 			);

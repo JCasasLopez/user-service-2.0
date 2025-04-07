@@ -63,9 +63,9 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
 		List<String> refreshAndAccessTokens = List.of(refreshToken, accessToken);
 
-		// Sube el token de refresco a Redis -> clave: refresh_token:username1.
+		// Sube el token de refresco a Redis -> clave: refresh_token:jti.
 		//
-		// Persists refresh token in Redis -> key: refresh_token:username1.
+		// Persists refresh token in Redis -> key: refresh_token:jti.
 		String refreshTokenJti = tokenService.getJtiFromToken(refreshToken);
 		String refreshTokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + refreshTokenJti;
 		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.REFRESH) * 60;		
