@@ -2,8 +2,8 @@ package dev.jcasaslopez.user.enums;
 
 public enum RedisKeyPrefix {
     LOGIN_ATTEMPTS("login_attempts"),
-    WHITELIST("whitelist"),
-    BLACKLIST("blacklist");
+    BLACKLIST("blacklist"),
+    REFRESH_TOKEN("refresh_token");
 
     private final String prefix;
 
@@ -11,12 +11,12 @@ public enum RedisKeyPrefix {
         this.prefix = prefix;
     }
 
-    // String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
+    // String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username); -> login_attempts:username1
     public String of(String keyPart) {
         return prefix + ":" + keyPart;
     }
 
-    // String prefix = RedisKeyPrefix.WHITELIST.prefix();
+    // String prefix = RedisKeyPrefix.LOGIN_ATTEMPTS.prefix(); -> login_attempts
     public String prefix() {
         return prefix;
     }
