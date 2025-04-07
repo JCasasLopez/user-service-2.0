@@ -33,7 +33,7 @@ public class StandardResponseHandler {
   }
   
   public HttpServletResponse handleResponse(HttpServletResponse response, int status, 
-  																String message, String details) throws IOException {
+  																String message, Object details) throws IOException {
   	response.setContentType("application/json");
   	response.setCharacterEncoding("UTF-8");
   	response.setStatus(status);
