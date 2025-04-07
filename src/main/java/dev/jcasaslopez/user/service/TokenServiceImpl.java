@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.token.TokenValidator;
+import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -156,7 +157,8 @@ public class TokenServiceImpl implements TokenService {
 		    // Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
 		    long expirationInSeconds = Math.max(1, remainingMillis / 1000); 
 			logger.debug("Blacklisting token with JTI {} for {} seconds", tokenJti, expirationInSeconds);
-		 	blacklistToken(tokenJti, expirationInSeconds);
+		 	String tokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
+			blacklistToken(tokenRedisKey, expirationInSeconds);
 		}
 		
 		// Si el token no es válido no hay que revocarlo, y se continúa con el logout igualmente.
