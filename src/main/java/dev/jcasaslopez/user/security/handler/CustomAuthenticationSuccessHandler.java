@@ -1,6 +1,8 @@
 package dev.jcasaslopez.user.security.handler;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +13,11 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import dev.jcasaslopez.user.enums.RedisKeyPrefix;
+import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
+import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.service.LoginAttemptService;
+import dev.jcasaslopez.user.service.TokenService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,12 +30,17 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 	private StringRedisTemplate redisTemplate;
 	private StandardResponseHandler standardResponseHandler;
 	private LoginAttemptService loginAttemptService;
+	private TokenService tokenService;
+	private TokensLifetimes tokensLifetimes;
 
 	public CustomAuthenticationSuccessHandler(StringRedisTemplate redisTemplate,
-			StandardResponseHandler standardResponseHandler, LoginAttemptService loginAttemptService) {
+			StandardResponseHandler standardResponseHandler, LoginAttemptService loginAttemptService,
+			TokenService tokenService, TokensLifetimes tokensLifetimes) {
 		this.redisTemplate = redisTemplate;
 		this.standardResponseHandler = standardResponseHandler;
 		this.loginAttemptService = loginAttemptService;
+		this.tokenService = tokenService;
+		this.tokensLifetimes = tokensLifetimes;
 	}
 
 	@Override
@@ -41,11 +51,32 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		// Reset the failed login attempts counter by deleting its Redis entry.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		String redisKey = RedisKeyPrefix.LOGIN_ATTEMPTS.of(username);
+		
+		// Si no existe esta entrada, no hay error.
+		//
+		// If there is no such entry, no error/exception is thrown.
 		redisTemplate.delete(redisKey);
 		
 		loginAttemptService.recordAttempt(true, request.getRemoteAddr(), null);
 		
+		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
+		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
+		List<String> refreshAndAccessTokens = List.of(refreshToken, accessToken);
+
+		// Sube el token de refresco a Redis -> clave: refresh_token:username1.
+		//
+		// Persists refresh token in Redis -> key: refresh_token:username1.
+		String refreshTokenRedisKey = RedisKeyPrefix.REFRESH_TOKEN.of(username);
+		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.REFRESH) * 60;		
+		redisTemplate.opsForValue().set(refreshTokenRedisKey, TokenType.REFRESH.prefix(), 
+				expirationInSeconds, TimeUnit.SECONDS);
+
 		logger.info("Login successful for user '{}'. Attempts reset and login attempt persisted.", username);
-		standardResponseHandler.handleResponse(response, 200, "Login attempt successful", null);
+		
+		// Devuelve los tokens en la respuesta.
+		//
+		// Returns tokens in the response.
+		standardResponseHandler.handleResponse(response, 200, "Login attempt successful", 
+				refreshAndAccessTokens);
 	}
 }
