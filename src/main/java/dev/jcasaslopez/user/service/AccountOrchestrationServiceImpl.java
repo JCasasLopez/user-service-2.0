@@ -1,5 +1,6 @@
 package dev.jcasaslopez.user.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +35,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.http.HttpServletRequest;
 
 @Service
-public class AccountOrchestrationServiceImpl {
+public class AccountOrchestrationServiceImpl implements AccountOrchestrationService {
 	
 	private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
 	
@@ -68,6 +69,7 @@ public class AccountOrchestrationServiceImpl {
 		this.emailService = emailService;
 	}
 
+	@Override
 	public void initiateRegistration(UserDto user) throws JsonProcessingException {
 		String verifyEmailToken = tokenService.createVerificationToken();
 		String tokenJti = tokenService.getJtiFromToken(verifyEmailToken);
@@ -93,6 +95,7 @@ public class AccountOrchestrationServiceImpl {
 		logger.info("Redis entry uploaded. RedisKey:{}", redisKey);
 	}
 	
+	@Override
 	public void userRegistration(HttpServletRequest request) throws JsonMappingException, JsonProcessingException {
 		// Hemos establecido el token como stributo en AuthenticationFilter.
 		//
@@ -120,6 +123,7 @@ public class AccountOrchestrationServiceImpl {
 		logger.info("User account persisted successfully for {}", user.getUsername());
 	}
 	
+	@Override
 	public void deleteAccount() {
 		// Endpoint solo accesible a usuarios autenticados, así que Security Context tiene que 
 		// estar poblado.
@@ -131,6 +135,7 @@ public class AccountOrchestrationServiceImpl {
 		logger.info("Account deleted successfully for user {}", username);;
 	}
 	
+	@Override
 	public void forgotPassword(String email) {
 		UserDto user = userMapper.userToUserDtoMapper(userAccountService.findUserByEmail(email));
 		String resetPasswordToken = tokenService.createVerificationToken();
@@ -140,6 +145,7 @@ public class AccountOrchestrationServiceImpl {
 	    logger.debug("Forgot password event published for user: {}", user.getUsername());
 	}
 	
+	@Override
 	public void resetPassword(String newPassword, HttpServletRequest request) {
 		// Hemos establecido el token como stributo en AuthenticationFilter.
 		//
@@ -156,6 +162,7 @@ public class AccountOrchestrationServiceImpl {
 		logger.debug("Change password event published for user: {}", user.getUsername());
 	}
 	
+	@Override
 	public void changePassword(String newPassword, String oldPassword) {
 		logger.debug("Calling changePassword() in User Details Service...");
 		userDetailsManager.changePassword(oldPassword, newPassword);
@@ -168,11 +175,13 @@ public class AccountOrchestrationServiceImpl {
 		logger.debug("Change password event published for user: {}", user.getUsername());
 	}
 	
+	@Override
 	public void upgradeUser(String email) {
 		logger.debug("Calling upgradeUser() in User Account Service...");
 		userAccountService.upgradeUser(email);
 	}
 	
+	@Override
 	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User user = userAccountService.findUserByEmail(email);
 		String username = user.getUsername();
@@ -185,8 +194,25 @@ public class AccountOrchestrationServiceImpl {
 		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
 	
+	@Override
 	public void sendNotification(Map<String, String> messageAsMap) {
 		logger.debug("Calling processMessageDetails() in Email Service...");
 		emailService.processMessageDetails(messageAsMap);
+	}
+	
+	@Override
+	public List<String> refreshToken(){
+		logger.debug("Creating access token...");
+		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
+		logger.debug("Creating refresh token...");
+		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
+		
+		String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenService.getJtiFromToken(refreshToken);
+		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.REFRESH) * 60;		
+		redisTemplate.opsForValue().set(redisKey, TokenType.REFRESH.prefix(), expirationInSeconds, 
+				TimeUnit.SECONDS);
+		logger.info("Refresh token uploaded in Redis with key {}", redisKey);
+		
+		return List.of(accessToken, refreshToken);
 	}
 }

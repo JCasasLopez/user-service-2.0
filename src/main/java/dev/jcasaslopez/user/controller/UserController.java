@@ -1,6 +1,7 @@
 package dev.jcasaslopez.user.controller;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -124,6 +125,14 @@ public class UserController {
 		accountOrchestrationService.sendNotification(messageAsMap);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Notification sent successfully", null, HttpStatus.OK);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+	
+	@PostMapping(value  = Constants.REFRESH_TOKEN_PATH)
+	public ResponseEntity<StandardResponse> refreshToken() {
+		List<String> tokens = accountOrchestrationService.refreshToken();
+		StandardResponse response = new StandardResponse(LocalDateTime.now(),
+				"New refresh and access tokens sent successfully", tokens, HttpStatus.OK);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 }
