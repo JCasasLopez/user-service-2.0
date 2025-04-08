@@ -186,7 +186,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole(' ADMIN')")
 	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User user = userAccountService.findUserByEmail(email);
 		String username = user.getUsername();
