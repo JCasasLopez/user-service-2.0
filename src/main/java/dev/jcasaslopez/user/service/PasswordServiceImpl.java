@@ -4,16 +4,12 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.event.ChangePasswordEvent;
-import dev.jcasaslopez.user.event.ResetPasswordEvent;
-import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
 
 @Service
@@ -28,20 +24,13 @@ public class PasswordServiceImpl implements PasswordService {
 	Pattern pattern = Pattern.compile(PASSWORD_PATTERN);
 
 	private UserRepository userRepository;
-	private UserMapper userMapper;
 	private PasswordEncoder passwordEncoder;
-	private TokenService tokenService;
-	private ApplicationEventPublisher eventPublisher;
 	private UserAccountService userAccountService;
 	
-	public PasswordServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder,
-			TokenService tokenService, ApplicationEventPublisher eventPublisher,
+	public PasswordServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder,
 			UserAccountService userAccountService) {
 		this.userRepository = userRepository;
-		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
-		this.tokenService = tokenService;
-		this.eventPublisher = eventPublisher;
 		this.userAccountService = userAccountService;
 	}
 
@@ -56,18 +45,23 @@ public class PasswordServiceImpl implements PasswordService {
 		// this method is only accessible to authenticated users.
 		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
 		String username = currentUser.getName();
-		logger.info("User {} found in Security Context", username);
-		if (!passwordEncoder.matches(oldPassword, userAccountService.findUser(username).getPassword())) {
+		User user = userAccountService.findUser(username);
+		logger.info("User {} found in the database", username);
+	
+		boolean oldPasswordMatchProvidedOne = passwordEncoder.matches(oldPassword, user.getPassword());
+		if (!oldPasswordMatchProvidedOne) {
 			logger.info("Provided old password does not match the one in the database");
 			throw new IllegalArgumentException
 				("The provided password does not match the one in the database");
 		}
+		
+		boolean newPasswordSameAsOldOne = passwordEncoder.matches(newPassword, user.getPassword());
+		if(newPasswordSameAsOldOne) {
+			throw new IllegalArgumentException("The new password has to be different from the old one");
+		}
+		
 		userRepository.updatePassword(username, passwordEncoder.encode(newPassword));
 		logger.info("Password updated successfully");
-		
-		String email = userAccountService.findUser(username).getEmail();
-		eventPublisher.publishEvent(new ChangePasswordEvent(email, username));
-		logger.debug("ChangePasswordEvent published for user: {}", username);
 	}
 
 	// Aunque resetPassword() y changePassword() son superficialmente similares,
@@ -78,17 +72,16 @@ public class PasswordServiceImpl implements PasswordService {
 	// latter operates with the user already authenticated. Also, their method signatures differ:
 	// resetPassword() does not need to verify if the old password matches.
 	@Override
-	public void resetPassword(String newPassword, String token) {
+	public void resetPassword(String newPassword, User user) {
 		passwordIsValid(newPassword);
-		String username = tokenService.parseClaims(token).getSubject();
-		User user = userAccountService.findUser(username);
-		logger.debug("User {} found. Encoding new password...", username);
-		String encodedPassword = passwordEncoder.encode(newPassword);
-		user.setPassword(encodedPassword);
-		userRepository.save(user);
-		logger.info("Password reset successfully");
-		eventPublisher.publishEvent(new ResetPasswordEvent(userMapper.userToUserDtoMapper(user)));
-		logger.debug("ResetPasswordEvent published for user: {}", username);
+		
+		boolean newPasswordSameAsOldOne = passwordEncoder.matches(newPassword, user.getPassword());
+		if(newPasswordSameAsOldOne) {
+			throw new IllegalArgumentException("The new password has to be different from the old one");
+		}
+		
+		userRepository.updatePassword(user.getUsername(), passwordEncoder.encode(newPassword));
+		logger.info("Password updated successfully");
 	}
 	
 	@Override

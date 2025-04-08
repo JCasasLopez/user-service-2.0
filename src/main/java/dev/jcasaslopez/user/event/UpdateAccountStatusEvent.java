@@ -1,27 +1,22 @@
 package dev.jcasaslopez.user.event;
 
+import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
 public class UpdateAccountStatusEvent {
 	
-	private String email;
-	private String username;
+	private User user;
 	private AccountStatus newAccountStatus;
 	
-	public UpdateAccountStatusEvent(String email, String username, AccountStatus newAccountStatus) {
-		this.email = email;
-		this.username = username;
+	public UpdateAccountStatusEvent(User user, AccountStatus newAccountStatus) {
+		this.user = user;
 		this.newAccountStatus = newAccountStatus;
 	}
 
-	public String getEmail() {
-		return email;
+	public User getUser() {
+		return user;
 	}
-
-	public String getUsername() {
-		return username;
-	}
-
+	
 	public AccountStatus getNewAccountStatus() {
 		return newAccountStatus;
 	}

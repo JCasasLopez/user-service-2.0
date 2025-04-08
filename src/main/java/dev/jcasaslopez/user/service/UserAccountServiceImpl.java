@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,6 @@ import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.repository.UserRepository;
 
@@ -23,11 +21,9 @@ public class UserAccountServiceImpl implements UserAccountService {
 	private static final Logger logger = LoggerFactory.getLogger(UserAccountServiceImpl.class);
 	
 	private UserRepository userRepository;
-	private ApplicationEventPublisher eventPublisher;
 
-	public UserAccountServiceImpl(UserRepository userRepository, ApplicationEventPublisher eventPublisher) {
+	public UserAccountServiceImpl(UserRepository userRepository) {
 		this.userRepository = userRepository;
-		this.eventPublisher = eventPublisher;
 	}
 
 	@Override
@@ -77,32 +73,27 @@ public class UserAccountServiceImpl implements UserAccountService {
 	
 	@Override
 	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
-		User foundUser = findUserByEmail(email);
-		String username = foundUser.getUsername();
+	public void updateAccountStatus(User user, AccountStatus newAccountStatus) {
+		String username = user.getUsername();
 		
 		if (newAccountStatus == null) {
 			logger.warn("Received null account status for user '{}'", username);
 		    throw new IllegalArgumentException("Account status cannot be null");
 		}
 		
-		if(foundUser.getAccountStatus() == AccountStatus.PERMANENTLY_SUSPENDED) {
+		if(user.getAccountStatus() == AccountStatus.PERMANENTLY_SUSPENDED) {
 	        logger.info("User '{}' has a permanently suspended account; status change ignored", username);
 			throw new AccountStatusException("Cannot change status: the account is permanently suspended");
 		}
 		
-		if(foundUser.getAccountStatus() == newAccountStatus) {
+		if(user.getAccountStatus() == newAccountStatus) {
 			logger.debug("No status change needed for user '{}': status already '{}'", 
                     username, newAccountStatus);
 			throw new AccountStatusException("The account already has the specified status");
 		}
 		
 		userRepository.updateAccountStatus(username, newAccountStatus);
-		logger.info("Account status updated from {} to {} for user {} ", foundUser.getAccountStatus(), 
+		logger.info("Account status updated from {} to {} for user {} ", user.getAccountStatus(), 
 				newAccountStatus, username);
-		
-		eventPublisher.publishEvent(new UpdateAccountStatusEvent(email, username, newAccountStatus));
-		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
-	
 }

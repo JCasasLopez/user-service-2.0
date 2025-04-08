@@ -23,6 +23,6 @@ public interface UserAccountService {
 	// Allows changing the status of an account, either by temporarily suspending it or 
 	// permanently deactivating it. This method is typically used in cases such as administrative 
 	// issues, suspicious activity, etc.
-	void updateAccountStatus(String email, AccountStatus accountStatus);
+	void updateAccountStatus(User user, AccountStatus accountStatus);
 
 }

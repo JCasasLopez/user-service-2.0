@@ -1,16 +1,16 @@
 package dev.jcasaslopez.user.event;
 
-import dev.jcasaslopez.user.dto.UserDto;
+import dev.jcasaslopez.user.entity.User;
 
 public class ResetPasswordEvent {
 	
-	private UserDto user;
+	private User user;
 
-	public ResetPasswordEvent(UserDto user) {
+	public ResetPasswordEvent(User user) {
 		this.user = user;
 	}
 
-	public UserDto getUser() {
+	public User getUser() {
 		return user;
 	}
 

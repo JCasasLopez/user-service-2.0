@@ -1,21 +1,17 @@
 package dev.jcasaslopez.user.event;
 
+import dev.jcasaslopez.user.entity.User;
+
 public class ChangePasswordEvent {
 	
-	private String email;
-	private String username;
-	
-	public ChangePasswordEvent(String email, String username) {
-		this.email = email;
-		this.username = username;
+	private User user;
+
+	public ChangePasswordEvent(User user) {
+		this.user = user;
 	}
 
-	public String getEmail() {
-		return email;
-	}
-
-	public String getUsername() {
-		return username;
+	public User getUser() {
+		return user;
 	}
 
 }

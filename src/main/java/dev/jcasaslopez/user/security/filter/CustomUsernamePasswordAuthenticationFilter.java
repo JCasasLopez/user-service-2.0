@@ -68,7 +68,7 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	                User user = userAccountService.findUser(username);
 	                if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
 	                	eventPublisher.publishEvent(new UpdateAccountStatusEvent
-	                			(user.getEmail(), username, AccountStatus.ACTIVE));
+	                			(user, AccountStatus.ACTIVE));
 	                    user.setAccountStatus(AccountStatus.ACTIVE);
 	                    userRepository.save(user);
 	                    logger.info("User {} reactivated after lock expiration", username);

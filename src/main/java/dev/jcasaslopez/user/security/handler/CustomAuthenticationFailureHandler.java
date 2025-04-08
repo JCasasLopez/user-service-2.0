@@ -112,7 +112,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        	//
 	        	// If the maximum number of failed attempts is exceeded, the account is locked.
 	        	eventPublisher.publishEvent(new UpdateAccountStatusEvent
-            			(user.getEmail(), username, AccountStatus.TEMPORARILY_BLOCKED));
+            			(user, AccountStatus.TEMPORARILY_BLOCKED));
 	        	user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 	            userRepository.save(user);
 	            logger.warn("User {} account blocked due to too many failed attempts", username);
