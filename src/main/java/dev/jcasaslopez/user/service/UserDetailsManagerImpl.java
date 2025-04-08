@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -52,6 +53,7 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 			//
 			// Assign default role ROLE_USER as per business rules.
 			userJPA.getRoles().add(new Role(RoleName.ROLE_USER));
+			userJPA.setAccountStatus(AccountStatus.ACTIVE);
 			userRepository.save(userJPA);
 		    logger.info("New user created with username: {}", userJPA.getUsername());
 		} else {
