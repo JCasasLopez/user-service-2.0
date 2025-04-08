@@ -1,19 +1,9 @@
 package dev.jcasaslopez.user.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 
 public interface UserAccountService {
-	
-	// Crea una cuenta de usuario a partir de un token previamente generado en initiateRegistration.
-	// Recupera el usuario desde Redis, lanza un evento y registra al usuario en el sistema.
-	//
-	// Creates a user account from a token previously generated in initiateRegistration.
-	// Retrieves the user from Redis, publishes an event, and registers the user in the system.
-	void createAccount(String token) throws JsonMappingException, JsonProcessingException;
 
 	User findUser(String username);
 

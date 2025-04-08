@@ -5,24 +5,14 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RedisKeyPrefix;
 import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.event.CreateAccountEvent;
 import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -33,33 +23,11 @@ public class UserAccountServiceImpl implements UserAccountService {
 	private static final Logger logger = LoggerFactory.getLogger(UserAccountServiceImpl.class);
 	
 	private UserRepository userRepository;
-	private UserDetailsManager userDetailsManager;
-	private ObjectMapper objectMapper;
-	private TokenService tokenService;
-    private StringRedisTemplate redisTemplate;
 	private ApplicationEventPublisher eventPublisher;
 
-	public UserAccountServiceImpl(UserRepository userRepository, UserDetailsManager userDetailsManager,
-			ObjectMapper objectMapper, TokenService tokenService, StringRedisTemplate redisTemplate,
-			ApplicationEventPublisher eventPublisher) {
+	public UserAccountServiceImpl(UserRepository userRepository, ApplicationEventPublisher eventPublisher) {
 		this.userRepository = userRepository;
-		this.userDetailsManager = userDetailsManager;
-		this.objectMapper = objectMapper;
-		this.tokenService = tokenService;
-		this.redisTemplate = redisTemplate;
 		this.eventPublisher = eventPublisher;
-	}
-	
-	@Override
-	public void createAccount(String token) throws JsonMappingException, JsonProcessingException {
-		String redisKey = RedisKeyPrefix.WHITELIST.of(tokenService.getJtiFromToken(token));
-		String userJson = redisTemplate.opsForValue().get(redisKey);
-	    UserDto user = objectMapper.readValue(userJson, UserDto.class);
-	    eventPublisher.publishEvent(new CreateAccountEvent(user));
-	    // Los atributos ya se han validado con la llamada al endpoint "initiateRegistration".
-	 	//
-	 	// The attributes have already been validated during the call to the "initiateRegistration" endpoint.
-		userDetailsManager.createUser((UserDetails) user);
 	}
 
 	@Override
