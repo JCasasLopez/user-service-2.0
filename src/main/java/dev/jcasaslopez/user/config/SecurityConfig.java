@@ -84,10 +84,10 @@ public class SecurityConfig {
             .logout(logout -> logout.disable()) 
             .authorizeHttpRequests(authorize -> authorize
             							.requestMatchers(
+            									Constants.INITIATE_REGISTRATION_PATH,
             									Constants.REGISTRATION_PATH,
             									Constants.FORGOT_PASSWORD_PATH,
-            									"/userRegistration",
-            									"/resetPassword",
+            									Constants.RESET_PASSWORD_PATH,
             									Constants.REFRESH_TOKEN_PATH
             													).permitAll() 
             							.requestMatchers(

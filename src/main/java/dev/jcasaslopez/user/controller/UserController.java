@@ -36,7 +36,7 @@ public class UserController {
 		this.accountOrchestrationService = accountOrchestrationService;
 	}
 
-	@PostMapping(value = Constants.REGISTRATION_PATH, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(value = Constants.INITIATE_REGISTRATION_PATH, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<StandardResponse> initiateRegistration(@Valid @RequestBody UserDto user) 
 			throws JsonProcessingException{
 		accountOrchestrationService.initiateRegistration(user);
@@ -45,7 +45,7 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	@PostMapping(value = "/userRegistration")
+	@PostMapping(value = Constants.REGISTRATION_PATH)
 	public ResponseEntity<StandardResponse> createAccount(HttpServletRequest request) 
 			throws JsonMappingException, JsonProcessingException{
 		accountOrchestrationService.userRegistration(request);
@@ -70,7 +70,7 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	@PostMapping(value = "/resetPassword")
+	@PostMapping(value = Constants.RESET_PASSWORD_PATH)
 	public ResponseEntity<StandardResponse> resetPassword(@RequestParam String newPassword, 
 			HttpServletRequest request) {
 		accountOrchestrationService.resetPassword(newPassword, request);
