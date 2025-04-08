@@ -1,6 +1,7 @@
 package dev.jcasaslopez.user.security.filter;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -66,6 +67,19 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			        !tokenValidator.isTokenBlacklisted(token) &&
 			        purposeStr.equals(TokenType.REFRESH.name())) {
 					logger.info("Valid refresh token received");
+					
+					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
+					// en el siguiente paso (controller -> AccountOrchestrationService).
+					//
+					// We have to revoke the token, since the system will issue a new one
+					// in the next step (controller -> AccountOrchestrationService).
+					String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenService.getJtiFromToken(token);					
+					Date expirationTime = tokenService.parseClaims(token).getExpiration();
+					Date currentTime = new Date(System.currentTimeMillis());
+				    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
+					tokenService.blacklistToken(redisKey, remainingMillis);
+					logger.info("Old refresh token revoked successfully");
+					
 			        filterChain.doFilter(request, response);
 			        return;
 			    }
