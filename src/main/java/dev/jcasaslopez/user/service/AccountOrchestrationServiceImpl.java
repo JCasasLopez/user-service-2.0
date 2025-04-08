@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -124,6 +125,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@PreAuthorize("#username == authentication.principal.username")
 	public void deleteAccount() {
 		// Endpoint solo accesible a usuarios autenticados, así que Security Context tiene que 
 		// estar poblado.
@@ -163,6 +165,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@PreAuthorize("#username == authentication.principal.username")
 	public void changePassword(String newPassword, String oldPassword) {
 		logger.debug("Calling changePassword() in User Details Service...");
 		userDetailsManager.changePassword(oldPassword, newPassword);
@@ -176,12 +179,14 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@PreAuthorize("hasRole('ROLE_SUPERADMIN')")
 	public void upgradeUser(String email) {
 		logger.debug("Calling upgradeUser() in User Account Service...");
 		userAccountService.upgradeUser(email);
 	}
 	
 	@Override
+	@PreAuthorize("hasRole('ADMIN')")
 	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User user = userAccountService.findUserByEmail(email);
 		String username = user.getUsername();
@@ -195,12 +200,14 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@PreAuthorize("#username == authentication.principal.username")
 	public void sendNotification(Map<String, String> messageAsMap) {
 		logger.debug("Calling processMessageDetails() in Email Service...");
 		emailService.processMessageDetails(messageAsMap);
 	}
 	
 	@Override
+	@PreAuthorize("#username == authentication.principal.username")
 	public List<String> refreshToken(){
 		logger.debug("Creating access token...");
 		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);

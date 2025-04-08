@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -53,7 +52,6 @@ public class UserAccountServiceImpl implements UserAccountService {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('ROLE_SUPERADMIN')")
 	public void upgradeUser(String email) {
 		// Se asigna ROLE_USER por defecto; si hay otro rol, tiene que ser ROLE_ADMIN.
 		// 
@@ -72,7 +70,6 @@ public class UserAccountServiceImpl implements UserAccountService {
 	}
 	
 	@Override
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public void updateAccountStatus(User user, AccountStatus newAccountStatus) {
 		String username = user.getUsername();
 		

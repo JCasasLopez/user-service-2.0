@@ -72,7 +72,6 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 	}
 
 	@Override
-	@PreAuthorize("#username == authentication.principal.username")
 	public void deleteUser(String username) {
 		accountService.findUser(username);
 		userRepository.deleteByUsername(username);
