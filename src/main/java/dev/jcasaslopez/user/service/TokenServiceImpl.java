@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
-import dev.jcasaslopez.user.token.TokenValidator;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -41,13 +40,10 @@ public class TokenServiceImpl implements TokenService {
 
 	private TokensLifetimes tokensLifetimes;
     private StringRedisTemplate redisTemplate;
-    private TokenValidator tokenValidator;
 
-	public TokenServiceImpl(TokensLifetimes tokensLifetimes, StringRedisTemplate redisTemplate,
-			TokenValidator tokenValidator) {
+	public TokenServiceImpl(TokensLifetimes tokensLifetimes, StringRedisTemplate redisTemplate) {
 		this.tokensLifetimes = tokensLifetimes;
 		this.redisTemplate = redisTemplate;
-		this.tokenValidator = tokenValidator;
 	}
 
 	@PostConstruct
@@ -102,6 +98,7 @@ public class TokenServiceImpl implements TokenService {
 		return token;
 	}
 
+	@Override
 	public Claims parseClaims(String token) {
 		try {
 			logger.debug("Parsing token claims...");
@@ -144,7 +141,7 @@ public class TokenServiceImpl implements TokenService {
 	public void logOut(String token) {
 		logger.info("Processing logout...");
 		
-		Optional<Claims> optionalClaims = tokenValidator.getValidClaims(token);
+		Optional<Claims> optionalClaims = getValidClaims(token);
 		String tokenJti = getJtiFromToken(token);
 		
 		if(optionalClaims.isPresent()) {
@@ -180,4 +177,37 @@ public class TokenServiceImpl implements TokenService {
         logger.info("Blacklisting token with key: {} for {} seconds", redisKey, expirationInSeconds);
         redisTemplate.opsForValue().set(redisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
     }		
+	
+	// Parsea y valida las claims del token (firma, expiración, etc.).
+	// Devuelve Optional.empty() si el token no es técnicamente válido.
+	//
+	// Parses and validates the token claims (signature, expiration, etc.).
+	// Returns Optional.empty() if the token is not technically valid.
+	@Override
+	public Optional<Claims> getValidClaims(String token) {
+		try {
+			Claims claims = parseClaims(token);
+			return Optional.of(claims);
+		} catch (JwtException ex) {
+			logger.warn("Token technical validation failed: {}", ex.getMessage());
+			return Optional.empty();
+		}
+	}
+
+	@Override
+	public boolean isTokenBlacklisted(String token) {
+		String tokenJti = getJtiFromToken(token);
+		String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
+		String redisValue = redisTemplate.opsForValue().get(redisKey);
+		boolean result;
+		if (redisValue.equals("blacklisted")) {
+			result = true;
+		}
+		// Incluye el caso de que no se encuentre la entrada en Redis (redisValue == null).
+		//
+		// Programs flow would reach this point also if no Redis entry is found (redisValue == null).
+		result = false;
+		logger.debug("Blacklist check for jti {}: {}", tokenJti, result);
+		return result;
+	}
 }

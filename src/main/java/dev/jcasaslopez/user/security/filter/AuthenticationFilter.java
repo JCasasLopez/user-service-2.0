@@ -12,7 +12,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.service.TokenService;
-import dev.jcasaslopez.user.token.TokenValidator;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -27,13 +26,10 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
 	private StandardResponseHandler standardResponseHandler;
 	private TokenService tokenService;
-	private TokenValidator tokenValidator;
 
-	public AuthenticationFilter(StandardResponseHandler standardResponseHandler, TokenService tokenService,
-			TokenValidator tokenValidator) {
+	public AuthenticationFilter(StandardResponseHandler standardResponseHandler, TokenService tokenService) {
 		this.standardResponseHandler = standardResponseHandler;
 		this.tokenService = tokenService;
-		this.tokenValidator = tokenValidator;
 	}
 
 	@Override
@@ -56,7 +52,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 				return;
 			}
 			
-			Optional<Claims> optionalClaims = tokenValidator.getValidClaims(token);
+			Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
 
 			if (optionalClaims.isPresent()) {
 			    String purposeStr = optionalClaims.get().get("purpose").toString();
@@ -64,7 +60,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			  
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
-			        !tokenValidator.isTokenBlacklisted(token) &&
+			        !tokenService.isTokenBlacklisted(token) &&
 			        purposeStr.equals(TokenType.REFRESH.name())) {
 					logger.info("Valid refresh token received");
 					
