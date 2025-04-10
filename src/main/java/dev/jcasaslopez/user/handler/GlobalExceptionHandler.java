@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -129,5 +130,12 @@ public class GlobalExceptionHandler {
     			"Error serializing or deserializing JSON data", null, HttpStatus.INTERNAL_SERVER_ERROR);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
-
+    
+    @ExceptionHandler(RedisConnectionFailureException .class)
+	public ResponseEntity<StandardResponse> handleRedisConnectionFailureException(RedisConnectionFailureException ex){
+        log.error("RedisConnectionFailureException: {}", ex.getMessage(), ex);
+        StandardResponse response = new StandardResponse (LocalDateTime.now(), 
+        		"Error connecting to Redis" , null, HttpStatus.INTERNAL_SERVER_ERROR);
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+	}
 }
