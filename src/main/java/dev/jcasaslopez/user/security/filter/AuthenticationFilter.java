@@ -6,11 +6,19 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
+import dev.jcasaslopez.user.mapper.UserMapper;
+import dev.jcasaslopez.user.repository.UserRepository;
+import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
@@ -26,10 +34,15 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
 	private StandardResponseHandler standardResponseHandler;
 	private TokenService tokenService;
+	private UserRepository userRepository;
+	private UserMapper userMapper;
 
-	public AuthenticationFilter(StandardResponseHandler standardResponseHandler, TokenService tokenService) {
+	public AuthenticationFilter(StandardResponseHandler standardResponseHandler, TokenService tokenService,
+			UserRepository userRepository, UserMapper userMapper) {
 		this.standardResponseHandler = standardResponseHandler;
 		this.tokenService = tokenService;
+		this.userRepository = userRepository;
+		this.userMapper = userMapper;
 	}
 
 	@Override
@@ -61,7 +74,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
 			        !tokenService.isTokenBlacklisted(token) &&
 			        purposeStr.equals(TokenType.REFRESH.name())) {
-					logger.info("Valid refresh token received");
+					logger.debug("Valid refresh token received");
 					
 					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
 					// en el siguiente paso (controller -> AccountOrchestrationService).
@@ -73,8 +86,8 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 					Date currentTime = new Date(System.currentTimeMillis());
 				    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
 					tokenService.blacklistToken(redisKey, remainingMillis);
-					logger.info("Old refresh token revoked successfully");
-					
+					logger.debug("Old refresh token revoked successfully");
+			
 			        filterChain.doFilter(request, response);
 			        return;
 			    }
@@ -85,13 +98,22 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    		&& purposeStr.equals(TokenType.VERIFICATION.name())) {
 			    	request.setAttribute("token", token);
 					logger.info("Valid verification token received for path: {}", path);
+					
 			        filterChain.doFilter(request, response);
 			        return;
 			    }
 			    
 			    // Access token
 			    if (purposeStr.equals(TokenType.ACCESS.name())) {
-			    	logger.info("Valid access token, proceeding with request");
+			    	String username = optionalClaims.get().getSubject();
+			    	User userJpa = userRepository.findByUsername(username).orElseThrow(
+							() -> new UsernameNotFoundException(username));
+			    	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
+			    	Authentication authentication = new UsernamePasswordAuthenticationToken
+													(user, token, user.getAuthorities());
+					SecurityContextHolder.getContext().setAuthentication(authentication);
+					
+			    	logger.info("Valid access token. User {} authenticated successfully", username);
 			        filterChain.doFilter(request, response);
 			        return;
 			    }
