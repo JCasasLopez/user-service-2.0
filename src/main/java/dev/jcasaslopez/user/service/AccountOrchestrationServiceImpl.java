@@ -74,7 +74,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	public void initiateRegistration(UserDto user) throws JsonProcessingException {
 		String verifyEmailToken = tokenService.createVerificationToken();
 		String tokenJti = tokenService.getJtiFromToken(verifyEmailToken);
-		logger.info("Verification token created with jti {}", tokenJti);
 		eventPublisher.publishEvent(new VerifyEmailEvent(user, verifyEmailToken));
 		logger.debug("Verify email event published for user: {}", user.getEmail());
 
@@ -86,6 +85,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		// We encode the password BEFORE saving all the info in Redis.
 		user.setPassword(passwordEncoder.encode(user.getPassword())); 
 		String userJson = objectMapper.writeValueAsString(user);
+		logger.debug("Redis key: {}. Password encoded before trying to upload to Redis ", redisKey);
 		
 		// Establecemos la cadena userJson como valor de la entrada de Redis, porque vamos 
 		// a necesitarlo en el siguiente paso (creación de la cuenta como tal).

@@ -31,8 +31,6 @@ public class EmailServiceImpl implements EmailService {
 	public void sendEmail(String recipient, String subject, String message) {
     	
         try {
-        	logger.info("Preparing email to: {}", recipient);
-
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
 

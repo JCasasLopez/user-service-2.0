@@ -56,7 +56,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
 			if (optionalClaims.isPresent()) {
 			    String purposeStr = optionalClaims.get().get("purpose").toString();
-				logger.debug("Token purpose: {}", purposeStr);
 			  
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
@@ -97,8 +96,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			        return;
 			    }
 			}
-
-			logger.warn("Token did not pass validation or was invalid/blacklisted");
 			standardResponseHandler.handleResponse(response, 401, "Token is invalid, expired or blacklisted", null);
 			return;
 		}

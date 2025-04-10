@@ -58,8 +58,6 @@ public class TokenServiceImpl implements TokenService {
     // Used both for access and refreshed tokens.
 	@Override
 	public String createAuthToken(TokenType tokenType) {
-		logger.info("Creating token type: {}", tokenType);
-		
 		// tokensLifetimes.getTokensLifetimes() -> Map<TokenType, Integer>.
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
 		Authentication authenticated = SecurityContextHolder.getContext().getAuthentication();
@@ -83,8 +81,6 @@ public class TokenServiceImpl implements TokenService {
 	
 	@Override
 	public String createVerificationToken() {
-		logger.debug("Creating verification token");
-	
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60 * 1000;		
 		String jti = UUID.randomUUID().toString();		
 		String token = Jwts.builder().header().type("JWT").and().subject(null)
@@ -101,8 +97,6 @@ public class TokenServiceImpl implements TokenService {
 	@Override
 	public Claims parseClaims(String token) {
 		try {
-			logger.debug("Parsing token claims...");
-			
 			// Configura cómo queremos verificar el token.
 			//
 			// Configures how we want to verify the token.
@@ -168,7 +162,6 @@ public class TokenServiceImpl implements TokenService {
 	@Override
 	public String getJtiFromToken(String token) {
 		String jti = parseClaims(token).getId();
-		logger.debug("Extracted JTI from token: {}", jti);
 		return jti;
 	}
 	
@@ -189,7 +182,6 @@ public class TokenServiceImpl implements TokenService {
 			Claims claims = parseClaims(token);
 			return Optional.of(claims);
 		} catch (JwtException ex) {
-			logger.warn("Token technical validation failed: {}", ex.getMessage());
 			return Optional.empty();
 		}
 	}

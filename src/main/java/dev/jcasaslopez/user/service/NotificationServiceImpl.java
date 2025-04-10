@@ -40,7 +40,6 @@ public class NotificationServiceImpl implements NotificationService {
                 + "Best regards The Team";
           
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
-        logger.info("Verification email sent to {}", event.getUser().getEmail()); 
     }
 	
 	@Override
@@ -52,7 +51,6 @@ public class NotificationServiceImpl implements NotificationService {
                 + "Best regards,\n"
                 + "The Team";
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
-        logger.info("Account created successfully email sent to {}", event.getUser().getEmail()); 
 	}
 	
 	@Override
@@ -68,7 +66,6 @@ public class NotificationServiceImpl implements NotificationService {
                 + "The Team";
         
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
-        logger.info("Password reset email sent to {}", event.getUser().getEmail()); 
 	}
 	
 	@Override
@@ -80,7 +77,6 @@ public class NotificationServiceImpl implements NotificationService {
                 + "Best regards,\n"
                 + "The Team";
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
-        logger.info("Password reset successfully email sent to {}", event.getUser().getEmail()); 
 	}
 	
 	@Override
@@ -92,7 +88,6 @@ public class NotificationServiceImpl implements NotificationService {
                 + "Best regards,\n"
                 + "The Team";
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
-        logger.info("Password changed successfully email sent to {}", event.getUser().getEmail()); 
 	}
 	
 	@Override
@@ -105,6 +100,5 @@ public class NotificationServiceImpl implements NotificationService {
                 + "Best regards,\n"
                 + "The Team";
         emailService.sendEmail(event.getUser().getEmail(), subject, message);
-        logger.info("Account status change successfully email sent to {}", event.getUser().getEmail()); 
 	}
 }
