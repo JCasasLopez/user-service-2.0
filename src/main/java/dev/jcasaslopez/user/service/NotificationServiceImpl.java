@@ -29,76 +29,114 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	@EventListener
-    public void handleVerifyEmail(VerifyEmailEvent event) throws JsonProcessingException {
-		logger.info("Starting email verification flow for user: {}", event.getUser().getUsername()); 
+	public void handleVerifyEmail(VerifyEmailEvent event) throws JsonProcessingException {
+		String username = event.getUser().getUsername();
+		String email = event.getUser().getEmail();
+		String token = event.getToken();
 
-        String subject = "Email verification";
-        String message = "Hi " + event.getUser().getUsername() + ",\n\n"
-                + "Thank you for registering. To complete your account setup, "
-                + "please verify your email address by copying and pasting the next link:"
-                + urlAngular + "/verifyEmail" + "?token=" + event.getToken()
-                + "Best regards The Team";
-          
-        emailService.sendEmail(event.getUser().getEmail(), subject, message);
-    }
+	    logger.info("Starting email verification flow for user: {}", event.getUser().getUsername());
+
+	    String subject = "Email verification";
+	    String message = """
+	        <p>Hi %s,</p>
+	        <p>Thank you for registering. To complete your account setup, 
+	        please verify your email address by clicking on the following link:</p>
+	        <p><a href="%s/verifyEmail?token=%s">Verify my email</a></p>
+	        <p>Best regards,<br>
+	        The Team</p>
+	        """.formatted(username, urlAngular, token);
+
+	    emailService.sendEmail(email, subject, message);
+	}
 	
 	@Override
 	@EventListener
     public void handleCreateAccount(CreateAccountEvent event) {
-        String subject = "Welcome to the platform!";
-        String message = "Hi " + event.getUser().getUsername() + ",\n\n"
-                + "Your account has been created successfully"
-                + "Best regards,\n"
-                + "The Team";
-        emailService.sendEmail(event.getUser().getEmail(), subject, message);
+		String username = event.getUser().getUsername();
+		String email = event.getUser().getEmail();
+		
+		String subject = "Welcome to the platform!";
+	    
+	    String htmlMessage = """
+	        <p>Hi %s,</p>
+	        <p>Your account has been created successfully.</p>
+	        <p>Best regards,<br>
+	        The Team</p>
+	        """.formatted(username);
+	    
+	    emailService.sendEmail(email, subject, htmlMessage);
 	}
 	
 	@Override
 	@EventListener
-    public void handleForgotPassword(ForgotPasswordEvent event) throws JsonProcessingException {
-		logger.info("Starting password reset flow for user: {}", event.getUser().getUsername()); 
+	public void handleForgotPassword(ForgotPasswordEvent event) throws JsonProcessingException {
+		String username = event.getUser().getUsername();
+		String email = event.getUser().getEmail();
+		String token = event.getToken();
+		
+	    logger.info("Starting password reset flow for user: {}", username);
 
-		String subject = "Password reset verification email";
-        String message = "Hi " + event.getUser().getUsername() + ",\n\n"
-                + "Copy and past the next link to reset your password:\n\n"
-                + urlAngular + "/forgotPassword" + "?token=" + event.getToken()
-                + "Best regards,\n"
-                + "The Team";
-        
-        emailService.sendEmail(event.getUser().getEmail(), subject, message);
+	    String subject = "Password reset verification email";
+	    String message = """
+	        <p>Hi %s,</p>
+	        <p>Click on the following link to reset your password:</p>
+	        <p><a href="%s/forgotPassword?token=%s">Reset my password</a></p>
+	        <p>Best regards,<br>
+	        The Team</p>
+	        """.formatted(username, urlAngular, token);
+
+	    emailService.sendEmail(email, subject, message);
 	}
-	
+
 	@Override
 	@EventListener
-    public void handleResetPassword(ResetPasswordEvent event) {
-		String subject = "Password reset successfully";
-		String message = "Hi " + event.getUser().getUsername() + ",\n\n"
-                + "Your password has been reset successfully"
-                + "Best regards,\n"
-                + "The Team";
-        emailService.sendEmail(event.getUser().getEmail(), subject, message);
+	public void handleResetPassword(ResetPasswordEvent event) {
+		String username = event.getUser().getUsername();
+		String email = event.getUser().getEmail();
+		
+	    String subject = "Password reset successfully";
+	    String message = """
+	        <p>Hi %s,</p>
+	        <p>Your password has been reset successfully.</p>
+	        <p>Best regards,<br>
+	        The Team</p>
+	        """.formatted(username);
+	    
+	    emailService.sendEmail(email, subject, message);
 	}
-	
+
 	@Override
 	@EventListener
-    public void handleChangePassword(ChangePasswordEvent event) {
-		String subject = "Password changed successfully";
-		String message = "Hi " + event.getUser().getUsername() + ",\n\n"
-                + "Your password has been changed successfully"
-                + "Best regards,\n"
-                + "The Team";
-        emailService.sendEmail(event.getUser().getEmail(), subject, message);
+	public void handleChangePassword(ChangePasswordEvent event) {
+		String username = event.getUser().getUsername();
+		String email = event.getUser().getEmail();
+		
+	    String subject = "Password changed successfully";
+	    String message = """
+	        <p>Hi %s,</p>
+	        <p>Your password has been changed successfully.</p>
+	        <p>Best regards,<br>
+	        The Team</p>
+	        """.formatted(username);
+	    
+	    emailService.sendEmail(email, subject, message);
 	}
-	
+
 	@Override
 	@EventListener
-    public void handleUpdateAccountStatus(UpdateAccountStatusEvent event) {
-		String subject = "Change in account status";
-		String message = "Hi " + event.getUser().getUsername() + ",\n\n"
-                + "Your account status has been changed to"
-				+ event.getNewAccountStatus().getDisplayName()
-                + "Best regards,\n"
-                + "The Team";
-        emailService.sendEmail(event.getUser().getEmail(), subject, message);
+	public void handleUpdateAccountStatus(UpdateAccountStatusEvent event) {
+		String username = event.getUser().getUsername();
+		String email = event.getUser().getEmail();
+		String newAccountStatus = event.getNewAccountStatus().getDisplayName();
+		
+	    String subject = "Change in account status";
+	    String message = """
+	        <p>Hi %s,</p>
+	        <p>Your account status has been changed to: %s</p>
+	        <p>Best regards,<br>
+	        The Team</p>
+	        """.formatted(username, newAccountStatus);
+	    
+	    emailService.sendEmail(email, subject, message);
 	}
 }
