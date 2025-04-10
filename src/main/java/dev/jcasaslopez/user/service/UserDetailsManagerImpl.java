@@ -1,5 +1,8 @@
 package dev.jcasaslopez.user.service;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +16,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.mapper.UserMapper;
+import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
 
@@ -26,13 +30,16 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 	private PasswordEncoder passwordEncoder;
 	private UserAccountService accountService;
 	private PasswordService passwordService;
+	private RoleRepository roleRepository;
 	
-	public UserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper,
-			PasswordEncoder passwordEncoder, UserAccountService accountService) {
+	public UserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder,
+			UserAccountService accountService, PasswordService passwordService, RoleRepository roleRepository) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
 		this.accountService = accountService;
+		this.passwordService = passwordService;
+		this.roleRepository = roleRepository;
 	}
 
 	// Las excepciones por violaciones de restricciones de base de datos (como valores duplicados)
@@ -52,7 +59,12 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 			// Según las reglas de negocio, se establece el role USER por defecto.
 			//
 			// Assign default role ROLE_USER as per business rules.
-			userJPA.getRoles().add(new Role(RoleName.ROLE_USER));
+			Role userRole = roleRepository.findByRoleName(RoleName.ROLE_USER)
+				    .orElseThrow(() -> new IllegalStateException("Role ROLE_USER not found in database"));
+			Set<Role> roles = new HashSet<>();
+			roles.add(userRole);
+			userJPA.setRoles(roles);
+			
 			userJPA.setAccountStatus(AccountStatus.ACTIVE);
 			userRepository.save(userJPA);
 		    logger.info("New user created with username: {}", userJPA.getUsername());
