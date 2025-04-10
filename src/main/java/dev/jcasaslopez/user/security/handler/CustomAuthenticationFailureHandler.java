@@ -122,6 +122,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	            logger.info("Failed login attempt {} for user {}", failedAttempts, username);
 	        }
 	    }
+        standardResponseHandler.handleResponse(response, 401, "Incorrect password", null);
 		loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.INCORRECT_PASSWORD);
 	}
 }
