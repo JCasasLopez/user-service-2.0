@@ -2,7 +2,6 @@ package dev.jcasaslopez.user.security.filter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
@@ -24,14 +23,21 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	
     private static final Logger logger = LoggerFactory.getLogger(CustomAuthenticationFailureHandler.class);
 
-    @Autowired
-    private StringRedisTemplate redisTemplate;
-    @Autowired
-	private UserAccountService userAccountService;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-	private ApplicationEventPublisher eventPublisher;
+    private final StringRedisTemplate redisTemplate;
+    private final UserAccountService userAccountService;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public CustomUsernamePasswordAuthenticationFilter(
+            StringRedisTemplate redisTemplate,
+            UserAccountService userAccountService,
+            UserRepository userRepository,
+            ApplicationEventPublisher eventPublisher) {
+        this.redisTemplate = redisTemplate;
+        this.userAccountService = userAccountService;
+        this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
+    }
     
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)

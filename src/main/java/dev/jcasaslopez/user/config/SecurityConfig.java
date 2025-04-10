@@ -1,7 +1,9 @@
 package dev.jcasaslopez.user.config;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -17,8 +19,10 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
+import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.filter.AuthenticationFilter;
 import dev.jcasaslopez.user.security.filter.CustomUsernamePasswordAuthenticationFilter;
+import dev.jcasaslopez.user.service.UserAccountService;
 import dev.jcasaslopez.user.utilities.Constants;
 
 @Configuration
@@ -29,20 +33,15 @@ public class SecurityConfig {
 	private UserDetailsService userDetailsService;
 	private PasswordEncoder passwordEncoder;
 	private AuthenticationFilter authenticationFilter;
-	private AuthenticationFailureHandler authenticationFailureHandler;
-	private AuthenticationSuccessHandler authenticationSuccessHandler;
 	private AuthenticationEntryPoint authenticationEntryPoint;
 	private AccessDeniedHandler accessDeniedHandler;
 	
 	public SecurityConfig(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
-			AuthenticationFilter authenticationFilter, AuthenticationFailureHandler authenticationFailureHandler,
-			AuthenticationSuccessHandler authenticationSuccessHandler,
-			AuthenticationEntryPoint authenticationEntryPoint, AccessDeniedHandler accessDeniedHandler) {
+			AuthenticationFilter authenticationFilter, AuthenticationEntryPoint authenticationEntryPoint,
+			AccessDeniedHandler accessDeniedHandler) {
 		this.userDetailsService = userDetailsService;
 		this.passwordEncoder = passwordEncoder;
 		this.authenticationFilter = authenticationFilter;
-		this.authenticationFailureHandler = authenticationFailureHandler;
-		this.authenticationSuccessHandler = authenticationSuccessHandler;
 		this.authenticationEntryPoint = authenticationEntryPoint;
 		this.accessDeniedHandler = accessDeniedHandler;
 	}
@@ -60,16 +59,34 @@ public class SecurityConfig {
 	AuthenticationManager authenticationManager() {
 	    return new ProviderManager(daoAuthenticationProvider(userDetailsService, passwordEncoder));
 	}
+	
+	@Bean
+	CustomUsernamePasswordAuthenticationFilter customUsernamePasswordAuthenticationFilter(
+	        StringRedisTemplate redisTemplate,
+	        UserAccountService userAccountService,
+	        UserRepository userRepository,
+	        ApplicationEventPublisher eventPublisher,
+	        AuthenticationManager authenticationManager,
+	        AuthenticationSuccessHandler authenticationSuccessHandler,
+	        AuthenticationFailureHandler authenticationFailureHandler) {
+
+	    CustomUsernamePasswordAuthenticationFilter filter = new CustomUsernamePasswordAuthenticationFilter(
+	        redisTemplate, userAccountService, userRepository, eventPublisher
+	    );
+
+	    filter.setAuthenticationManager(authenticationManager);
+	    filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
+	    filter.setAuthenticationFailureHandler(authenticationFailureHandler);
+	    filter.setFilterProcessesUrl("/user/login");
+
+	    return filter;
+	}
+
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    	
-    	CustomUsernamePasswordAuthenticationFilter loginFilter = new CustomUsernamePasswordAuthenticationFilter();
-        loginFilter.setAuthenticationManager(authenticationManager());
-        loginFilter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
-        loginFilter.setAuthenticationFailureHandler(authenticationFailureHandler);
-        loginFilter.setFilterProcessesUrl("/login");
-        
+    SecurityFilterChain securityFilterChain(HttpSecurity http, 
+    		CustomUsernamePasswordAuthenticationFilter loginFilter) throws Exception {
+       
         http
         	.exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(authenticationEntryPoint)
