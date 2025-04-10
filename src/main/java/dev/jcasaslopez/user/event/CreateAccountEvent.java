@@ -1,17 +1,16 @@
 package dev.jcasaslopez.user.event;
 
-import dev.jcasaslopez.user.dto.UserDto;
+import dev.jcasaslopez.user.entity.User;
 
 public class CreateAccountEvent {
 	
-	private final UserDto user;
+	private final User user;
 
-	public CreateAccountEvent(UserDto user) {
+	public CreateAccountEvent(User user) {
 		this.user = user;
 	}
 
-	public UserDto getUser() {
+	public User getUser() {
 		return user;
 	}
-	
 }
