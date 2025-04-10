@@ -11,7 +11,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
@@ -32,6 +31,7 @@ import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
 import dev.jcasaslopez.user.event.VerifyEmailEvent;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.model.TokensLifetimes;
+import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -74,9 +74,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	public void initiateRegistration(UserDto user) throws JsonProcessingException {
 		String verifyEmailToken = tokenService.createVerificationToken();
 		String tokenJti = tokenService.getJtiFromToken(verifyEmailToken);
-		eventPublisher.publishEvent(new VerifyEmailEvent(user, verifyEmailToken));
-		logger.debug("Verify email event published for user: {}", user.getEmail());
-
+	
 		String redisKey = Constants.CREATE_ACCOUNT_REDIS_KEY + tokenJti;
 		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60;
 		
@@ -94,6 +92,9 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		// next step (creating the account).
 		redisTemplate.opsForValue().set(redisKey, userJson, expirationInSeconds, TimeUnit.SECONDS);
 		logger.info("Redis entry uploaded. RedisKey:{}", redisKey);
+		
+		eventPublisher.publishEvent(new VerifyEmailEvent(user, verifyEmailToken));
+		logger.debug("Verify email event published for user: {}", user.getEmail());
 	}
 	
 	@Override
@@ -111,17 +112,18 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		String tokenJti = tokenService.getJtiFromToken(token);
 		String redisKey = Constants.CREATE_ACCOUNT_REDIS_KEY + tokenJti;
 		String userJson = redisTemplate.opsForValue().get(redisKey);
-		UserDto user = objectMapper.readValue(userJson, UserDto.class);
+		User user = objectMapper.readValue(userJson, User.class);
 		logger.info("User {} obtained from Redis entry with Redis key {}", user.getUsername(), redisKey);
-		
-	    eventPublisher.publishEvent(new CreateAccountEvent(user));
-	    logger.debug("Create account event published for user: {}", user.getUsername());
-	    
+		 
 	    // Los atributos ya se habían validado con la llamada al endpoint "initiateRegistration".
 	 	//
 	 	// Attributes already validated when calling "initiateRegistration" endpoint.
-		userDetailsManager.createUser((UserDetails) user);
+	    CustomUserDetails userAsCustomUserDetails = userMapper.userToCustomUserDetailsMapper(user);
+		userDetailsManager.createUser(userAsCustomUserDetails);
 		logger.info("User account persisted successfully for {}", user.getUsername());
+		
+		eventPublisher.publishEvent(new CreateAccountEvent(user));
+	    logger.debug("Create account event published for user: {}", user.getUsername());
 	}
 	
 	@Override
