@@ -70,7 +70,7 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	@PostMapping(value = Constants.RESET_PASSWORD_PATH)
+	@PutMapping(value = Constants.RESET_PASSWORD_PATH)
 	public ResponseEntity<StandardResponse> resetPassword(@RequestParam String newPassword, 
 			HttpServletRequest request) {
 		accountOrchestrationService.resetPassword(newPassword, request);
@@ -87,7 +87,7 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	@PostMapping(value = "/changePassword")
+	@PutMapping(value = "/changePassword")
 	public ResponseEntity<StandardResponse> changePassword(@RequestParam String newPassword, 
 			@RequestParam String oldPassword) {
 		accountOrchestrationService.changePassword(oldPassword, newPassword);
@@ -103,7 +103,7 @@ public class UserController {
 	// but only if the value in the URL exactly matches the enum name.
 	//
 	// Accepted values: ACTIVE, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
-	@PostMapping(value = "/updateAccountStatus")
+	@PutMapping(value = "/updateAccountStatus")
 	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestParam String email, 
 			@RequestParam AccountStatus newAccountStatus) {
 		accountOrchestrationService.updateAccountStatus(email, newAccountStatus);
