@@ -8,7 +8,7 @@ import io.jsonwebtoken.Claims;
 public interface TokenService {
 
 	String createAuthToken(TokenType tokenType);
-	String createVerificationToken();
+	String createVerificationToken(String username);
 	Claims parseClaims(String token);
 	void logOut(String token);
 	String getJtiFromToken(String token);

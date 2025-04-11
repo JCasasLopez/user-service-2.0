@@ -80,10 +80,11 @@ public class TokenServiceImpl implements TokenService {
 	}
 	
 	@Override
-	public String createVerificationToken() {
+	public String createVerificationToken(String username) {
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60 * 1000;		
-		String jti = UUID.randomUUID().toString();		
-		String token = Jwts.builder().header().type("JWT").and().subject(null)
+		String jti = UUID.randomUUID().toString();	
+		
+		String token = Jwts.builder().header().type("JWT").and().subject(username)
 				.id(jti)
 				.claim("purpose", TokenType.VERIFICATION)
 				.issuedAt(new Date(System.currentTimeMillis()))

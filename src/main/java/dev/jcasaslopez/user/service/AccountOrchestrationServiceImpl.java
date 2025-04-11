@@ -73,7 +73,8 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 
 	@Override
 	public void initiateRegistration(UserDto user) throws JsonProcessingException {
-		String verifyEmailToken = tokenService.createVerificationToken();
+		String username = user.getUsername();
+		String verifyEmailToken = tokenService.createVerificationToken(username);
 		String tokenJti = tokenService.getJtiFromToken(verifyEmailToken);
 	
 		String redisKey = Constants.CREATE_ACCOUNT_REDIS_KEY + tokenJti;
@@ -146,7 +147,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@Override
 	public void forgotPassword(String email) {
 		UserDto user = userMapper.userToUserDtoMapper(userAccountService.findUserByEmail(email));
-		String resetPasswordToken = tokenService.createVerificationToken();
+		String resetPasswordToken = tokenService.createVerificationToken(user.getUsername());
 		logger.info("Verification token created for user {}", user.getUsername());
 		
 		eventPublisher.publishEvent(new ForgotPasswordEvent(user, resetPasswordToken));
