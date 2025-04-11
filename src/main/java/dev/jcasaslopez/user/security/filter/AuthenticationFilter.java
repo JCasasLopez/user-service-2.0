@@ -72,8 +72,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			  
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
-			        !tokenService.isTokenBlacklisted(token) &&
-			        purposeStr.equals(TokenType.REFRESH.name())) {
+			        !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
 					logger.debug("Valid refresh token received");
 					
 					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
@@ -112,7 +111,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    	Authentication authentication = new UsernamePasswordAuthenticationToken
 													(user, token, user.getAuthorities());
 					SecurityContextHolder.getContext().setAuthentication(authentication);
-					
 			    	logger.info("Valid access token. User {} authenticated successfully", username);
 			        filterChain.doFilter(request, response);
 			        return;

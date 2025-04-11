@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -98,6 +99,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@Transactional
 	public void userRegistration(HttpServletRequest request) throws JsonMappingException, JsonProcessingException {
 		// Hemos establecido el token como stributo en AuthenticationFilter.
 		//
@@ -127,13 +129,15 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
-	@PreAuthorize("#username == authentication.principal.username")
+	@Transactional
 	public void deleteAccount() {
-		// Endpoint solo accesible a usuarios autenticados, así que Security Context tiene que 
-		// estar poblado.
-		//
-		// This enspoint is only accesible to authenticated user, so the Security Context has to be 
-		// populated.
+		// Este endpoint solo es accesible para usuarios autenticados (ver configuración de 
+		// seguridad). Se elimina la cuenta del usuario actualmente autenticado, 
+		// cuyo nombre de usuario se obtiene directamente del SecurityContext.
+	    //
+	    // This endpoint is only accessible to authenticated users (see security config).
+	    // It deletes the account of the currently authenticated user, whose username is retrieved
+	    // from the SecurityContext.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		userDetailsManager.deleteUser(username);
 		logger.info("Account deleted successfully for user {}", username);;
@@ -167,7 +171,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
-	@PreAuthorize("#username == authentication.principal.username")
+	// @PreAuthorize("#username == authentication.principal.username")
 	public void changePassword(String newPassword, String oldPassword) {
 		logger.debug("Calling changePassword() in User Details Service...");
 		userDetailsManager.changePassword(oldPassword, newPassword);
@@ -202,14 +206,12 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
-	@PreAuthorize("#username == authentication.principal.username")
 	public void sendNotification(Map<String, String> messageAsMap) {
 		logger.debug("Calling processMessageDetails() in Email Service...");
 		emailService.processMessageDetails(messageAsMap);
 	}
 	
 	@Override
-	@PreAuthorize("#username == authentication.principal.username")
 	public List<String> refreshToken(){
 		logger.debug("Creating access token...");
 		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
