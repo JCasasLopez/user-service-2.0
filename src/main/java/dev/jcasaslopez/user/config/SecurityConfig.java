@@ -18,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.filter.AuthenticationFilter;
@@ -77,7 +78,7 @@ public class SecurityConfig {
 	    filter.setAuthenticationManager(authenticationManager);
 	    filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 	    filter.setAuthenticationFailureHandler(authenticationFailureHandler);
-	    filter.setFilterProcessesUrl("/user/login");
+	    filter.setFilterProcessesUrl("/login");
 
 	    return filter;
 	}
@@ -93,8 +94,8 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sessMang -> sessMang.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(authenticationFilter, CustomUsernamePasswordAuthenticationFilter.class)
-            .addFilterAt(loginFilter, CustomUsernamePasswordAuthenticationFilter.class) 
+            .addFilterAt(loginFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
             // Deshabilito LogoutFilter poque voy a usar una implementación personalizada.
             //
             // We disable LogoutFilter because we are using custom implementation.
@@ -105,7 +106,8 @@ public class SecurityConfig {
             									Constants.REGISTRATION_PATH,
             									Constants.FORGOT_PASSWORD_PATH,
             									Constants.RESET_PASSWORD_PATH,
-            									Constants.REFRESH_TOKEN_PATH
+            									Constants.REFRESH_TOKEN_PATH,
+            									"/login"
             													).permitAll() 
             							.requestMatchers(
             									"/deleteAccount",
