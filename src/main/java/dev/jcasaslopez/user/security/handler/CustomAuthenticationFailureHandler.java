@@ -99,13 +99,16 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	    // If the user has provided a username that is in the database, and that account 
 	    // is active, then the authentication has failed because the password was incorrect.
 	    String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+	    int failedAttempts=0;
 
 	    if (!redisTemplate.hasKey(redisKey)) {
 	        redisTemplate.opsForValue().set(redisKey, "1", accountLockedDuration, TimeUnit.SECONDS);
 	        logger.info("First failed login attempt for user {}", username);
 	        
 	    } else {
-	        int failedAttempts = Integer.parseInt(redisTemplate.opsForValue().get(redisKey)) + 1;
+	        failedAttempts = Integer.parseInt(redisTemplate.opsForValue().get(redisKey)) + 1;
+	        redisTemplate.opsForValue().set(redisKey, String.valueOf(failedAttempts),
+                    accountLockedDuration, TimeUnit.SECONDS);
 	        
 	        if (failedAttempts >= maxNumberFailedAttempts) {
 	        	// Si se ha superado el número máximo de intentos fallidos, se bloquea la cuenta.
@@ -117,12 +120,16 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	            userRepository.save(user);
 	            logger.warn("User {} account blocked due to too many failed attempts", username);
 	        } else {
-	            redisTemplate.opsForValue().set(redisKey, String.valueOf(failedAttempts),
-	                    accountLockedDuration, TimeUnit.SECONDS);
 	            logger.info("Failed login attempt {} for user {}", failedAttempts, username);
 	        }
 	    }
-        standardResponseHandler.handleResponse(response, 401, "Incorrect password", null);
+	    if(failedAttempts >= maxNumberFailedAttempts) {
+	        standardResponseHandler.handleResponse(response, 401, "Incorrect password. Your account has been "
+	        		+ "locked due to too many attempts", null);
+	    } else {
+	        standardResponseHandler.handleResponse(response, 401, "Incorrect password", null);
+	    }
+	    
 		loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.INCORRECT_PASSWORD);
 	}
 }
