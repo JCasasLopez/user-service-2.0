@@ -93,7 +93,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
 			    // Verification token 
 			    if ("POST".equalsIgnoreCase(method) && 
-			    		(path.equals(Constants.REGISTRATION_PATH) || path.equals(Constants.FORGOT_PASSWORD_PATH))
+			    		(path.equals(Constants.REGISTRATION_PATH) || path.equals(Constants.RESET_PASSWORD_PATH))
 			    		&& purposeStr.equals(TokenType.VERIFICATION.name())) {
 			    	request.setAttribute("token", token);
 					logger.info("Valid verification token received for path: {}", path);
