@@ -155,6 +155,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@Transactional
 	public void resetPassword(String newPassword, HttpServletRequest request) {
 		// Hemos establecido el token como stributo en AuthenticationFilter.
 		//
@@ -172,7 +173,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
-	// @PreAuthorize("#username == authentication.principal.username")
+	@Transactional
 	public void changePassword(String newPassword, String oldPassword) {
 		logger.debug("Calling changePassword() in User Details Service...");
 		userDetailsManager.changePassword(oldPassword, newPassword);
@@ -186,6 +187,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@Transactional
 	@PreAuthorize("hasRole('ROLE_SUPERADMIN')")
 	public void upgradeUser(String email) {
 		logger.debug("Calling upgradeUser() in User Account Service...");
@@ -193,6 +195,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
+	@Transactional
 	@PreAuthorize("hasRole(' ADMIN')")
 	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User user = userAccountService.findUserByEmail(email);
