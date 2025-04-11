@@ -11,6 +11,7 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -97,8 +98,26 @@ public class GlobalExceptionHandler {
 
 	    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 	}
-
 	
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<StandardResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+	    List<String> errors = ex.getBindingResult()
+	                            .getFieldErrors()
+	                            .stream()
+	                            .map(error -> error.getField() + ": " + error.getDefaultMessage())
+	                            .collect(Collectors.toList());
+
+	    StandardResponse response = new StandardResponse(
+	        LocalDateTime.now(),
+	        "Validation failed for one or more fields",
+	        errors.toString(), 
+	        HttpStatus.BAD_REQUEST
+	    );
+
+	    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+	}
+
+
 	@ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<StandardResponse> handleExpiredJwtException(ExpiredJwtException ex) {
 		log.error("ExpiredJwtException: {}", ex.getMessage(), ex);
