@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
 
@@ -27,16 +26,14 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 	
 	private UserRepository userRepository;
 	private UserMapper userMapper;
-	private PasswordEncoder passwordEncoder;
 	private UserAccountService accountService;
 	private PasswordService passwordService;
 	private RoleRepository roleRepository;
 	
-	public UserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder,
+	public UserDetailsManagerImpl(UserRepository userRepository, UserMapper userMapper, 
 			UserAccountService accountService, PasswordService passwordService, RoleRepository roleRepository) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
-		this.passwordEncoder = passwordEncoder;
 		this.accountService = accountService;
 		this.passwordService = passwordService;
 		this.roleRepository = roleRepository;
@@ -52,10 +49,17 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 	@Override
 	public void createUser(UserDetails user) {
 		if (user instanceof CustomUserDetails) {
+			
+			// Ya se ha codificado la contraseña en AccountOrchestrationServiceImpl.initiateRegistration(),
+			// al establecer el objeto 'user' como valor de la entrada de Redis, así que no 
+			// hace falta hacerlo otra vez.
+			//
+			// The password has already been encoded in AccountOrchestrationServiceImpl.initiateRegistration(),
+			// when setting the 'user' object as the value in the Redis entry, 
+			// so there's no need to do it again.
 			CustomUserDetails customUser = (CustomUserDetails) user;
 			User userJPA = customUser.getUser();
-			userJPA.setPassword(passwordEncoder.encode(userJPA.getPassword()));
-			
+	
 			// Según las reglas de negocio, se establece el role USER por defecto.
 			//
 			// Assign default role ROLE_USER as per business rules.
