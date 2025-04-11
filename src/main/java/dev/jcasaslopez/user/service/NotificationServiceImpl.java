@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.event.ChangePasswordEvent;
 import dev.jcasaslopez.user.event.CreateAccountEvent;
 import dev.jcasaslopez.user.event.ForgotPasswordEvent;
@@ -127,15 +128,24 @@ public class NotificationServiceImpl implements NotificationService {
 	public void handleUpdateAccountStatus(UpdateAccountStatusEvent event) {
 		String username = event.getUser().getUsername();
 		String email = event.getUser().getEmail();
-		String newAccountStatus = event.getNewAccountStatus().getDisplayName();
+		AccountStatus newAccountStatus = event.getNewAccountStatus();
+		
+		String messageCore="";
+		if (newAccountStatus == AccountStatus.TEMPORARILY_BLOCKED) {
+		    messageCore = "Your account has been temporarily blocked. It will become active again automatically within 24 hours.";
+		} else if (newAccountStatus == AccountStatus.ACTIVE) {
+		    messageCore = "Your account is active again.";
+		} else if (newAccountStatus == AccountStatus.PERMANENTLY_SUSPENDED) {
+		    messageCore = "Your account has been permanently suspended.";
+		}
 		
 	    String subject = "Change in account status";
 	    String message = """
 	        <p>Hi %s,</p>
-	        <p>Your account status has been changed to: %s</p>
+	        <p>%s</p>
 	        <p>Best regards,<br>
 	        The Team</p>
-	        """.formatted(username, newAccountStatus);
+	        """.formatted(username, messageCore);
 	    
 	    emailService.sendEmail(email, subject, message);
 	}
