@@ -56,19 +56,23 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 		if (authHeader != null && authHeader.startsWith("Bearer ")) {
 			String token = authHeader.substring(7);
 			logger.debug("Authorization header found, token extracted");
-
-			// logout
-			if ("POST".equalsIgnoreCase(method) && path.equals(Constants.LOGOUT_PATH)) {
-				logger.info("Processing logout request");
-				tokenService.logOut(token);
-				standardResponseHandler.handleResponse(response, 200, "The user has been logged out", null);
-				return;
-			}
 			
 			Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
 
 			if (optionalClaims.isPresent()) {
 			    String purposeStr = optionalClaims.get().get("purpose").toString();
+			    
+			    // logout
+				// Tienes que recibir el token de refresco, no el de acceso.
+				//
+				// You have to receive the refresh token, not the access one.
+				if ("POST".equalsIgnoreCase(method) && path.equals(Constants.LOGOUT_PATH) && 
+						!tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
+					logger.info("Processing logout request");
+					tokenService.logOut(token);
+					standardResponseHandler.handleResponse(response, 200, "The user has been logged out", null);
+					return;
+				}
 			  
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
