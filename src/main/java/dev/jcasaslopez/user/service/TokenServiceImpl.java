@@ -139,24 +139,25 @@ public class TokenServiceImpl implements TokenService {
 		Optional<Claims> optionalClaims = getValidClaims(token);
 		String tokenJti = getJtiFromToken(token);
 		
-		if(optionalClaims.isPresent()) {
-		    Date expirationTime = optionalClaims.get().getExpiration();
-		    Date currentTime = new Date(System.currentTimeMillis());
-		    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
-		    // Asegura al menos 1 segundo para evitar que Redis rechace TTL cero o negativo 
-		    // (redondea hacia abajo).
-		    //
-		    // Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
-		    long expirationInSeconds = Math.max(1, remainingMillis / 1000); 
-			logger.debug("Blacklisting token with JTI {} for {} seconds", tokenJti, expirationInSeconds);
-		 	String tokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
-			blacklistToken(tokenRedisKey, expirationInSeconds);
-		}
-		
-		// Si el token no es válido no hay que revocarlo, y se continúa con el logout igualmente.
+		// Si el optional está vacío, se lanza una JwtException en getValidClaims(), y no se
+		// llegaría a este punto.
 		//
-		// If the token is not valid, does not have to revoked, and we continue with the logout process.
-	    SecurityContextHolder.getContext().setAuthentication(null);
+		// If the optional is empty, a JwtException is thrown in getValidClaims(), and the
+		// flow would not reach this point.
+		Date expirationTime = optionalClaims.get().getExpiration();
+		Date currentTime = new Date(System.currentTimeMillis());
+		long remainingMillis = expirationTime.getTime() - currentTime.getTime();
+
+		// Asegura al menos 1 segundo para evitar que Redis rechace TTL cero o negativo
+		// (redondea hacia abajo).
+		//
+		// Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
+		long expirationInSeconds = Math.max(1, remainingMillis / 1000);
+		logger.debug("Blacklisting token with JTI {} for {} seconds", tokenJti, expirationInSeconds);
+		String tokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
+		blacklistToken(tokenRedisKey, expirationInSeconds);
+
+		SecurityContextHolder.getContext().setAuthentication(null);
 		logger.info("User has been logged out");
 	}
 	
