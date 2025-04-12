@@ -12,8 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -157,4 +159,18 @@ public class GlobalExceptionHandler {
         		"Error connecting to Redis" , null, HttpStatus.INTERNAL_SERVER_ERROR);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 	}
+    
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<StandardResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String message = "Invalid value for parameter: " + ex.getName();
+        return ResponseEntity.badRequest().body(
+            new StandardResponse(LocalDateTime.now(), message, null, HttpStatus.BAD_REQUEST));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<StandardResponse> handleMissingParam(MissingServletRequestParameterException ex) {
+        String message = "Missing required parameter: " + ex.getParameterName();
+        return ResponseEntity.badRequest().body(
+            new StandardResponse(LocalDateTime.now(), message, null, HttpStatus.BAD_REQUEST));
+    }
 }
