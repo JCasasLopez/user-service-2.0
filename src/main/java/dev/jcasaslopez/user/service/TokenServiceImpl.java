@@ -193,14 +193,17 @@ public class TokenServiceImpl implements TokenService {
 		String tokenJti = getJtiFromToken(token);
 		String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
 		String redisValue = redisTemplate.opsForValue().get(redisKey);
+		
 		boolean result;
-		if (redisValue.equals("blacklisted")) {
-			result = true;
+		if ("blacklisted".equals(redisValue)) {
+		    result = true;
+		} else {
+			// Incluye el caso de que no se encuentre la entrada en Redis (redisValue == null).
+			//
+			// Programs flow would reach this point also if no Redis entry is found (redisValue == null).
+		    result = false;
 		}
-		// Incluye el caso de que no se encuentre la entrada en Redis (redisValue == null).
-		//
-		// Programs flow would reach this point also if no Redis entry is found (redisValue == null).
-		result = false;
+		
 		logger.debug("Blacklist check for jti {}: {}", tokenJti, result);
 		return result;
 	}
