@@ -88,8 +88,8 @@ public class UserController {
 	}
 	
 	@PutMapping(value = "/changePassword")
-	public ResponseEntity<StandardResponse> changePassword(@RequestParam String newPassword, 
-			@RequestParam String oldPassword) {
+	public ResponseEntity<StandardResponse> changePassword(@RequestParam String oldPassword, 
+			@RequestParam String newPassword) {
 		accountOrchestrationService.changePassword(oldPassword, newPassword);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Password changed successfully", null, HttpStatus.OK);

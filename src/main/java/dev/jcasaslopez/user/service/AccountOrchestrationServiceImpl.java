@@ -174,7 +174,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	
 	@Override
 	@Transactional
-	public void changePassword(String newPassword, String oldPassword) {
+	public void changePassword(String oldPassword, String newPassword) {
 		logger.debug("Calling changePassword() in User Details Service...");
 		userDetailsManager.changePassword(oldPassword, newPassword);
 		
