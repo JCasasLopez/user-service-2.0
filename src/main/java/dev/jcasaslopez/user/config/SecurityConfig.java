@@ -107,7 +107,9 @@ public class SecurityConfig {
             									Constants.FORGOT_PASSWORD_PATH,
             									Constants.RESET_PASSWORD_PATH,
             									Constants.REFRESH_TOKEN_PATH,
+            									Constants.LOGOUT_PATH,
             									"/login"
+            									
             													).permitAll() 
             							.requestMatchers(
             									"/deleteAccount",
