@@ -79,11 +79,6 @@ public class UserAccountServiceImpl implements UserAccountService {
 	public void updateAccountStatus(User user, AccountStatus newAccountStatus) {
 		String username = user.getUsername();
 		
-		if (newAccountStatus == null) {
-			logger.warn("Received null account status for user '{}'", username);
-		    throw new IllegalArgumentException("Account status cannot be null");
-		}
-		
 		if(user.getAccountStatus() == AccountStatus.PERMANENTLY_SUSPENDED) {
 	        logger.info("User '{}' has a permanently suspended account; status change ignored", username);
 			throw new AccountStatusException("Cannot change status: the account is permanently suspended");
