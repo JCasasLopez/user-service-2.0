@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +26,11 @@ import dev.jcasaslopez.user.service.AccountOrchestrationService;
 import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
+@Validated
 @CrossOrigin("*")
 @RestController
 public class UserController {
@@ -63,7 +68,8 @@ public class UserController {
 	}
 	
 	@PostMapping(value = Constants.FORGOT_PASSWORD_PATH)
-	public ResponseEntity<StandardResponse> forgotPassword(@RequestParam String email) {
+	public ResponseEntity<StandardResponse> forgotPassword(@RequestParam @NotBlank @Email 
+			String email) {
 		accountOrchestrationService.forgotPassword(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Token created successfully and sent to the user to reset password", null, HttpStatus.OK);
@@ -71,7 +77,7 @@ public class UserController {
 	}
 	
 	@PutMapping(value = Constants.RESET_PASSWORD_PATH)
-	public ResponseEntity<StandardResponse> resetPassword(@RequestParam String newPassword, 
+	public ResponseEntity<StandardResponse> resetPassword(@RequestParam @NotBlank String newPassword, 
 			HttpServletRequest request) {
 		accountOrchestrationService.resetPassword(newPassword, request);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -80,7 +86,7 @@ public class UserController {
 	}
 	
 	@PutMapping(value = "/upgradeUser")
-	public ResponseEntity<StandardResponse> upgradeUser(@RequestParam String email) {
+	public ResponseEntity<StandardResponse> upgradeUser(@RequestParam @NotBlank @Email String email) {
 		accountOrchestrationService.upgradeUser(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"User upgraded successfully to admin", null, HttpStatus.OK);
@@ -88,8 +94,8 @@ public class UserController {
 	}
 	
 	@PutMapping(value = "/changePassword")
-	public ResponseEntity<StandardResponse> changePassword(@RequestParam String oldPassword, 
-			@RequestParam String newPassword) {
+	public ResponseEntity<StandardResponse> changePassword(@RequestParam @NotBlank String oldPassword, 
+			@RequestParam @NotBlank String newPassword) {
 		accountOrchestrationService.changePassword(oldPassword, newPassword);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Password changed successfully", null, HttpStatus.OK);
@@ -104,8 +110,8 @@ public class UserController {
 	//
 	// Accepted values: ACTIVE, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
 	@PutMapping(value = "/updateAccountStatus")
-	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestParam String email, 
-			@RequestParam AccountStatus newAccountStatus) {
+	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestParam @NotBlank String email, 
+			@RequestParam @NotNull AccountStatus newAccountStatus) {
 		accountOrchestrationService.updateAccountStatus(email, newAccountStatus);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Account status successfully update to " + newAccountStatus.getDisplayName(), null, HttpStatus.OK);
@@ -121,7 +127,7 @@ public class UserController {
 	// "Subject"   : String
 	// "Message"   : String
 	@PostMapping(value = "/sendNotification")
-	public ResponseEntity<StandardResponse> sendNotification(@RequestParam Map<String, String> messageAsMap) {
+	public ResponseEntity<StandardResponse> sendNotification(@RequestParam @NotNull Map<String, String> messageAsMap) {
 		accountOrchestrationService.sendNotification(messageAsMap);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Notification sent successfully", null, HttpStatus.OK);
