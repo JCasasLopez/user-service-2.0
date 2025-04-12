@@ -83,7 +83,7 @@ public class UserController {
 	public ResponseEntity<StandardResponse> upgradeUser(@RequestParam String email) {
 		accountOrchestrationService.upgradeUser(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
-				"User with email " + email + " upgraded successfully to admin", null, HttpStatus.OK);
+				"User upgraded successfully to admin", null, HttpStatus.OK);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
