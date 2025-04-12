@@ -1,6 +1,7 @@
 package dev.jcasaslopez.user.service;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.exception.AccountStatusException;
+import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 
 @Service
@@ -20,9 +22,11 @@ public class UserAccountServiceImpl implements UserAccountService {
 	private static final Logger logger = LoggerFactory.getLogger(UserAccountServiceImpl.class);
 	
 	private UserRepository userRepository;
+	private RoleRepository roleRepository;
 
-	public UserAccountServiceImpl(UserRepository userRepository) {
+	public UserAccountServiceImpl(UserRepository userRepository, RoleRepository roleRepository) {
 		this.userRepository = userRepository;
+		this.roleRepository = roleRepository;
 	}
 
 	@Override
@@ -61,10 +65,12 @@ public class UserAccountServiceImpl implements UserAccountService {
 			logger.warn("User {} is already admin; upgrade user ignored.", user.getUsername());
 			throw new IllegalArgumentException("User is already ADMIN");
 		}
-		// Validamos que exista el usuario.
-		//
-		// We validate there is such user.
-		user.getRoles().add(new Role(RoleName.ROLE_ADMIN));
+		
+		Set<Role> roles = user.getRoles();
+		Role userRole = roleRepository.findByRoleName(RoleName.ROLE_ADMIN)
+			    .orElseThrow(() -> new IllegalStateException("Role ROLE_ADMIN not found in database"));
+		roles.add(userRole);
+		user.setRoles(roles);
 		userRepository.save(user);
 		logger.info("User {} upgraded to ADMIN", user.getUsername());
 	}
