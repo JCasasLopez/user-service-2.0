@@ -28,11 +28,12 @@ public class LoginAttempt {
 	private User user;
 
 	public LoginAttempt(LocalDateTime timestamp, boolean successful, String ipAddress,
-			LoginFailureReason loginFailureReason) {
+			LoginFailureReason loginFailureReason, User user) {
 		this.timestamp = timestamp;
 		this.successful = successful;
 		this.ipAddress = ipAddress;
 		this.loginFailureReason = loginFailureReason;
+		this.user = user;
 	}
 
 	public LoginAttempt() {

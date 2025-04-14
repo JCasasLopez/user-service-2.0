@@ -59,40 +59,42 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	@Override
 	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
 	        AuthenticationException exception) throws IOException, ServletException {
-		// Establecido en en la implementación de UsernamePasswordAuthenticationFilter.
+		
+		// Atributo establecido en CustomUsernamePasswordAuthenticationFilter.
 		//
-		// Set by custom UsernamePasswordAuthenticationFilter
+		// Attribute set by custom UsernamePasswordAuthenticationFilter
 	    String username = (String) request.getAttribute("attemptedUsername");
 	    if (username == null || username.trim().isEmpty()) {
-			loginAttemptService.recordAttempt(true, request.getRemoteAddr(), LoginFailureReason.MISSING_FIELD);
+			loginAttemptService.recordAttempt(true, request.getRemoteAddr(), 
+					LoginFailureReason.MISSING_FIELD, null);
 	        logger.warn("Username not found in request attributes during auth failure");
 	        standardResponseHandler.handleResponse(response, 400, "Username not provided", null);
 	        return;
 	    }
 	    
+	    User user;
+        user = userAccountService.findUser(username);
+	    
 	    if (exception instanceof LockedException) {
 	        // La cuenta ya estaba bloqueada: registramos ACCOUNT_LOCKED como causa.
 	    	//
 	        // The account was already locked: log ACCOUNT_LOCKED as the reason.
-	        loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.ACCOUNT_LOCKED);
+	        loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
+	        		LoginFailureReason.ACCOUNT_LOCKED, user);
 	        standardResponseHandler.handleResponse(response, 403, "Account is locked", null);
 	        return;
-	    }
-
-	    User user;
-	    try {
-	        user = userAccountService.findUser(username);
-            
-	    } catch (UsernameNotFoundException ex) {
-        	// Si findUser() lanza una excepción, se ha usado un username equivocado para la autenticación.
+	        
+	    } else if (exception instanceof UsernameNotFoundException) {
+	    	// Si findUser() lanza una excepción, se ha usado un username equivocado para la autenticación.
             //
         	// If findUser() throws an exception, an incorrect username was used for authentication.
-			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.USER_NOT_FOUND);
+			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
+					LoginFailureReason.USER_NOT_FOUND, null);
 	        logger.warn("Username not found in the database");
 	        standardResponseHandler.handleResponse(response, 400, "Wrong username", null);
             return;
-        }
-
+	    }
+	    
 	    // Si el usuario ha proporcionado un username y este está en la base de datos, 
 	    // y la cuenta está activa, entonces el problema es que la contraseña es incorrecta.
 	    //
@@ -130,6 +132,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        standardResponseHandler.handleResponse(response, 401, "Incorrect password", null);
 	    }
 	    
-		loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.INCORRECT_PASSWORD);
+		loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
+				LoginFailureReason.INCORRECT_PASSWORD, user);
 	}
 }

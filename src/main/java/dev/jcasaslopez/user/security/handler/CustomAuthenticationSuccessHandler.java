@@ -12,11 +12,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.service.LoginAttemptService;
 import dev.jcasaslopez.user.service.TokenService;
+import dev.jcasaslopez.user.service.UserAccountService;
 import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,15 +34,17 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 	private LoginAttemptService loginAttemptService;
 	private TokenService tokenService;
 	private TokensLifetimes tokensLifetimes;
+	private UserAccountService userAccountService;
 
 	public CustomAuthenticationSuccessHandler(StringRedisTemplate redisTemplate,
 			StandardResponseHandler standardResponseHandler, LoginAttemptService loginAttemptService,
-			TokenService tokenService, TokensLifetimes tokensLifetimes) {
+			TokenService tokenService, TokensLifetimes tokensLifetimes, UserAccountService userAccountService) {
 		this.redisTemplate = redisTemplate;
 		this.standardResponseHandler = standardResponseHandler;
 		this.loginAttemptService = loginAttemptService;
 		this.tokenService = tokenService;
 		this.tokensLifetimes = tokensLifetimes;
+		this.userAccountService = userAccountService;
 	}
 
 	@Override
@@ -50,6 +54,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		// 
 		// Reset the failed login attempts counter by deleting its Redis entry.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		User user = userAccountService.findUser(username);
 		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		
 		// Si no existe esta entrada, no hay error.
@@ -57,7 +62,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		// If there is no such entry, no error/exception is thrown.
 		redisTemplate.delete(redisKey);
 		
-		loginAttemptService.recordAttempt(true, request.getRemoteAddr(), null);
+		loginAttemptService.recordAttempt(true, request.getRemoteAddr(), null, user);
 		
 		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
 		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
