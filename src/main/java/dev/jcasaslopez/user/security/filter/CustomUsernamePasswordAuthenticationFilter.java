@@ -6,7 +6,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import dev.jcasaslopez.user.entity.User;
@@ -50,37 +49,21 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	    //
 	    // We need the username in the handlers to use it as the key in Redis,
 	    // where we track failed authentication attempts.
-	    request.setAttribute("attemptedUsername", username);
-	    
-	    if (username == null || username.trim().isEmpty()) {
-	        logger.warn("Empty username received in login request");
-	        
-	    } else {
-	    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+		request.setAttribute("attemptedUsername", username);
+		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+		User user = userAccountService.findUser(username);
 
-	        // Si no existe una entrada en Redis para este usuario (y su cuenta está bloqueada)
-	    	// significa que ha expirado el periodo de bloqueo y la cuenta puede ser 
-	    	// reactivada automáticamente.
-			//
-			// If there is no Redis entry for this user (and his account is blocked)
-	    	// it means the lock period has expired and the account can be 
-	    	// automatically reactivated.
-	        if (!redisTemplate.hasKey(redisKey)) {
-	            try {
-	                User user = userAccountService.findUser(username);
-	                if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
-	                	eventPublisher.publishEvent(new UpdateAccountStatusEvent
-	                			(user, AccountStatus.ACTIVE));
-	                    user.setAccountStatus(AccountStatus.ACTIVE);
-	                    userRepository.save(user);
-	                    logger.info("User {} reactivated after lock expiration", username);
-	                }
-	                
-	            } catch (UsernameNotFoundException e) {
-	                logger.warn("User {} not found during attempted reactivation", username);
-	            }
-	        }
-	    }
-	    return super.attemptAuthentication(request, response);
+		// Si no existe una entrada en Redis para este usuario (y su cuenta está bloqueada)
+		// significa que ha expirado el periodo de bloqueo y la cuenta puede ser reactivada automáticamente.
+		//
+		// If there is no Redis entry for this user (and his account is blocked)
+		// it means the lock period has expired and the account can be automatically reactivated.
+		if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED && !redisTemplate.hasKey(redisKey)) {
+			eventPublisher.publishEvent(new UpdateAccountStatusEvent(user, AccountStatus.ACTIVE));
+			user.setAccountStatus(AccountStatus.ACTIVE);
+			userRepository.save(user);
+			logger.info("User {} reactivated after lock expiration", username);
+		}
+		return super.attemptAuthentication(request, response);
 	}
 }
