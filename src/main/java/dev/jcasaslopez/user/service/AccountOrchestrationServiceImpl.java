@@ -217,10 +217,10 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	
 	@Override
 	public List<String> refreshToken(){
-		logger.debug("Creating access token...");
-		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
 		logger.debug("Creating refresh token...");
 		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
+		logger.debug("Creating access token...");
+		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
 		
 		String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenService.getJtiFromToken(refreshToken);
 		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.REFRESH) * 60;		
@@ -228,6 +228,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 				TimeUnit.SECONDS);
 		logger.info("Refresh token uploaded in Redis with key {}", redisKey);
 		
-		return List.of(accessToken, refreshToken);
+		return List.of(refreshToken, accessToken);
 	}
 }
