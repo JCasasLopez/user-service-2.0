@@ -78,7 +78,7 @@ public class SecurityConfig {
 	    filter.setAuthenticationManager(authenticationManager);
 	    filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 	    filter.setAuthenticationFailureHandler(authenticationFailureHandler);
-	    filter.setFilterProcessesUrl("/login");
+	    filter.setFilterProcessesUrl(Constants.LOGIN_PATH);
 
 	    return filter;
 	}
@@ -106,12 +106,11 @@ public class SecurityConfig {
             									Constants.REGISTRATION_PATH,
             									Constants.FORGOT_PASSWORD_PATH,
             									Constants.RESET_PASSWORD_PATH,
-            									Constants.REFRESH_TOKEN_PATH,
             									Constants.LOGOUT_PATH,
-            									"/login"
-            									
+            									Constants.LOGIN_PATH
             													).permitAll() 
             							.requestMatchers(
+            									Constants.REFRESH_TOKEN_PATH,
             									"/deleteAccount",
             									"/upgradeUser",
             									"/changePassword",
