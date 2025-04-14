@@ -134,11 +134,20 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
+	// Endpoint para la funcionalidad de refrescado de tokens.
+	// El sistema deberá recibir un token de refresco que se intercepta en AuthenticationFilter:
+	// si el token es válido, se revoca en el filtro. accountOrchestrationService.refreshToken()
+	// simplemente devuelve otra pareja de tokens refresco/acceso.
+	//
+	// Endpoint for token refresh functionality.
+	// The system should receive a refresh token, which is intercepted in AuthenticationFilter:
+	// if the token is valid, it is revoked in the filter. accountOrchestrationService.refreshToken()
+	// simply returns another pair of refresh/access tokens.
 	@PostMapping(value  = Constants.REFRESH_TOKEN_PATH)
 	public ResponseEntity<StandardResponse> refreshToken() {
 		List<String> tokens = accountOrchestrationService.refreshToken();
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
-				"New refresh and access tokens sent successfully", tokens, HttpStatus.OK);
-		return ResponseEntity.status(HttpStatus.OK).body(response);
+				"New refresh and access tokens sent successfully", tokens, HttpStatus.CREATED);
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 }
