@@ -77,14 +77,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
 			        !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
-					String username = optionalClaims.get().getSubject();
-			    	User userJpa = userRepository.findByUsername(username).orElseThrow(
-							() -> new UsernameNotFoundException(username));
-			    	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
-			    	Authentication authentication = new UsernamePasswordAuthenticationToken
-													(user, token, user.getAuthorities());
-					SecurityContextHolder.getContext().setAuthentication(authentication);
-			    	logger.info("Valid refresh token. User {} authenticated successfully", username);
+			    	authenticateUser(token, optionalClaims);
 					
 					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
 					// en el siguiente paso (controller -> AccountOrchestrationService).
@@ -120,14 +113,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    // The access token is valid for all endpoints that require authentication
 			    // except for 'refresh token' endpoint.
 			    if (!path.equals(Constants.REFRESH_TOKEN_PATH) && purposeStr.equals(TokenType.ACCESS.name())) {
-			    	String username = optionalClaims.get().getSubject();
-			    	User userJpa = userRepository.findByUsername(username).orElseThrow(
-							() -> new UsernameNotFoundException(username));
-			    	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
-			    	Authentication authentication = new UsernamePasswordAuthenticationToken
-													(user, token, user.getAuthorities());
-					SecurityContextHolder.getContext().setAuthentication(authentication);
-			    	logger.info("Valid access token. User {} authenticated successfully", username);
+			    	authenticateUser(token, optionalClaims);
 			        filterChain.doFilter(request, response);
 			        return;
 			    }
@@ -141,5 +127,16 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 		// If the endpoint does not required authentication, so there was no token in the header.
 		logger.debug("No Authorization header found or token not required for path: {}", path);
 		filterChain.doFilter(request, response);
+	}
+	
+	public void authenticateUser(String token, Optional<Claims> optionalClaims) {
+		String username = optionalClaims.get().getSubject();
+    	User userJpa = userRepository.findByUsername(username).orElseThrow(
+				() -> new UsernameNotFoundException(username));
+    	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
+    	Authentication authentication = new UsernamePasswordAuthenticationToken
+										(user, token, user.getAuthorities());
+		SecurityContextHolder.getContext().setAuthentication(authentication);
+    	logger.info("Valid access token. User {} authenticated successfully", username);
 	}
 }
