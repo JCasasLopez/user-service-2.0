@@ -71,6 +71,14 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		this.emailService = emailService;
 	}
 
+	// Se añade una entrada en Redis para almacenar temporalmente los datos del usuario que necesitaremos 
+	// en el siguiente paso, una vez que se haya verificado el correo electrónico y se proceda a crear la cuenta. 
+	// La clave es el JTI del token y el valor, los datos del usuario en formato JSON. 
+	// En el siguiente paso, recuperamos esta información a partir del token que el usuario recibe por email.
+	//
+	// A Redis entry is added to temporarily store the user's data needed in the next step—after email verification—
+	// for the actual account creation. The key is the token's JTI, and the value is the user data serialized as JSON.
+	// In the next step, we retrieve the user's data using the token received via email.
 	@Override
 	public void initiateRegistration(UserDto user) throws JsonProcessingException {
 		String username = user.getUsername();
@@ -86,12 +94,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		user.setPassword(passwordEncoder.encode(user.getPassword())); 
 		String userJson = objectMapper.writeValueAsString(user);
 		logger.debug("Redis key: {}. Password encoded before trying to upload to Redis ", redisKey);
-		
-		// Establecemos la cadena userJson como valor de la entrada de Redis, porque vamos 
-		// a necesitarlo en el siguiente paso (creación de la cuenta como tal).
-		//
-		// We set the string userJson as the Redis entry value, since we will need it in 
-		// next step (creating the account).
 		redisTemplate.opsForValue().set(redisKey, userJson, expirationInSeconds, TimeUnit.SECONDS);
 		logger.info("Redis entry uploaded. RedisKey:{}", redisKey);
 		
@@ -102,7 +104,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@Override
 	@Transactional
 	public void userRegistration(HttpServletRequest request) throws JsonMappingException, JsonProcessingException {
-		// Hemos establecido el token como stributo en AuthenticationFilter.
+		// Hemos establecido el token como atributo en AuthenticationFilter.
 		//
 		// We have set the token as an attribute in AuthenticationFilter.
 		String token = (String) request.getAttribute("token");
@@ -132,13 +134,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@Override
 	@Transactional
 	public void deleteAccount() {
-		// Este endpoint solo es accesible para usuarios autenticados (ver configuración de 
-		// seguridad). Se elimina la cuenta del usuario actualmente autenticado, 
-		// cuyo nombre de usuario se obtiene directamente del SecurityContext.
-	    //
-	    // This endpoint is only accessible to authenticated users (see security config).
-	    // It deletes the account of the currently authenticated user, whose username is retrieved
-	    // from the SecurityContext.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		userDetailsManager.deleteUser(username);
 		logger.info("Account deleted successfully for user {}", username);;
@@ -157,7 +152,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@Override
 	@Transactional
 	public void resetPassword(String newPassword, HttpServletRequest request) {
-		// Hemos establecido el token como stributo en AuthenticationFilter.
+		// Hemos establecido el token como atributo en AuthenticationFilter.
 		//
 		// We have set the token as an attribute in AuthenticationFilter.
 		String token = (String) request.getAttribute("token");
