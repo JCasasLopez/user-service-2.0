@@ -23,11 +23,12 @@ public class EmailServiceImpl implements EmailService {
 	private JavaMailSender mailSender;
 	private UserRepository userRepository;
 
-    public EmailServiceImpl(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    public EmailServiceImpl(JavaMailSender mailSender, UserRepository userRepository) {
+		this.mailSender = mailSender;
+		this.userRepository = userRepository;
+	}
 
-    @Override
+	@Override
 	public void sendEmail(String recipient, String subject, String message) {
     	
         try {
