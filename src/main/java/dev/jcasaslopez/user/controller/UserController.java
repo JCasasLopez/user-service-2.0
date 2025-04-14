@@ -41,6 +41,9 @@ public class UserController {
 		this.accountOrchestrationService = accountOrchestrationService;
 	}
 
+	// Manda un email con el token de verificación para la creación de una cuenta.
+	//
+	// It sends a verification email to initiate the registration process.
 	@PostMapping(value = Constants.INITIATE_REGISTRATION_PATH, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<StandardResponse> initiateRegistration(@Valid @RequestBody UserDto user) 
 			throws JsonProcessingException{
@@ -59,6 +62,9 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 	
+	// Sin parámetros: borra al usuario que está autenticado en ese momento (puebla SecurityContext).
+	//
+	// No paramters: deletes the user that populates SecurityContextHolder.
 	@DeleteMapping(value = "/deleteAccount")
 	public ResponseEntity<StandardResponse> deleteAccount() {
 		accountOrchestrationService.deleteAccount();
@@ -67,6 +73,9 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
+	// Manda un email con el token de verificación para resetear la contraseña.
+	//
+	// It sends a verification email to initiate the password reset process.
 	@PostMapping(value = Constants.FORGOT_PASSWORD_PATH)
 	public ResponseEntity<StandardResponse> forgotPassword(@RequestParam @NotBlank @Email 
 			String email) {
@@ -76,6 +85,11 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
+	// Ver comentario en PasswordServiceImpl.resetPassword() para entender mejor la diferencia 
+	// entre las funcionalidades resetPassword y changePassword, y por qué son 2 lógicas diferenciadas.
+	//
+	// See the comment in PasswordServiceImpl.resetPassword() to better understand the difference 
+	// between the resetPassword and changePassword functionalities, and why they are two separate flows.
 	@PutMapping(value = Constants.RESET_PASSWORD_PATH)
 	public ResponseEntity<StandardResponse> resetPassword(@RequestParam @NotBlank String newPassword, 
 			HttpServletRequest request) {
@@ -84,15 +98,7 @@ public class UserController {
 				"Password reset successfully", null, HttpStatus.OK);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
-	
-	@PutMapping(value = "/upgradeUser")
-	public ResponseEntity<StandardResponse> upgradeUser(@RequestParam @NotBlank @Email String email) {
-		accountOrchestrationService.upgradeUser(email);
-		StandardResponse response = new StandardResponse(LocalDateTime.now(),
-				"User upgraded successfully to admin", null, HttpStatus.OK);
-		return ResponseEntity.status(HttpStatus.OK).body(response);
-	}
-	
+		
 	@PutMapping(value = "/changePassword")
 	public ResponseEntity<StandardResponse> changePassword(@RequestParam @NotBlank String oldPassword, 
 			@RequestParam @NotBlank String newPassword) {
@@ -102,11 +108,28 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	// Spring permite pasar una enumeración como parámetro en un @RequestParam,
-	// pero solo si el valor en la URL coincide exactamente con el nombre del enum.
+	// Promociona usuario de simple USER a ADMIN. Solo accesible para usuarios SUPER_ADMIN.
 	//
+	// Upgrades user from USER to ADMIN. Only accesible to SUPER_ADMIN users.
+	@PutMapping(value = "/upgradeUser")
+	public ResponseEntity<StandardResponse> upgradeUser(@RequestParam @NotBlank @Email String email) {
+		accountOrchestrationService.upgradeUser(email);
+		StandardResponse response = new StandardResponse(LocalDateTime.now(),
+				"User upgraded successfully to admin", null, HttpStatus.OK);
+		return ResponseEntity.status(HttpStatus.OK).body(response);
+	}
+	
+	// Para cambios en el estatus de la cuenta. Solo accesible para usuarios ADMIN.
+	// Desbloqueo de cuenta automático tras el período de tiempo estipulado en application.properties.
+	// Una vez la cuenta se ha suspendido permanentemente (PERMANENTLY_SUSPENDED), ya no se puede modificar.
+	// Spring permite pasar una enumeración como parámetro en un @RequestParam,
+	// pero solo si el valor en la URL coincide exactamente con el nombre del enumeración.
+	//
+	// To modify account status. Only accessible to ADMIN users.
+	// Automatic account unlock after the time period specified in application.properties.
+	// Once the account has been permanently suspended (PERMANENTLY_SUSPENDED), it can no longer be modified.
 	// Spring allows passing an enumeration as a parameter in a @RequestParam,
-	// but only if the value in the URL exactly matches the enum name.
+	// but only if the value in the URL exactly matches the enumeration name.
 	//
 	// Accepted values: ACTIVE, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
 	@PutMapping(value = "/updateAccountStatus")
@@ -136,13 +159,15 @@ public class UserController {
 	
 	// Endpoint para la funcionalidad de refrescado de tokens.
 	// El sistema deberá recibir un token de refresco que se intercepta en AuthenticationFilter:
-	// si el token es válido, se revoca en el filtro. accountOrchestrationService.refreshToken()
-	// simplemente devuelve otra pareja de tokens refresco/acceso.
+	// si el token es válido, se revoca en el filtro. 
+	// accountOrchestrationService.refreshToken() simplemente devuelve otra pareja de tokens refresco/acceso.
+	// IMPORTANTE: En la lista, el primer token corresponde al de refresco y el segundo al de acceso.
 	//
 	// Endpoint for token refresh functionality.
 	// The system should receive a refresh token, which is intercepted in AuthenticationFilter:
-	// if the token is valid, it is revoked in the filter. accountOrchestrationService.refreshToken()
-	// simply returns another pair of refresh/access tokens.
+	// if the token is valid, it is revoked in the filter. 
+	// accountOrchestrationService.refreshToken() simply returns another pair of refresh/access tokens.
+	// IMPORTANT: In the list, the first token is the refresh token and the second one is the access token.
 	@PostMapping(value  = Constants.REFRESH_TOKEN_PATH)
 	public ResponseEntity<StandardResponse> refreshToken() {
 		List<String> tokens = accountOrchestrationService.refreshToken();
