@@ -77,7 +77,14 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
 			        !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
-					logger.debug("Valid refresh token received");
+					String username = optionalClaims.get().getSubject();
+			    	User userJpa = userRepository.findByUsername(username).orElseThrow(
+							() -> new UsernameNotFoundException(username));
+			    	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
+			    	Authentication authentication = new UsernamePasswordAuthenticationToken
+													(user, token, user.getAuthorities());
+					SecurityContextHolder.getContext().setAuthentication(authentication);
+			    	logger.info("Valid refresh token. User {} authenticated successfully", username);
 					
 					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
 					// en el siguiente paso (controller -> AccountOrchestrationService).
@@ -107,7 +114,12 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    }
 			    
 			    // Access token
-			    if (purposeStr.equals(TokenType.ACCESS.name())) {
+			    // El token de acceso es válido para todos los endpoints que necesitan autenticación
+			    // excepto 'refresh token'.
+			    // 
+			    // The access token is valid for all endpoints that require authentication
+			    // except for 'refresh token' endpoint.
+			    if (!path.equals(Constants.REFRESH_TOKEN_PATH) && purposeStr.equals(TokenType.ACCESS.name())) {
 			    	String username = optionalClaims.get().getSubject();
 			    	User userJpa = userRepository.findByUsername(username).orElseThrow(
 							() -> new UsernameNotFoundException(username));
