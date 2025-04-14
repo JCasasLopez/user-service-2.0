@@ -28,6 +28,10 @@ public class EmailServiceImpl implements EmailService {
 		this.userRepository = userRepository;
 	}
 
+    	
+    // El formato del mensaje es HTTP.
+    //
+    // Message format is HTTP.
 	@Override
 	public void sendEmail(String recipient, String subject, String message) {
     	
@@ -48,6 +52,11 @@ public class EmailServiceImpl implements EmailService {
         }
     }
     
+	// Convierte el formato Map recibido como parámetro a los parámetros individuales conforma a la 
+	// firma de sendEmail(), extrayendo el email del usuario y convirtiendo el idUser a tipo 'int'.
+	//
+	// Converts the Map format received as a parameter into individual parameters according to the 
+	// sendEmail() method signature, extracting the user's email and converting the idUser to type 'int'.
     public void processMessageDetails(Map<String, String> messageAsMap) {
         int idUser = Integer.valueOf(messageAsMap.get("Recipient"));
         logger.debug("Processing message for user ID: {}", idUser);
