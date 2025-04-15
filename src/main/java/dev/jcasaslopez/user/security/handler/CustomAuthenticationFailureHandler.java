@@ -10,7 +10,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 
@@ -84,22 +83,15 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        standardResponseHandler.handleResponse(response, 403, "Account is locked", null);
 	        return;
 	        
-	    } else if (exception instanceof UsernameNotFoundException) {
-	    	// Si findUser() lanza una excepción, se ha usado un username equivocado para la autenticación.
-            //
-        	// If findUser() throws an exception, an incorrect username was used for authentication.
-			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
-					LoginFailureReason.USER_NOT_FOUND, null);
-	        logger.warn("Username not found in the database");
-	        standardResponseHandler.handleResponse(response, 400, "Wrong username", null);
-            return;
-	    }
+	    } 
 	    
-	    // Si el usuario ha proporcionado un username y este está en la base de datos, 
-	    // y la cuenta está activa, entonces el problema es que la contraseña es incorrecta.
+	    // Si el usuario ha proporcionado un username y este está en la base de datos 
+	    // (ver LoginUsernameCheckerFilter), y la cuenta está activa, entonces el problema es que 
+	    // la contraseña es incorrecta.
 	    //
-	    // If the user has provided a username that is in the database, and that account 
-	    // is active, then the authentication has failed because the password was incorrect.
+	    // If the user has provided a username that is in the database (see LoginUsernameCheckerFilter), 
+	    // and that account is active, then the authentication has failed because the password was 
+	    // incorrect.
 	    String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 	    int failedAttempts=0;
 
