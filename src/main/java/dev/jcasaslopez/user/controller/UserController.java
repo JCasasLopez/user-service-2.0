@@ -119,15 +119,19 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	// Para cambios en el estatus de la cuenta. Solo accesible para usuarios ADMIN.
+	// Permite cambiar el estado de una cuenta, ya sea para suspenderla temporalmente o 
+	// desactivarla de forma definitiva. Este método se utiliza en situaciones como problemas 
+	// administrativos, detección de actividad sospechosa, etc.	
+	// Solo accesible para usuarios ADMIN.
 	// Desbloqueo de cuenta automático tras el período de tiempo estipulado en application.properties.
-	// Una vez la cuenta se ha suspendido permanentemente (PERMANENTLY_SUSPENDED), ya no se puede modificar.
 	// Spring permite pasar una enumeración como parámetro en un @RequestParam,
 	// pero solo si el valor en la URL coincide exactamente con el nombre del enumeración.
 	//
-	// To modify account status. Only accessible to ADMIN users.
+	// Allows changing the status of an account, either by temporarily suspending it or 
+	// permanently deactivating it. This method is typically used in cases such as administrative 
+	// issues, suspicious activity, etc.
+	// Only accessible to ADMIN users.
 	// Automatic account unlock after the time period specified in application.properties.
-	// Once the account has been permanently suspended (PERMANENTLY_SUSPENDED), it can no longer be modified.
 	// Spring allows passing an enumeration as a parameter in a @RequestParam,
 	// but only if the value in the URL exactly matches the enumeration name.
 	//

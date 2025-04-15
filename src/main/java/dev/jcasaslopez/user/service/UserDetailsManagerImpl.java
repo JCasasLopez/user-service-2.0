@@ -100,12 +100,12 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 		return userRepository.existsByUsername(username);
 	}
 
-	@Override
 	// Método interno usado por Spring Security durante el proceso de autenticación
 	// No debe exponerse directamente a los usuarios.
 	//
 	// Internal method used by Spring Security during the authentication process
 	// Should not be exposed directly to users.
+	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		logger.debug("Attempting to load user details for username: {}", username);
 		return userMapper.userToCustomUserDetailsMapper(accountService.findUser(username));
