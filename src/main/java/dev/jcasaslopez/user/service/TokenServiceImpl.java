@@ -53,9 +53,13 @@ public class TokenServiceImpl implements TokenService {
 		logger.info("TokenService initialized with decoded secret key");
 	}
 	
-	// Se usa tanto para tokens de acceso como para los de refrescado.
+	// Crea un token de autenticación (ACCESS o REFRESH) para un usuario autenticado.
+	// Utiliza el contexto de seguridad para obtener el usuario actual y sus roles.
+	// Se mantiene separado del token de verificación para no mezclar lógicas diferentes.
 	//
-    // Used both for access and refreshed tokens.
+	// Creates an authentication token (ACCESS or REFRESH) for an authenticated user.
+	// Uses the security context to retrieve the current user and their roles.
+	// Kept separate from verification token logic to avoid mixing different concerns.
 	@Override
 	public String createAuthToken(TokenType tokenType) {
 		// tokensLifetimes.getTokensLifetimes() -> Map<TokenType, Integer>.
@@ -79,6 +83,13 @@ public class TokenServiceImpl implements TokenService {
 		return token;
 	}
 	
+	// Crea un token de verificación (por ejemplo, para activación de cuenta o restablecimiento de contraseña).
+	// No requiere contexto de seguridad: solo necesita el nombre de usuario.
+	// Se separa de los tokens de autenticación para mantener la lógica simple y específica.
+	//
+	// Creates a verification token (e.g., for account activation or password reset).
+	// Does not require a security context: only the username is needed.
+	// Separated from authentication tokens to keep the logic simple and purpose-specific.
 	@Override
 	public String createVerificationToken(String username) {
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60 * 1000;		
@@ -94,7 +105,7 @@ public class TokenServiceImpl implements TokenService {
 		logger.debug("Verification token issued successfully. jti: {}", jti);
 		return token;
 	}
-
+	
 	@Override
 	public Claims parseClaims(String token) {
 		try {
@@ -132,6 +143,27 @@ public class TokenServiceImpl implements TokenService {
 		}
 	} 
 	
+	// Parsea y valida las claims del token (firma, expiración, etc.).
+	// Devuelve Optional.empty() si el token no es técnicamente válido.
+	//
+	// Parses and validates the token claims (signature, expiration, etc.).
+	// Returns Optional.empty() if the token is not technically valid.
+	@Override
+	public Optional<Claims> getValidClaims(String token) {
+		try {
+			Claims claims = parseClaims(token);
+			return Optional.of(claims);
+		} catch (JwtException ex) {
+			return Optional.empty();
+		}
+	}
+	
+	@Override
+	public String getJtiFromToken(String token) {
+		String jti = parseClaims(token).getId();
+		return jti;
+	}
+	
 	@Override
 	public void logOut(String token) {
 		logger.info("Processing logout...");
@@ -161,11 +193,7 @@ public class TokenServiceImpl implements TokenService {
 		logger.info("User has been logged out");
 	}
 	
-	@Override
-	public String getJtiFromToken(String token) {
-		String jti = parseClaims(token).getId();
-		return jti;
-	}
+	
 	
 	@Override
 	public void blacklistToken(String redisKey, long expirationInSeconds) {
@@ -173,21 +201,6 @@ public class TokenServiceImpl implements TokenService {
         redisTemplate.opsForValue().set(redisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
     }		
 	
-	// Parsea y valida las claims del token (firma, expiración, etc.).
-	// Devuelve Optional.empty() si el token no es técnicamente válido.
-	//
-	// Parses and validates the token claims (signature, expiration, etc.).
-	// Returns Optional.empty() if the token is not technically valid.
-	@Override
-	public Optional<Claims> getValidClaims(String token) {
-		try {
-			Claims claims = parseClaims(token);
-			return Optional.of(claims);
-		} catch (JwtException ex) {
-			return Optional.empty();
-		}
-	}
-
 	@Override
 	public boolean isTokenBlacklisted(String token) {
 		String tokenJti = getJtiFromToken(token);
