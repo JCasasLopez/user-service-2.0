@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.exception.AccountStatusException;
+import dev.jcasaslopez.user.exception.MissingCredentialException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -62,6 +63,14 @@ public class GlobalExceptionHandler {
 		StandardResponse response = new StandardResponse (LocalDateTime.now(), 
 				ex.getMessage() , null, HttpStatus.NOT_FOUND);
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+	}
+	
+	@ExceptionHandler(MissingCredentialException.class)
+	public ResponseEntity<StandardResponse> handleMissingCredentialException(MissingCredentialException ex){
+        log.error("AccountStatusException: {}", ex.getMessage(), ex);
+        StandardResponse response = new StandardResponse (LocalDateTime.now(), 
+				ex.getMessage() , null, HttpStatus.BAD_REQUEST);
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
 	}
 	
 	@ExceptionHandler(DataIntegrityViolationException.class)
