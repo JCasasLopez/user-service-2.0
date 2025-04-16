@@ -10,6 +10,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
 import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
+import dev.jcasaslopez.user.exception.MissingCredentialException;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.LoginAttemptService;
@@ -63,12 +65,36 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 		//
 		// Attribute set by custom UsernamePasswordAuthenticationFilter
 	    String username = (String) request.getAttribute("attemptedUsername");
-	    if (username == null || username.trim().isEmpty()) {
-			loginAttemptService.recordAttempt(true, request.getRemoteAddr(), 
+	    
+	    // Tratamos las credenciales faltantes aquí en lugar de AuthenticationEntryPoint, que es su 
+	    // lugar natural, es decir, adonde te lleva el flujo de Spring Security por defecto,
+	    // porque así tenemos todos los casos de fallo de login reunidos bajo una misma clase.
+	    //
+	    // We handle missing credentials here instead of in the AuthenticationEntryPoint, 
+	    // which would be their natural place (i.e., where Spring Security would route them by default),
+	    // so that all login failure cases are grouped together in a single class.
+	    if (exception instanceof MissingCredentialException) {
+			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
 					LoginFailureReason.MISSING_FIELD, null);
-	        logger.warn("Username not found in request attributes during auth failure");
-	        standardResponseHandler.handleResponse(response, 400, "Username not provided", null);
+	        logger.warn("Username or password not found during auth failure");
+	        standardResponseHandler.handleResponse(response, 400, "Username and password are required", null);
 	        return;
+	    }
+	      
+	    if (exception instanceof UsernameNotFoundException) {
+	    	loginAttemptService.recordAttempt(false, request.getRemoteAddr(),
+                    LoginFailureReason.USER_NOT_FOUND, null);
+            logger.info("Failed login attempt - User not found");
+            
+            // Aunque el usuario no existe, devolvemos 401 con un mensaje neutro 
+            // ("Bad credentials") para no revelar si el fallo fue por username o contraseña, 
+            // evitando posibles ataques de enumeración.
+            //
+            // Even if the user does not exist, we return 401 with a neutral message 
+            // ("Bad credentials") to avoid revealing whether the failure was due to username 
+            // or password, preventing user enumeration attacks.
+            standardResponseHandler.handleResponse(response, 401, "Bad credentials", null);
+            return;
 	    }
 	    
 	    User user;
@@ -82,16 +108,13 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        		LoginFailureReason.ACCOUNT_LOCKED, user);
 	        standardResponseHandler.handleResponse(response, 403, "Account is locked", null);
 	        return;
-	        
-	    } 
+	    }
 	    
-	    // Si el usuario ha proporcionado un username y este está en la base de datos 
-	    // (ver LoginUsernameCheckerFilter), y la cuenta está activa, entonces el problema es que 
-	    // la contraseña es incorrecta.
+	    // Si el usuario ha proporcionado un username y este está en la base de datos, y la cuenta 
+	    // está activa, entonces el problema es que la contraseña es incorrecta.
 	    //
-	    // If the user has provided a username that is in the database (see LoginUsernameCheckerFilter), 
-	    // and that account is active, then the authentication has failed because the password was 
-	    // incorrect.
+	    // If the user has provided a username that is in the database, and that account is active
+	    // , then the authentication has failed because the password was incorrect.
 	    String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 	    int failedAttempts=0;
 
@@ -117,11 +140,17 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	            logger.info("Failed login attempt {} for user {}", failedAttempts, username);
 	        }
 	    }
+	    
+	    // Usamos "Bad Credentials" en vez de "Incorrect password" por la razón ya mencionada 
+	    // más arriba (prevenir ataques de enumeración).
+	    //
+	    // We use "Bad credentials" instead of "Incorrect password" for the reason mentioned above 
+	    // (to prevent enumeration attacks).
 	    if(failedAttempts >= maxNumberFailedAttempts) {
-	        standardResponseHandler.handleResponse(response, 401, "Incorrect password. Your account has been "
+	        standardResponseHandler.handleResponse(response, 401, "Bad credentials. Your account has been "
 	        		+ "locked due to too many attempts", null);
 	    } else {
-	        standardResponseHandler.handleResponse(response, 401, "Incorrect password", null);
+	        standardResponseHandler.handleResponse(response, 401, "Bad credentials", null);
 	    }
 	    
 		loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 

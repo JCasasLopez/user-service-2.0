@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
+import dev.jcasaslopez.user.exception.MissingCredentialException;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.handler.CustomAuthenticationFailureHandler;
 import dev.jcasaslopez.user.service.UserAccountService;
@@ -41,8 +42,16 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 	        throws AuthenticationException {
+		
+		String username = request.getParameter("username");
+	    String password = request.getParameter("password");
 
-	    String username = obtainUsername(request);
+	    if (username == null || username.trim().isEmpty() ||
+	        password == null || password.trim().isEmpty()) {
+	        throw new MissingCredentialException("Username and password are required");
+	    }
+
+	    request.setAttribute("attemptedUsername", username);
 	    
 	    // Necesitamos el username en los handlers para usarlo como clave en Redis,
 	    // donde llevamos el control de los intentos fallidos de autenticación.
