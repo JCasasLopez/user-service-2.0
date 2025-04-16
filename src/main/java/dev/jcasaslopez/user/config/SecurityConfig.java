@@ -23,7 +23,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.filter.AuthenticationFilter;
 import dev.jcasaslopez.user.security.filter.CustomUsernamePasswordAuthenticationFilter;
-import dev.jcasaslopez.user.security.filter.LoginUsernameCheckerFilter;
 import dev.jcasaslopez.user.service.UserAccountService;
 import dev.jcasaslopez.user.utilities.Constants;
 
@@ -37,17 +36,15 @@ public class SecurityConfig {
 	private AuthenticationFilter authenticationFilter;
 	private AuthenticationEntryPoint authenticationEntryPoint;
 	private AccessDeniedHandler accessDeniedHandler;
-	private LoginUsernameCheckerFilter loginUsernameCheckerFilter;
 	
 	public SecurityConfig(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
 			AuthenticationFilter authenticationFilter, AuthenticationEntryPoint authenticationEntryPoint,
-			AccessDeniedHandler accessDeniedHandler, LoginUsernameCheckerFilter loginUsernameCheckerFilter) {
+			AccessDeniedHandler accessDeniedHandler) {
 		this.userDetailsService = userDetailsService;
 		this.passwordEncoder = passwordEncoder;
 		this.authenticationFilter = authenticationFilter;
 		this.authenticationEntryPoint = authenticationEntryPoint;
 		this.accessDeniedHandler = accessDeniedHandler;
-		this.loginUsernameCheckerFilter = loginUsernameCheckerFilter;
 	}
 
 	@Bean
@@ -56,6 +53,14 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
+        // Permite que UsernameNotFoundException no se encapsule como InternalAuthenticationServiceException,
+        // pudiendo capturarla directamente en el AuthenticationFailureHandler y persistir la 
+        // causa real del fallo (usuario no encontrado).
+        //
+        // Prevents UsernameNotFoundException from being wrapped as InternalAuthenticationServiceException,
+        // so it can be handled directly in the AuthenticationFailureHandler and the 
+        // actual failure reason (user not found) can be logged.
+        provider.setHideUserNotFoundExceptions(false);
         return provider;
     }
 	
@@ -97,7 +102,6 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sessMang -> sessMang.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(loginUsernameCheckerFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAt(loginFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
             // Deshabilito LogoutFilter poque voy a usar una implementación personalizada.
