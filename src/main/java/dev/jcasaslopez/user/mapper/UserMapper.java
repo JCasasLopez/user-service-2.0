@@ -18,7 +18,6 @@ public class UserMapper {
 	public UserDto userToUserDtoMapper(User user) {
 		return new UserDto(user.getIdUser(),
 				user.getUsername(),
-				user.getPassword(),
 				user.getFullName(),
 				user.getEmail(),
 				user.getDateOfBirth(),
@@ -30,15 +29,12 @@ public class UserMapper {
 	}
 	
 	public User userDtoToUserMapper(UserDto user) {
-		return new User(user.getUsername(),
+		return new User(
+				user.getUsername(),
 				user.getPassword(),
 				user.getFullName(),
 				user.getEmail(),
-				user.getDateOfBirth(),
-				user.getRoles().stream()
-						.map(rol -> roleMapper.roleDtoToRoleMapper(rol))
-						.collect(Collectors.toSet()),
-				user.getAccountStatus()
+				user.getDateOfBirth()
 				);
 	}
 	

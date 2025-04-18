@@ -52,25 +52,29 @@ public class UserRoleRelationshipTest {
 			    "securePassword123",
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15), 
-			    // No se debe usar Set.of() porque crea una colección inmutable, y Hibernate 
-			    // necesita modificarla internamente.
-			    //
-			    // Set.of() should not be used because it creates an immutable collection, and 
-			    // Hibernate needs to modify it internally.
-			    new HashSet<>(Arrays.asList(roleUser, roleAdmin)),
-			    AccountStatus.ACTIVE
-			);
+			    LocalDate.of(1990, 5, 15)
+			    );
 		
+		// No se debe usar Set.of() porque crea una colección inmutable, y Hibernate 
+		// necesita modificarla internamente.
+		//
+		// Set.of() should not be used because it creates an immutable collection, and 
+		// Hibernate needs to modify it internally.
+		Set<Role> user1Roles = new HashSet<>(Arrays.asList(roleUser, roleAdmin));
+		user1.setRoles(user1Roles);
+		user1.setAccountStatus(AccountStatus.ACTIVE);
+			    		
 		User user2 = new User(
 			    "Laura",
 			    "securePassword456",
 			    "Laura Smith",
 			    "laura92@example.com",
-			    LocalDate.of(1992, 6, 11), 
-			    new HashSet<>(Arrays.asList(roleUser)),
-			    AccountStatus.ACTIVE
+			    LocalDate.of(1992, 6, 11)
 			);
+		
+		Set<Role> user2Roles = new HashSet<>(Arrays.asList(roleUser));
+		user2.setRoles(user2Roles);
+		user2.setAccountStatus(AccountStatus.ACTIVE);
 		
 		persistedUser1 = userRepository.save(user1);
 		persistedUser2 = userRepository.save(user2);

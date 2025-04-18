@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import dev.jcasaslopez.user.dto.RoleDto;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
@@ -40,13 +41,15 @@ public class UserMapperTest {
 		Role role = new Role(RoleName.ROLE_USER);
 		User user = new User(
 			    "Johnny",
-			    "Qwerty123!",
 			    "John Doe",
+			    "Qwerty123!",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15), 
-			    Set.of(role), 
-			    AccountStatus.ACTIVE
+			    LocalDate.of(1990, 5, 15)
 			);
+		
+		Set<Role> userRoles = new HashSet<>(Arrays.asList(role));
+		user.setRoles(userRoles);
+		user.setAccountStatus(AccountStatus.ACTIVE);
 		
 		// Act
 		UserDto mappedUserDto = userMapper.userToUserDtoMapper(user);
@@ -54,9 +57,7 @@ public class UserMapperTest {
 		// Assert
 		assertAll(
 		        () -> assertEquals(user.getUsername(), mappedUserDto.getUsername(), 
-		        		"USernames should match"),
-		        () -> assertEquals(user.getPassword(), mappedUserDto.getPassword(), 
-		        		"Passwords should match"),
+		        		"Usernames should match"),
 		        () -> assertEquals(user.getFullName(), mappedUserDto.getFullName(), 
 		        		"Full names should match"),
 		        () -> assertEquals(user.getEmail(), mappedUserDto.getEmail(), 
@@ -84,15 +85,12 @@ public class UserMapperTest {
 	@DisplayName("userDtoToUserMapper() should map correctly from UserDto to User")
 	void userDtoToUserMapper_ShoudMapCorrectlyToUser() {
 		// Arrange
-		RoleDto roleDto = new RoleDto(RoleName.ROLE_USER);
 		UserDto userDto = new UserDto(
 			    "Johnny",
 			    "Qwerty123!",
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15), 
-			    Set.of(roleDto), 
-			    AccountStatus.ACTIVE
+			    LocalDate.of(1990, 5, 15)
 			);
 		
 		// Act
@@ -101,7 +99,7 @@ public class UserMapperTest {
 		// Assert
 		assertAll(
 		        () -> assertEquals(userDto.getUsername(), mappedUser.getUsername(), 
-		        		"USernames should match"),
+		        		"Usernames should match"),
 		        () -> assertEquals(userDto.getPassword(), mappedUser.getPassword(), 
 		        		"Passwords should match"),
 		        () -> assertEquals(userDto.getFullName(), mappedUser.getFullName(), 
@@ -109,22 +107,7 @@ public class UserMapperTest {
 		        () -> assertEquals(userDto.getEmail(), mappedUser.getEmail(), 
 		        		"Emails should match"),
 		        () -> assertEquals(userDto.getDateOfBirth(), mappedUser.getDateOfBirth(), 
-		        		"Dates of birth times should match"),
-		        () -> {
-		            Set<RoleName> expectedRoleNames = userDto.getRoles().stream()
-		                .map(r -> r.getRoleName())
-		                .collect(Collectors.toSet());
-
-		            Set<RoleName> actualRoleNames = mappedUser.getRoles().stream()
-		                .map(r -> r.getRoleName())
-		                .collect(Collectors.toSet());
-
-		            assertEquals(expectedRoleNames, actualRoleNames, "Role names should match");
-		        },
-		        
-		        () -> assertEquals(userDto.getAccountStatus(), mappedUser.getAccountStatus(), 
-		        		"Account status should match")
+		        		"Dates of birth times should match")
 		    );
 	}
-
 }

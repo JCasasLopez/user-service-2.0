@@ -51,15 +51,12 @@ public class User {
 		@Enumerated(EnumType.STRING)
 		private AccountStatus accountStatus;
 
-		public User(String username, String password, String fullName, String email, LocalDate dateOfBirth,
-				Set<Role> roles, AccountStatus accountStatus) {
+		public User(String username, String password, String fullName, String email, LocalDate dateOfBirth) {
 			this.username = username;
 			this.password = password;
 			this.fullName = fullName;
 			this.email = email;
 			this.dateOfBirth = dateOfBirth;
-			this.roles = roles;
-			this.accountStatus = accountStatus;
 		}
 
 		public User() {

@@ -55,11 +55,10 @@ public class UserDto {
 	// User -> UserDto. Sirve para enviar información sobre User al front-end.
 	//
 	// User -> UserDto. To send User info to the front-end.
-	public UserDto(int idUser, String username, String password, String fullName, String email, 
+	public UserDto(int idUser, String username, String fullName, String email, 
 			LocalDate dateOfBirth, Set<RoleDto> roles, AccountStatus accountStatus) {
 		this.idUser = idUser;
 		this.username = username;
-		this.password = password;
 		this.fullName = fullName;
 		this.email = email;
 		this.dateOfBirth = dateOfBirth;

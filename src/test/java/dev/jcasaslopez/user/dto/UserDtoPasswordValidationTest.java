@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RoleName;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -43,15 +41,12 @@ public class UserDtoPasswordValidationTest {
     @DisplayName("Valid UserDto should pass validation")
     void userDto_WithValidData_ShouldReturnNoViolations() {
     	// Arrange
-    	RoleDto roleDto = new RoleDto(RoleName.ROLE_USER);
     	UserDto userDto = new UserDto(
 			    "Johnny",
 			    "securePassword123!",
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15), 
-			    Set.of(roleDto),
-			    AccountStatus.ACTIVE
+			    LocalDate.of(1990, 5, 15)
 			);
     	
     	// Act
@@ -70,8 +65,6 @@ public class UserDtoPasswordValidationTest {
 			    null,
 			    null,
 			    null,
-			    null, 
-			    null,
 			    null
 			);
     	
@@ -80,14 +73,12 @@ public class UserDtoPasswordValidationTest {
     	
     	// Assert
     	assertAll(
-                () -> assertEquals(7, violations.size(), "Expected exactly 7 violations"),
+                () -> assertEquals(5, violations.size(), "Expected exactly 5 violations"),
                 () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Username field is required"))),
                 () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Password field is required"))),
                 () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Full name field is required"))),
                 () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Email field is required"))),
-                () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Date of birth field is required"))),
-                () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Roles field is required"))),
-                () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account status field is required")))
+                () -> assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Date of birth field is required")))
             );
     }
     
@@ -99,15 +90,12 @@ public class UserDtoPasswordValidationTest {
    	@DisplayName("UserDto with password that does not meet requirement should fail validation")
        void userDto_WithInvalidPassword_ShouldReturnPasswordViolation(String password) {
     	// Arrange
-    	RoleDto roleDto = new RoleDto(RoleName.ROLE_USER);
     	UserDto userDto = new UserDto(
 			    "Johnny90",
 			    password,
 			    "John Doe",
 			    "123@example.com",
-			    LocalDate.of(1990, 5, 15), 
-			    Set.of(roleDto),
-			    AccountStatus.ACTIVE
+			    LocalDate.of(1990, 5, 15)
 			);
     	
     	// Act
