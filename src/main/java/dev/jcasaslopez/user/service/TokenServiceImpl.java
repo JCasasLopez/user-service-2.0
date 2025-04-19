@@ -25,34 +25,27 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
 
 @Service
 public class TokenServiceImpl implements TokenService {
-	
-	private static final Logger logger = LoggerFactory.getLogger(TokenServiceImpl.class);
 
-	@Value("${jwt.secretKey}")
-	private String secretKey;
+    private static final Logger logger = LoggerFactory.getLogger(TokenServiceImpl.class);
 
-	private byte[] keyBytes;
-	private SecretKey key;
+    private final TokensLifetimes tokensLifetimes;
+    private final StringRedisTemplate redisTemplate;
+    private final SecretKey key;
 
-	private TokensLifetimes tokensLifetimes;
-    private StringRedisTemplate redisTemplate;
+    public TokenServiceImpl(TokensLifetimes tokensLifetimes, 
+                            StringRedisTemplate redisTemplate, 
+                            @Value("${jwt.secretKey}") String base64SecretKey) {
+        this.tokensLifetimes = tokensLifetimes;
+        this.redisTemplate = redisTemplate;
 
-	public TokenServiceImpl(TokensLifetimes tokensLifetimes, StringRedisTemplate redisTemplate) {
-		this.tokensLifetimes = tokensLifetimes;
-		this.redisTemplate = redisTemplate;
-	}
+        byte[] keyBytes = Base64.getDecoder().decode(base64SecretKey);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
+        logger.info("TokenService initialized with decoded secret key");
+    }
 
-	@PostConstruct
-	public void init() {
-		keyBytes = Base64.getDecoder().decode(secretKey);
-		key = Keys.hmacShaKeyFor(keyBytes);
-		logger.info("TokenService initialized with decoded secret key");
-	}
-	
 	// Crea un token de autenticación (ACCESS o REFRESH) para un usuario autenticado.
 	// Utiliza el contexto de seguridad para obtener el usuario actual y sus roles.
 	// Se mantiene separado del token de verificación para no mezclar lógicas diferentes.
