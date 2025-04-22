@@ -31,6 +31,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 public class ValidationsInitiateRegistrationTest {
 	
 	@Autowired TestRestTemplate testRestTemplate;
+	@Autowired ObjectMapper mapper;
 	
 	public static Stream<Arguments> invalidUserData(){
 		return Stream.of(
@@ -85,8 +86,6 @@ public class ValidationsInitiateRegistrationTest {
 	public void initiateRegistration_whenDetailsNotValid_ShouldResponse400BadRequest
 											(UserDto invalidUser) throws JsonProcessingException {
 		// Arrange
-		ObjectMapper mapper = new ObjectMapper();
-		
 		// Jackson no puede serializar o deserializar java.time.LocalDate por defecto.
 		// Debes registrar el módulo JavaTimeModule en el ObjectMapper.
 		//
