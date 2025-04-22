@@ -63,11 +63,24 @@ import jakarta.transaction.Transactional;
 // La validación de campos únicos (username, email, etc.) se cubre en los tests de entidad,
 // específicamente en UniquenessUserFieldsTest.
 //
+// Esta clase contiene un test de integración completo que cubre el ciclo de vida de una cuenta de usuario:
+// 1) Registro: se inicia correctamente y se almacena la entrada en Redis.
+// 2) Creación de cuenta: la cuenta se persiste en la base de datos con los datos correctos.
+// 3) Eliminación fallida: si no hay usuario autenticado, se devuelve un error 401.
+// 4) Eliminación exitosa: un usuario autenticado puede eliminar su cuenta y se borra de la base de datos.
+//
+//
 // These tests exclusively verify the happy path of the account creation flow.
 // Scenarios related to token validity, expiration, or signature are tested
 // separately in AuthenticationFilterTest.
 // Validation of unique fields (username, email, etc.) is covered in the entity tests,
 // specifically in UniquenessUserFieldsTest.
+//
+// This class contains a full integration test covering the user account lifecycle:
+// 1) Registration: initiates successfully and stores the entry in Redis.
+// 2) Account creation: the account is persisted in the database with correct data.
+// 3) Failed deletion: unauthenticated users receive a 401 error when trying to delete.
+// 4) Successful deletion: an authenticated user can delete their account, and it's removed from the database.
 
 @Transactional
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -238,6 +251,35 @@ public class FullRegistrationAndDeleteAccountTest {
 	}
 	
 	@Order(3)
+	@Test
+	@DisplayName("Fails to delete account when user is not authenticated")
+	public void deleteAccount_whenNoUserAuthenticated_ShouldReturn401() {
+	    // Arrange
+	    HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+	    
+	    // Sin token de autenticación en el encabezado = no hay usuario autenticado.
+	    //
+	    // No authentication token in the header = no authenticated user.
+	    
+	    HttpEntity<Void> request = new HttpEntity<>(headers);
+
+	    // Act
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(
+	            "/deleteAccount", HttpMethod.DELETE, request, StandardResponse.class);
+
+	    // Assert
+	    assertAll(
+	        () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), 
+	                "Expected 401 Unauthorized when no token is provided"),
+	        () -> assertNotNull(response.getBody(), "Response body should not be null"),
+	        () -> assertEquals("Access denied: invalid or missing token", 
+	                response.getBody().getMessage(), "Unexpected response message")
+	    );
+	}
+
+	@Order(4)
 	@Test
 	@DisplayName("Deletes account successfully")
 	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
