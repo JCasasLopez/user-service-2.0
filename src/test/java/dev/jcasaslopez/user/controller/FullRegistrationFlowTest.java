@@ -47,6 +47,18 @@ import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 import jakarta.transaction.Transactional;
 
+// Estos tests verifican exclusivamente el happy path del flujo de creación de cuenta.
+// Los escenarios relacionados con la validez, expiración o firma del token
+// se testean de forma aislada en AuthenticationFilterTest.
+// La validación de campos únicos (username, email, etc.) se cubre en los tests de entidad,
+// específicamente en UniquenessUserFieldsTest.
+//
+// These tests exclusively verify the happy path of the account creation flow.
+// Scenarios related to token validity, expiration, or signature are tested
+// separately in AuthenticationFilterTest.
+// Validation of unique fields (username, email, etc.) is covered in the entity tests,
+// specifically in UniquenessUserFieldsTest.
+
 @Transactional
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
