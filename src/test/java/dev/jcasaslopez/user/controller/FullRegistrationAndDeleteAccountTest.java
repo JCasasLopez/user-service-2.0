@@ -14,11 +14,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONException;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,9 +29,13 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,12 +45,16 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.enums.TokenType;
+import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.repository.UserRepository;
+import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 // Estos tests verifican exclusivamente el happy path del flujo de creación de cuenta.
@@ -62,7 +72,8 @@ import jakarta.transaction.Transactional;
 @Transactional
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class FullRegistrationFlowTest {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class FullRegistrationAndDeleteAccountTest {
 	
 	@Autowired TestRestTemplate testRestTemplate;
 	@Autowired TokenServiceImpl tokenServiceImpl;
@@ -71,6 +82,8 @@ public class FullRegistrationFlowTest {
 	@Autowired UserRepository userRepository;
 	@Autowired PasswordEncoder passwordEncoder;
 	@Autowired ObjectMapper mapper;
+	@Autowired UserMapper userMapper;
+	@Autowired EntityManager entityManager;
 	@MockBean private EmailService emailService;
 
 	private static String token;
@@ -81,17 +94,6 @@ public class FullRegistrationFlowTest {
 	@BeforeAll
 	void setup() throws JsonProcessingException {
 		username = "Yorch123";
-		
-		// Borramos el usuario antes de ejecutar los tests porque @AfterAll no se ejecuta dentro de 
-		// una transacción, lo que impide que se pueda usar EntityManager para eliminar entidades JPA.
-		// Esta limpieza previa asegura que los tests no fallen por restricciones de unicidad (username/email).
-		//
-		// We delete the user before running the tests because @AfterAll does not run within a 
-		// transactional context, which prevents the EntityManager from removing JPA entities. This 
-		// pre-test cleanup ensures that tests do not fail due to uniqueness constraints (username/email).
-		userRepository.findByUsername(username)
-	    				.ifPresent(user -> userRepository.deleteById(user.getIdUser()));
-
 		// Jackson no puede serializar o deserializar java.time.LocalDate por defecto.
 		// Debes registrar el módulo JavaTimeModule en el ObjectMapper.
 		//
@@ -133,6 +135,7 @@ public class FullRegistrationFlowTest {
 	// - That the username and email extracted from the Redis entry match the input.
 	//   Also verifies that the password was properly encoded.
 	// - That an email is sent to the user (only the message content is verified).
+	@Order(1)
 	@Test
 	@DisplayName("Registration process initiates correctly")
 	public void initiateRegistration_whenValidDetails_ShouldUploadRedisEntryAndReturn200()
@@ -145,7 +148,7 @@ public class FullRegistrationFlowTest {
 		HttpEntity<String> request = new HttpEntity<>(userJson, headers);
 
 		// Act
-		ResponseEntity<StandardResponse> initiateRegistrationResponse = testRestTemplate
+		ResponseEntity<StandardResponse> response = testRestTemplate
 				.postForEntity(Constants.INITIATE_REGISTRATION_PATH, request, StandardResponse.class);
 
 		// Assert
@@ -181,12 +184,20 @@ public class FullRegistrationFlowTest {
 		assertNotNull(storedUserAsJson, "Redis entry not found for token");
 		UserDto storedUser = mapper.readValue(storedUserAsJson, UserDto.class);
 
-		assertAll(() -> assertEquals(HttpStatus.OK, initiateRegistrationResponse.getStatusCode()),
-				() -> assertEquals(username, storedUser.getUsername()),
-				() -> assertEquals(user.getEmail(), storedUser.getEmail()),
-				() -> assertTrue(passwordEncoder.matches(user.getPassword(), storedUser.getPassword())));
+		assertAll(
+				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), 
+						"Expected HTTP status 200 OK"),
+				() -> assertNotNull(response.getBody(), "Response body should not be null"),
+			    () -> assertEquals("Token created successfully and sent to the user to verify email",
+			    		response.getBody().getMessage(), "Unexpected response message"),
+				() -> assertEquals(username, storedUser.getUsername(), "Username does not match"),
+				() -> assertEquals(user.getEmail(), storedUser.getEmail(), "Email does not match"),
+				() -> assertTrue(passwordEncoder.matches(user.getPassword(), storedUser.getPassword()),
+						"Encoded password does not match")
+				);
 	}
 	
+	@Order(2)
 	@Test
 	@DisplayName("Creates account correctly")
 	public void createAccount_whenValidDetails_ShouldWorkCorrectly() throws JsonProcessingException {
@@ -207,6 +218,10 @@ public class FullRegistrationFlowTest {
 		assertAll(
 			    () -> assertEquals(HttpStatus.CREATED, response.getStatusCode(), 
 			    		"Expected HTTP status to be 201 CREATED"),
+			    () -> assertNotNull(response.getBody(), 
+			    		"Response body should not be null"),
+			    () -> assertEquals("Account created successfully", response.getBody().getMessage(), 
+			    		"Unexpected response message"),
 			    () -> assertTrue(optionalUserJPA.isPresent(), 
 			    		"Expected user to be present in the database"),
 			    () -> assertEquals(username, optionalUserJPA.get().getUsername(), 
@@ -219,6 +234,48 @@ public class FullRegistrationFlowTest {
 			    		"Birth date does not match"),
 			    () -> assertTrue(passwordEncoder.matches("Jorge22!", optionalUserJPA.get().getPassword()), 
 			    		"Password was not encoded or does not match")
+			);
+	}
+	
+	@Order(3)
+	@Test
+	@DisplayName("Deletes account successfully")
+	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
+		// Arrange
+		
+		// Primero tenemos que poblar SecurityContextHolder, ya que:
+		// 1) Es necesario para la creación del token de acceso.
+		// 2) Es un método protegido.
+		//
+		// First, we need to populate the SecurityContextHolder because:
+		// 1) It's required for generating the access token.
+		// 2) The method is protected.
+		CustomUserDetails userDetails = userMapper.userDtoToCustomUserDetailsMapper(user);
+		Authentication authentication = new UsernamePasswordAuthenticationToken
+				(userDetails, userDetails.getPassword(), userDetails.getAuthorities());
+		SecurityContextHolder.getContext().setAuthentication(authentication);
+		String accessToken = tokenServiceImpl.createAuthToken(TokenType.ACCESS);
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+		headers.setBearerAuth(accessToken);
+		HttpEntity<Void> request = new HttpEntity<>(headers); 
+		
+		// Act
+		ResponseEntity<StandardResponse> response = testRestTemplate.exchange(
+			    "/deleteAccount", HttpMethod.DELETE, request, StandardResponse.class);
+
+		// Assert
+		assertAll(
+			    () -> assertEquals(HttpStatus.OK, response.getStatusCode(), 
+			    		"Expected status 200 OK"),
+			    () -> assertNotNull(response.getBody(), 
+			    		"Response body should not be null"),
+			    () -> assertEquals("Account deleted successfully", response.getBody().getMessage(), 
+			    		"Unexpected response message"),
+			    () -> assertTrue(userRepository.findByUsername(user.getUsername()).isEmpty(), 
+			    		"User should no longer exist")
 			);
 	}
 }
