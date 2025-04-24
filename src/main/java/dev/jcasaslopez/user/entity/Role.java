@@ -1,6 +1,7 @@
 package dev.jcasaslopez.user.entity;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import dev.jcasaslopez.user.enums.RoleName;
@@ -60,5 +61,17 @@ public class Role {
 	public void setUsers(Set<User> users) {
 		this.users = users;
 	}
+	
+	@Override
+	public boolean equals(Object o) {
+	    if (this == o) return true;
+	    if (!(o instanceof Role)) return false;
+	    Role role = (Role) o;
+	    return roleName == role.roleName; 
+	}
 
+	@Override
+	public int hashCode() {
+	    return Objects.hash(roleName);
+	}
 }
