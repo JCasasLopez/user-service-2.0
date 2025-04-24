@@ -157,7 +157,6 @@ public class FullRegistrationAndDeleteAccountTest {
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
-		headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 		HttpEntity<String> request = new HttpEntity<>(userJson, headers);
 
 		// Act
@@ -217,8 +216,6 @@ public class FullRegistrationAndDeleteAccountTest {
 		
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 		headers.setBearerAuth(token);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 
 	
@@ -256,9 +253,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	public void deleteAccount_whenNoUserAuthenticated_ShouldReturn401() {
 	    // Arrange
 	    HttpHeaders headers = new HttpHeaders();
-	    headers.setContentType(MediaType.APPLICATION_JSON);
-	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-	    
+	   	    
 	    // Sin token de autenticación en el encabezado = no hay usuario autenticado.
 	    //
 	    // No authentication token in the header = no authenticated user.
@@ -299,8 +294,6 @@ public class FullRegistrationAndDeleteAccountTest {
 		String accessToken = tokenServiceImpl.createAuthToken(TokenType.ACCESS);
 
 		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 		headers.setBearerAuth(accessToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 
 		
