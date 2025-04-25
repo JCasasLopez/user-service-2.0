@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
@@ -25,6 +26,7 @@ import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
 @DataJpaTest
+@ActiveProfiles("test")
 public class UserRoleRelationshipTest {
 	
 	@Autowired
