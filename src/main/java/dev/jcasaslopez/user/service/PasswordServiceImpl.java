@@ -95,5 +95,4 @@ public class PasswordServiceImpl implements PasswordService {
         logger.debug("The provided password meets the requirements");
         return isValid;
 	}
-
 }
