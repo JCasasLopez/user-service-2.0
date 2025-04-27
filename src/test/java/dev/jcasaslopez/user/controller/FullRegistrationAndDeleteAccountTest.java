@@ -8,7 +8,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,6 +36,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,7 +52,9 @@ import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
+import dev.jcasaslopez.user.service.UserDetailsManagerImpl;
 import dev.jcasaslopez.user.utilities.Constants;
+import dev.jcasaslopez.user.utilities.TestHelper;
 import io.jsonwebtoken.Claims;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -86,6 +88,7 @@ import jakarta.transaction.Transactional;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@ActiveProfiles("prod")
 public class FullRegistrationAndDeleteAccountTest {
 	
 	@Autowired TestRestTemplate testRestTemplate;
@@ -97,27 +100,25 @@ public class FullRegistrationAndDeleteAccountTest {
 	@Autowired ObjectMapper mapper;
 	@Autowired UserMapper userMapper;
 	@Autowired EntityManager entityManager;
+	@Autowired TestHelper testHelper;
 	@MockBean private EmailService emailService;
 
 	private static String token;
-	private static UserDto user;
+	private static User user;
 	private static String userJson;
 	private static String username;
 	
 	@BeforeAll
 	void setup() throws JsonProcessingException {
-		username = "Yorch123";
 		// Jackson no puede serializar o deserializar java.time.LocalDate por defecto.
 		// Debes registrar el módulo JavaTimeModule en el ObjectMapper.
 		//
 		// Jackson cannot serialize or deserialize java.time.LocalDate by default.
 		// You need to register the JavaTimeModule with the ObjectMapper.
 		mapper.registerModule(new JavaTimeModule());
-		user = new UserDto(username, 
-							"Jorge22!", 
-							"Jorge García", 
-							"jorgecasas22@hotmail.com", 
-							LocalDate.of(1978, 11, 26));
+		
+		username = "Yorch123";
+		user = new User(username, "Jorge22!", "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
 		userJson = mapper.writeValueAsString(user);
 	}
 	
@@ -257,7 +258,6 @@ public class FullRegistrationAndDeleteAccountTest {
 	    // Sin token de autenticación en el encabezado = no hay usuario autenticado.
 	    //
 	    // No authentication token in the header = no authenticated user.
-	    
 	    HttpEntity<Void> request = new HttpEntity<>(headers);
 
 	    // Act
@@ -279,20 +279,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	@DisplayName("Deletes account successfully")
 	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
 		// Arrange
-		
-		// Primero tenemos que poblar SecurityContextHolder, ya que:
-		// 1) Es necesario para la creación del token de acceso.
-		// 2) Es un método protegido.
-		//
-		// First, we need to populate the SecurityContextHolder because:
-		// 1) It's required for generating the access token.
-		// 2) The method is protected.
-		CustomUserDetails userDetails = userMapper.userDtoToCustomUserDetailsMapper(user);
-		Authentication authentication = new UsernamePasswordAuthenticationToken
-				(userDetails, userDetails.getPassword(), userDetails.getAuthorities());
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		String accessToken = tokenServiceImpl.createAuthToken(TokenType.ACCESS);
-
+		String accessToken = testHelper.logUserIn(user);
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 

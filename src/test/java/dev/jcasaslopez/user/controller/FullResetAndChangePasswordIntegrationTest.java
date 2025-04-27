@@ -8,10 +8,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,26 +31,21 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
-import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
+import dev.jcasaslopez.user.service.UserDetailsManagerImpl;
 import dev.jcasaslopez.user.utilities.Constants;
+import dev.jcasaslopez.user.utilities.TestHelper;
 import io.jsonwebtoken.Claims;
 
 // Los escenarios relacionados con la validez, expiración o firma del token
@@ -84,6 +77,7 @@ import io.jsonwebtoken.Claims;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@ActiveProfiles("prod")
 public class FullResetAndChangePasswordIntegrationTest {
 	
 	@Autowired TestRestTemplate testRestTemplate;
@@ -92,6 +86,8 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@Autowired RoleRepository roleRepository;
 	@Autowired PasswordEncoder passwordEncoder;
 	@Autowired UserMapper userMapper;
+	@Autowired TestHelper testHelper;
+	@Autowired UserDetailsManagerImpl userDetailsManagerImpl;
 	@MockBean private EmailService emailService;
 	
 	private static String token;
@@ -100,20 +96,9 @@ public class FullResetAndChangePasswordIntegrationTest {
 	
 	@BeforeAll
 	void setup() {
-	Set<Role> roles = new HashSet<>();
-	Role roleUser = roleRepository.findByRoleName(RoleName.ROLE_USER).get();
-	roles.add(roleUser);
-	username = "Yorch123";
-	
-	user = new User(username, 
-				"Jorge22!", 
-				"Jorge García", 
-				"jorgecasas22@hotmail.com", 
-				LocalDate.of(1978, 11, 26));
-	
-	user.setRoles(roles);
-	user.setAccountStatus(AccountStatus.ACTIVE);
-	userRepository.save(user);
+		username = "Yorch123";
+		user = new User(username, "Jorge22!", "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
+		userDetailsManagerImpl.createUser(userMapper.userToCustomUserDetailsMapper(user));
 	}
 	
 	@Order(1)
@@ -205,7 +190,6 @@ public class FullResetAndChangePasswordIntegrationTest {
 		// Sin token de autenticación en el encabezado = no hay usuario autenticado.
 	    //
 	    // No authentication token in the header = no authenticated user.
-	    
 	    HttpEntity<Void> request = new HttpEntity<>(headers);
 
 	    // Act
@@ -227,15 +211,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Changes password successfully")
 	public void changePassword_whenUserLoggedIn_ShouldSendEmailChangePasswordReturn200() {
 		// Arrange
-		// Primero tenemos que poblar SecurityContextHolder, ya que es un método protegido.
-		//
-		// First, we need to populate the SecurityContextHolder because the method is protected.
-		CustomUserDetails userDetails = userMapper.userToCustomUserDetailsMapper(user);
-		Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(),
-				userDetails.getAuthorities());
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		String accessToken = tokenServiceImpl.createAuthToken(TokenType.ACCESS);
-		
+		String accessToken = testHelper.logUserIn(user);
 		String url = "/changePassword?newPassword=Jorge22!&oldPassword=Garcia22!";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
