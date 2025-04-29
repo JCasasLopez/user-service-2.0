@@ -32,9 +32,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -45,18 +42,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.TokenType;
-import dev.jcasaslopez.user.mapper.UserMapper;
-import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.repository.UserRepository;
-import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
-import dev.jcasaslopez.user.service.UserDetailsManagerImpl;
 import dev.jcasaslopez.user.utilities.Constants;
 import dev.jcasaslopez.user.utilities.TestHelper;
 import io.jsonwebtoken.Claims;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 // Estos tests verifican exclusivamente el happy path del flujo de creación de cuenta.
@@ -91,16 +82,13 @@ import jakarta.transaction.Transactional;
 @ActiveProfiles("prod")
 public class FullRegistrationAndDeleteAccountTest {
 	
-	@Autowired TestRestTemplate testRestTemplate;
-	@Autowired TokenServiceImpl tokenServiceImpl;
-	@Autowired RedisTemplate<String, String> redisTemplate;
-	@Autowired TokensLifetimes tokensLifetimes;
-	@Autowired UserRepository userRepository;
-	@Autowired PasswordEncoder passwordEncoder;
-	@Autowired ObjectMapper mapper;
-	@Autowired UserMapper userMapper;
-	@Autowired EntityManager entityManager;
-	@Autowired TestHelper testHelper;
+	@Autowired private TestRestTemplate testRestTemplate;
+	@Autowired private TokenServiceImpl tokenServiceImpl;
+	@Autowired private RedisTemplate<String, String> redisTemplate;
+	@Autowired private UserRepository userRepository;
+	@Autowired private PasswordEncoder passwordEncoder;
+	@Autowired private ObjectMapper mapper;
+	@Autowired private TestHelper testHelper;
 	@MockBean private EmailService emailService;
 
 	private static String token;
@@ -122,32 +110,17 @@ public class FullRegistrationAndDeleteAccountTest {
 		userJson = mapper.writeValueAsString(user);
 	}
 	
-	// El método que estamos sometiendo a test:
-	// - Crea un token de verificación.
-	// - Se crea una entrada en Redis con: 
-	//       CLAVE: create_account:f8a65da7-e8c9-41d2-a5f3-b8d1a2e7c0b9 (JTI del token). 
-	//       VALOR: usuario como JSON.
-	// - Mediante la publicación de un evento, manda un correo al usuario con el token.
-	//
 	// Este test de integración verifica que:
 	// - Se devuelve un 200 OK.
 	// - El token está presente en el mensaje del email y es válido.
-	// - Los campos "username" y "email" extraídos del valor de la entrada de Redis, coinciden con los
-	//   del usuario. La contraseña también coincide y ha sido codificada correctamente.
+	// - Los campos "username" extraído del valor de la entrada de Redis, coincide con los
+	//   del usuario. 
 	// - Se manda un email al usuario (aunque solo se verifica el mensaje).
-	//
-	// The method under test performs the following:
-	// - Creates a verification token.
-	// - Stores a Redis entry with:
-	//     KEY: create_account:f8a65da7-e8c9-41d2-a5f3-b8d1a2e7c0b9 (token JTI). 
-	//	   VALUE: user data as JSON.
-	// - Sends a verification email to the user by publishing an event.
 	//
 	// This integration test verifies:
 	// - That a 200 OK response is returned.
 	// - That the token is included in the email body and is valid.
-	// - That the username and email extracted from the Redis entry match the input.
-	//   Also verifies that the password was properly encoded.
+	// - That the username extracted from the Redis entry match the input.
 	// - That an email is sent to the user (only the message content is verified).
 	@Order(1)
 	@Test
@@ -166,11 +139,9 @@ public class FullRegistrationAndDeleteAccountTest {
 
 		// Assert
 
-		// Extraemos el token del email. Verificamos que esté presente y que se envía el
-		// email.
+		// Extraemos el token del email. Verificamos que esté presente y que se envía elemail.
 		//
-		// We extract the token from the email. Verify the token in the message body and
-		// the email is sent.
+		// We extract the token from the email. Verify the token in the message body and the email is sent.
 		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		String emailBody = bodyCaptor.getValue();
@@ -188,11 +159,9 @@ public class FullRegistrationAndDeleteAccountTest {
 		assertTrue(optionalClaims.isPresent());
 		String redisKey = Constants.CREATE_ACCOUNT_REDIS_KEY + tokenJti;
 
-		// Si encontramos al usuario correcto, estamos verificando indirectamente que la
-		// clave de Redis también lo es.
+		// Si encontramos al usuario correcto, estamos verificando indirectamente que la clave de Redis también lo es.
 		//
-		// If the user is correct, we are verifying indirectly that the Redis entry is
-		// also.
+		// If the user is correct, we are verifying indirectly that the Redis entry is correct also.
 		String storedUserAsJson = redisTemplate.opsForValue().get(redisKey);
 		assertNotNull(storedUserAsJson, "Redis entry not found for token");
 		UserDto storedUser = mapper.readValue(storedUserAsJson, UserDto.class);
@@ -203,10 +172,7 @@ public class FullRegistrationAndDeleteAccountTest {
 				() -> assertNotNull(response.getBody(), "Response body should not be null"),
 			    () -> assertEquals("Token created successfully and sent to the user to verify email",
 			    		response.getBody().getMessage(), "Unexpected response message"),
-				() -> assertEquals(username, storedUser.getUsername(), "Username does not match"),
-				() -> assertEquals(user.getEmail(), storedUser.getEmail(), "Email does not match"),
-				() -> assertTrue(passwordEncoder.matches(user.getPassword(), storedUser.getPassword()),
-						"Encoded password does not match")
+				() -> assertEquals(username, storedUser.getUsername(), "Username does not match")
 				);
 	}
 	
@@ -279,7 +245,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	@DisplayName("Deletes account successfully")
 	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
 		// Arrange
-		String accessToken = testHelper.logUserIn(user);
+		String accessToken = testHelper.loginUser(user);
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 

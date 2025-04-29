@@ -39,7 +39,6 @@ import org.springframework.transaction.annotation.Transactional;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.mapper.UserMapper;
-import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
@@ -80,14 +79,13 @@ import io.jsonwebtoken.Claims;
 @ActiveProfiles("prod")
 public class FullResetAndChangePasswordIntegrationTest {
 	
-	@Autowired TestRestTemplate testRestTemplate;
-	@Autowired TokenServiceImpl tokenServiceImpl;
-	@Autowired UserRepository userRepository;
-	@Autowired RoleRepository roleRepository;
-	@Autowired PasswordEncoder passwordEncoder;
-	@Autowired UserMapper userMapper;
-	@Autowired TestHelper testHelper;
-	@Autowired UserDetailsManagerImpl userDetailsManagerImpl;
+	@Autowired private TestRestTemplate testRestTemplate;
+	@Autowired private TokenServiceImpl tokenServiceImpl;
+	@Autowired private UserRepository userRepository;
+	@Autowired private PasswordEncoder passwordEncoder;
+	@Autowired private UserMapper userMapper;
+	@Autowired private TestHelper testHelper;
+	@Autowired private UserDetailsManagerImpl userDetailsManagerImpl;
 	@MockBean private EmailService emailService;
 	
 	private static String token;
@@ -118,11 +116,6 @@ public class FullResetAndChangePasswordIntegrationTest {
 	    		.postForEntity(url, request, StandardResponse.class);
 
 		// Assert
-	    
-		// Extraemos el token del email. Verificamos que esté presente y que se envía el email.
-		//
-		// We extract the token from the email. Verify the token in the message body and
-		// the email is sent.
 		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		
@@ -211,7 +204,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Changes password successfully")
 	public void changePassword_whenUserLoggedIn_ShouldSendEmailChangePasswordReturn200() {
 		// Arrange
-		String accessToken = testHelper.logUserIn(user);
+		String accessToken = testHelper.loginUser(user);
 		String url = "/changePassword?newPassword=Jorge22!&oldPassword=Garcia22!";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
