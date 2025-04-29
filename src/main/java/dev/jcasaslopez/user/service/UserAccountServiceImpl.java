@@ -57,11 +57,8 @@ public class UserAccountServiceImpl implements UserAccountService {
 
 	@Override
 	public void upgradeUser(String email) {
-		// Se asigna ROLE_USER por defecto; si hay otro rol, tiene que ser ROLE_ADMIN.
-		// 
-		// ROLE_USER is assigned by default; if there's another role, it must be ROLE_ADMIN.
 		User user = findUserByEmail(email);
-		if (user.getRoles().size() > 1) {
+		if (user.getRoles().contains(roleRepository.findByRoleName(RoleName.ROLE_ADMIN).get())) {
 			logger.warn("User {} is already admin; upgrade user ignored.", user.getUsername());
 			throw new IllegalArgumentException("User is already ADMIN");
 		}
