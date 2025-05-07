@@ -141,7 +141,7 @@ public class UserController {
 			@RequestParam @NotNull AccountStatus newAccountStatus) {
 		accountOrchestrationService.updateAccountStatus(email, newAccountStatus);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
-				"Account status successfully update to " + newAccountStatus.getDisplayName(), null, HttpStatus.OK);
+				"Account status successfully updated to " + newAccountStatus.getDisplayName(), null, HttpStatus.OK);
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
