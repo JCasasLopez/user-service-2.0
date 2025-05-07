@@ -6,10 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,7 +40,8 @@ import dev.jcasaslopez.user.utilities.TestHelper;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class UpgradeUserEndpointIntegrationTest {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class UpgradeUserIntegrationTest {
 	
 	@Autowired private RoleRepository roleRepository;
 	@Autowired private UserRepository userRepository;
@@ -56,7 +61,13 @@ public class UpgradeUserEndpointIntegrationTest {
 		user = testHelper.createUser();
 	}
 	
+	@AfterAll
+	void cleanup() {
+	    userRepository.deleteById(user.getIdUser());
+	}
+	
 	@Test
+	@Order(1)
 	@DisplayName("Admin cannot upgrade user to admin")
 	@WithMockUser(username = "admin", roles = {"ADMIN"})
 	public void upgradeUser_WhenAdminTriesToUpgrade_ShouldReturn403Forbidden() throws Exception {
@@ -64,7 +75,7 @@ public class UpgradeUserEndpointIntegrationTest {
 		RequestBuilder requestBuilder = buildMockMvcRequest();
 		
 		// Act
-		MvcResult mvcResult = callEndpointAndUpgradeUser(requestBuilder);
+		MvcResult mvcResult = callEndpointAndUReloadUser(requestBuilder);
 				
 		String responseAsString = mvcResult.getResponse().getContentAsString();
 		StandardResponse response = objectMapper.readValue(responseAsString, StandardResponse.class);
@@ -80,11 +91,12 @@ public class UpgradeUserEndpointIntegrationTest {
 			    		"Unexpected response message"),
 			    () -> assertFalse(user.getRoles()
 			    		.contains(roleRepository.findByRoleName(RoleName.ROLE_ADMIN).get()), 
-			    		user.getUsername() + " should have the role admin")
+			    		user.getUsername() + " should not have the role admin")
 			);
 	}
 	
 	@Test
+	@Order(2)
 	@DisplayName("SuperAdmin upgrades user successfully")
 	@WithMockUser(username = "superAdmin", roles = {"SUPERADMIN"})
 	public void upgradeUser_WhenSuperAdminUpgrades_ShouldReturn200OK() throws Exception {
@@ -92,7 +104,7 @@ public class UpgradeUserEndpointIntegrationTest {
 		RequestBuilder requestBuilder = buildMockMvcRequest();
 		
 		// Act
-		MvcResult mvcResult = callEndpointAndUpgradeUser(requestBuilder);
+		MvcResult mvcResult = callEndpointAndUReloadUser(requestBuilder);
 		
 		String responseAsString = mvcResult.getResponse().getContentAsString();
 		StandardResponse response = objectMapper.readValue(responseAsString, StandardResponse.class);
@@ -112,6 +124,7 @@ public class UpgradeUserEndpointIntegrationTest {
 	}
 	
 	@Test
+	@Order(3)
 	@DisplayName("SuperAdmin cannot upgrade user already admin")
 	@WithMockUser(username = "superAdmin", roles = {"SUPERADMIN"})
 	public void upgradeUser_WhenUserAlreadyAdmin_ShouldThrowException() throws Exception {
@@ -144,7 +157,7 @@ public class UpgradeUserEndpointIntegrationTest {
 				.accept(MediaType.APPLICATION_JSON);
 	}
 	
-	private MvcResult callEndpointAndUpgradeUser(RequestBuilder requestBuilder) throws Exception {
+	private MvcResult callEndpointAndUReloadUser(RequestBuilder requestBuilder) throws Exception {
 		MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();
 		
 		// Recarga el usuario desde la base de datos con los roles ya actualizados.
