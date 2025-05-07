@@ -30,11 +30,11 @@ public class TestHelper {
 		return plainUser;
 	}
 	
-	public String loginUser(User userJpa) {
+	public String loginUser(User userJpa, TokenType tokenType) {
 		CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
     	Authentication authentication = new UsernamePasswordAuthenticationToken
 										(user, user.getPassword(), user.getAuthorities());
 		SecurityContextHolder.getContext().setAuthentication(authentication);
-		return tokenServiceImpl.createAuthToken(TokenType.ACCESS);
+		return tokenServiceImpl.createAuthToken(tokenType);
 	}
 }

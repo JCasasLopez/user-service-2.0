@@ -42,6 +42,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
@@ -245,7 +246,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	@DisplayName("Deletes account successfully")
 	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
 		// Arrange
-		String accessToken = testHelper.loginUser(user);
+		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 

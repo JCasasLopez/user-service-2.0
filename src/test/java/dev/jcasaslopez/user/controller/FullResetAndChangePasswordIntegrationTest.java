@@ -38,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
@@ -204,7 +205,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Changes password successfully")
 	public void changePassword_whenUserLoggedIn_ShouldSendEmailChangePasswordReturn200() {
 		// Arrange
-		String accessToken = testHelper.loginUser(user);
+		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
 		String url = "/changePassword?newPassword=Jorge22!&oldPassword=Garcia22!";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
