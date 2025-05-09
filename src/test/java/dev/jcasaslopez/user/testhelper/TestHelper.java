@@ -1,4 +1,4 @@
-package dev.jcasaslopez.user.utilities;
+package dev.jcasaslopez.user.testhelper;
 
 import java.time.LocalDate;
 

@@ -46,8 +46,8 @@ import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
+import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
-import dev.jcasaslopez.user.utilities.TestHelper;
 import io.jsonwebtoken.Claims;
 import jakarta.transaction.Transactional;
 

@@ -34,7 +34,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
-import dev.jcasaslopez.user.utilities.TestHelper;
+import dev.jcasaslopez.user.testhelper.TestHelper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
