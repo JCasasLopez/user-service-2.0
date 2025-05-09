@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.exception.AccountStatusException;
+import dev.jcasaslopez.user.exception.MalformedMessageException;
 import dev.jcasaslopez.user.exception.MissingCredentialException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -181,5 +182,13 @@ public class GlobalExceptionHandler {
         String message = "Missing required parameter: " + ex.getParameterName();
         return ResponseEntity.badRequest().body(
             new StandardResponse(LocalDateTime.now(), message, null, HttpStatus.BAD_REQUEST));
+    }
+    
+    @ExceptionHandler(MalformedMessageException.class)
+    public ResponseEntity<StandardResponse> handleMalformedMessageException(MalformedMessageException ex) {
+    	log.error("MalformedMessageException: {}", ex.getMessage(), ex);
+    	StandardResponse response = new StandardResponse (LocalDateTime.now(), ex.getMessage(), null,
+				HttpStatus.BAD_REQUEST);
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }
