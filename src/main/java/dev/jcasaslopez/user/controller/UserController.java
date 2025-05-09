@@ -24,6 +24,7 @@ import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.service.AccountOrchestrationService;
 import dev.jcasaslopez.user.utilities.Constants;
+import dev.jcasaslopez.user.utilities.MessageNotificationValidation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -155,6 +156,10 @@ public class UserController {
 	// "Message"   : String
 	@PostMapping(value = "/sendNotification")
 	public ResponseEntity<StandardResponse> sendNotification(@RequestParam @NotNull Map<String, String> messageAsMap) {
+		// Validamos que el mensaje tenga un formato válido.
+		//
+		// We validate the message has a a valid format.
+		MessageNotificationValidation.validateMessage(messageAsMap);
 		accountOrchestrationService.sendNotification(messageAsMap);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Notification sent successfully", null, HttpStatus.OK);
