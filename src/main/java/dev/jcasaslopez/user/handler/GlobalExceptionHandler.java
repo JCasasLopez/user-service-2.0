@@ -68,7 +68,7 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(MissingCredentialException.class)
 	public ResponseEntity<StandardResponse> handleMissingCredentialException(MissingCredentialException ex){
-        log.error("AccountStatusException: {}", ex.getMessage(), ex);
+        log.error("MissingCredentialException: {}", ex.getMessage(), ex);
         StandardResponse response = new StandardResponse (LocalDateTime.now(), 
 				ex.getMessage() , null, HttpStatus.BAD_REQUEST);
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
