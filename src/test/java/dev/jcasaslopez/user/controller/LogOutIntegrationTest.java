@@ -60,11 +60,11 @@ public class LogOutIntegrationTest {
 		
 		// Spring Security maneja la petición en un hilo distinto al del test, y como SecurityContextHolder 
 		// es específico de cada hilo (ThreadLocal), no podemos verificar desde aquí los cambios que ocurren
-		// en el filtro. Esta verificación se realiza en los tests unitarios específicos de AuthenticationFilter.
+		// en el filtro. Esta verificación se realiza en los tests unitarios específicos de TokenService.logOut().
 		//
 		// Spring Security handles the request in a different thread than the test, and since SecurityContextHolder
 		// is thread-local, we can't verify in the test the changes made inside the filter. That
-		// verification is done in the dedicated unit tests for AuthenticationFilter.
+		// verification is done in the dedicated unit tests for TokenService.logOut().
 		assertAll(
 				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), 
 						"Expected 200 OK status code"),
