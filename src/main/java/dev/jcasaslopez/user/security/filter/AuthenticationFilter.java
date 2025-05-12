@@ -57,7 +57,11 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			String token = authHeader.substring(7);
 			logger.debug("Authorization header found, token extracted");
 			
+			// Verifica que el token es técnicamente válido.
+			//
+			// Verifies that the token is technically valid.
 			Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
+			String username = optionalClaims.get().getSubject();
 
 			if (optionalClaims.isPresent()) {
 			    String purposeStr = optionalClaims.get().get("purpose").toString();
@@ -77,7 +81,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    // Refresh token
 			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
 			        !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
-			    	authenticateUser(token, optionalClaims);
+			    	authenticateUser(token, username);
 					
 					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
 					// en el siguiente paso (controller -> AccountOrchestrationService).
@@ -113,7 +117,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			    // The access token is valid for all endpoints that require authentication
 			    // except for 'refresh token' endpoint.
 			    if (!path.equals(Constants.REFRESH_TOKEN_PATH) && purposeStr.equals(TokenType.ACCESS.name())) {
-			    	authenticateUser(token, optionalClaims);
+			    	authenticateUser(token, username);
 			        filterChain.doFilter(request, response);
 			        return;
 			    }
@@ -129,8 +133,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 		filterChain.doFilter(request, response);
 	}
 	
-	public void authenticateUser(String token, Optional<Claims> optionalClaims) {
-		String username = optionalClaims.get().getSubject();
+	public void authenticateUser(String token, String username) {
     	User userJpa = userRepository.findByUsername(username).orElseThrow(
 				() -> new UsernameNotFoundException(username));
     	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
