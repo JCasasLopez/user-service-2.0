@@ -182,11 +182,20 @@ public class TokenServiceImpl implements TokenService {
 		String tokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
 		blacklistToken(tokenRedisKey, expirationInSeconds);
 
-		SecurityContextHolder.getContext().setAuthentication(null);
+		// En lugar de establecer la autenticación a null, utilizamos clearContext()
+		// para eliminar completamente el SecurityContext del hilo actual. Esto es esencial
+		// para evitar que datos de autenticación residuales persistan en hilos reutilizados,
+		// lo cual podría causar comportamientos inesperados en entornos concurrentes o durante pruebas.
+		//
+		// Instead of setting the authentication to null, we use clearContext()
+		// to completely remove the SecurityContext from the current thread. This is crucial
+		// to prevent residual authentication data from persisting in reused threads,
+		// which could lead to unexpected behaviors in concurrent environments or during testing.
+		
+		// Reference: https://master-spring-ter.medium.com/understanding-clearcontext-in-spring-security-enhancing-application-security-17407ea55b4d
+		SecurityContextHolder.clearContext();
 		logger.info("User has been logged out");
 	}
-	
-	
 	
 	@Override
 	public void blacklistToken(String redisKey, long expirationInSeconds) {
