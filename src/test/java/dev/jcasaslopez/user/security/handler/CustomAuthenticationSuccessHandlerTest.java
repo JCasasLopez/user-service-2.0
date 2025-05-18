@@ -91,12 +91,12 @@ public class CustomAuthenticationSuccessHandlerTest {
 				.postForEntity("/login", request, StandardResponse.class);
 		
 		LocalDateTime endTest = LocalDateTime.now();
-		List<LoginAttempt> loginAttemptsDuringTestExecution = loginAttemptRepository.findByTimestampBetween(startTest, endTest);		
+		List<LoginAttempt> loginAttemptsDuringTestExecution = loginAttemptRepository.findAll();		
 		
 		LoginAttempt matchingAttempt = loginAttemptsDuringTestExecution.stream()
-			    .filter(a -> a.getUser().getIdUser() == user.getIdUser())
+			    .filter(a -> a.getTimestamp().isAfter(startTest) && a.getTimestamp().isBefore(endTest))
 			    .findFirst()
-			    .orElseThrow(() -> new AssertionError("No login attempt found for user"));
+			    .orElseThrow(() -> new AssertionError("No login attempt found for that time period"));
 		
 		// Assert
 		assertAll(
@@ -115,6 +115,8 @@ public class CustomAuthenticationSuccessHandlerTest {
 			        }
 			        assertEquals(2, tokenList.size(), "Expected 2 tokens in the response");
 			    },
+				() -> assertEquals(user.getIdUser(), matchingAttempt.getUser().getIdUser(),
+						"User's ID in persisted login attempt should be user's ID"),
 				() -> assertTrue(matchingAttempt.isSuccessful(),
 						"Persisted login attempt should be successful")
 		);
