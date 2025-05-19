@@ -48,98 +48,102 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		
+
 		String authHeader = request.getHeader("Authorization");
 		String method = request.getMethod();
-	    String path = request.getServletPath();
+		String path = request.getServletPath();
 
 		if (authHeader != null && authHeader.startsWith("Bearer ")) {
 			String token = authHeader.substring(7);
 			logger.debug("Authorization header found, token extracted");
-			
+
 			// Verifica que el token es técnicamente válido.
 			//
 			// Verifies that the token is technically valid.
 			Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
-			String username = optionalClaims.get().getSubject();
-
-			if (optionalClaims.isPresent()) {
-			    String purposeStr = optionalClaims.get().get("purpose").toString();
-			    
-			    // logout
-				// Tienes que recibir el token de refresco, no el de acceso.
-				//
-				// You have to receive the refresh token, not the access one.
-				if ("POST".equalsIgnoreCase(method) && path.equals(Constants.LOGOUT_PATH) && 
-						!tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
-					logger.info("Processing logout request");
-					tokenService.logOut(token);
-					standardResponseHandler.handleResponse(response, 200, "The user has been logged out", null);
-					return;
-				}
-			  
-			    // Refresh token
-			    if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH) &&
-			        !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
-			    	authenticateUser(token, username);
-					
-					// Tenemos que revocar el token, ya que se va a emitir otro nuevo 
-					// en el siguiente paso (controller -> AccountOrchestrationService).
-					//
-					// We have to revoke the token, since the system will issue a new one
-					// in the next step (controller -> AccountOrchestrationService).
-					String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenService.getJtiFromToken(token);					
-					Date expirationTime = tokenService.parseClaims(token).getExpiration();
-					Date currentTime = new Date(System.currentTimeMillis());
-				    long remainingMillis = expirationTime.getTime() - currentTime.getTime();
-					tokenService.blacklistToken(redisKey, remainingMillis);
-					logger.debug("Old refresh token revoked successfully");
-			
-			        filterChain.doFilter(request, response);
-			        return;
-			    }
-
-			    // Verification token 
-			    if (purposeStr.equals(TokenType.VERIFICATION.name()) && 
-			    		("POST".equalsIgnoreCase(method) && path.equals(Constants.REGISTRATION_PATH) || 
-			    		"PUT".equalsIgnoreCase(method) && path.equals(Constants.RESET_PASSWORD_PATH))) {
-			    	request.setAttribute("token", token);
-					logger.info("Valid verification token received for path: {}", path);
-					
-			        filterChain.doFilter(request, response);
-			        return;
-			    }
-			    
-			    // Access token
-			    // El token de acceso es válido para todos los endpoints que necesitan autenticación
-			    // excepto 'refresh token'.
-			    // 
-			    // The access token is valid for all endpoints that require authentication
-			    // except for 'refresh token' endpoint.
-			    if (!path.equals(Constants.REFRESH_TOKEN_PATH) && purposeStr.equals(TokenType.ACCESS.name())) {
-			    	authenticateUser(token, username);
-			        filterChain.doFilter(request, response);
-			        return;
-			    }
+			if(optionalClaims.isEmpty()) {
+				logger.warn("Invalid or malformed token");
+				standardResponseHandler.handleResponse(response, 401, "Token is invalid, expired or malformed", null);
+				return;
 			}
+
+			Claims claims = optionalClaims.get();
+			String username = claims.getSubject();
+			String purposeStr = String.valueOf(claims.get("purpose"));
+
+			// logout
+			// Tienes que recibir el token de refresco, no el de acceso.
+			//
+			// You have to receive the refresh token, not the access one.
+			if ("POST".equalsIgnoreCase(method) && path.equals(Constants.LOGOUT_PATH)
+					&& !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
+				logger.info("Processing logout request");
+				tokenService.logOut(token);
+				standardResponseHandler.handleResponse(response, 200, "The user has been logged out", null);
+				return;
+			}
+
+			// Refresh token
+			if ("POST".equalsIgnoreCase(method) && path.equals(Constants.REFRESH_TOKEN_PATH)
+					&& !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
+				authenticateUser(token, username);
+
+				// Tenemos que revocar el token, ya que se va a emitir otro nuevo
+				// en el siguiente paso (controller -> AccountOrchestrationService).
+				//
+				// We have to revoke the token, since the system will issue a new one
+				// in the next step (controller -> AccountOrchestrationService).
+				String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenService.getJtiFromToken(token);
+				Date expirationTime = tokenService.parseClaims(token).getExpiration();
+				Date currentTime = new Date(System.currentTimeMillis());
+				long remainingMillis = expirationTime.getTime() - currentTime.getTime();
+				tokenService.blacklistToken(redisKey, remainingMillis);
+				logger.debug("Old refresh token revoked successfully");
+
+				filterChain.doFilter(request, response);
+				return;
+			}
+
+			// Verification token
+			if (purposeStr.equals(TokenType.VERIFICATION.name())
+					&& ("POST".equalsIgnoreCase(method) && path.equals(Constants.REGISTRATION_PATH)
+						|| "PUT".equalsIgnoreCase(method) && path.equals(Constants.RESET_PASSWORD_PATH))) {
+				request.setAttribute("token", token);
+				logger.info("Valid verification token received for path: {}", path);
+
+				filterChain.doFilter(request, response);
+				return;
+			}
+
+			// Access token
+			// El token de acceso es válido para todos los endpoints que necesitan
+			// autenticación excepto 'refresh token'.
+			//
+			// The access token is valid for all endpoints that require authentication
+			// except for 'refresh token' endpoint.
+			if (!path.equals(Constants.REFRESH_TOKEN_PATH) && purposeStr.equals(TokenType.ACCESS.name())) {
+				authenticateUser(token, username);
+				filterChain.doFilter(request, response);
+				return;
+			}
+
 			standardResponseHandler.handleResponse(response, 401, "Token is invalid, expired or blacklisted", null);
 			return;
 		}
-		
+
 		// Si el endpoint no requiere estar autenticado y, por tanto, el encabezado no tenía ningún token.
 		//
 		// If the endpoint does not required authentication, so there was no token in the header.
 		logger.debug("No Authorization header found or token not required for path: {}", path);
 		filterChain.doFilter(request, response);
 	}
-	
+
 	public void authenticateUser(String token, String username) {
-    	User userJpa = userRepository.findByUsername(username).orElseThrow(
-				() -> new UsernameNotFoundException(username));
-    	CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
-    	Authentication authentication = new UsernamePasswordAuthenticationToken
-										(user, token, user.getAuthorities());
+		User userJpa = userRepository.findByUsername(username)
+				.orElseThrow(() -> new UsernameNotFoundException(username));
+		CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
+		Authentication authentication = new UsernamePasswordAuthenticationToken(user, token, user.getAuthorities());
 		SecurityContextHolder.getContext().setAuthentication(authentication);
-    	logger.info("Valid access token. User {} authenticated successfully", username);
+		logger.info("Valid access token. User {} authenticated successfully", username);
 	}
 }
