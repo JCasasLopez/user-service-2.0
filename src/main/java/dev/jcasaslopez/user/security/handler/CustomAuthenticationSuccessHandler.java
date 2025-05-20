@@ -1,7 +1,6 @@
 package dev.jcasaslopez.user.security.handler;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import dev.jcasaslopez.user.dto.LoginResponse;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
@@ -58,10 +58,11 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		
 		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
 		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
-		List<String> refreshAndAccessTokens = List.of(refreshToken, accessToken);
+		
 		logger.info("Login successful for user '{}'. Attempts reset and login attempt persisted.", username);
 		
+		LoginResponse loginResponse = new LoginResponse (user, refreshToken, accessToken);
 		standardResponseHandler.handleResponse(response, 200, "Login attempt successful", 
-				refreshAndAccessTokens);
+				loginResponse);
 	}
 }
