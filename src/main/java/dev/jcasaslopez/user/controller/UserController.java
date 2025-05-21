@@ -78,7 +78,7 @@ public class UserController {
 	//
 	// It sends a verification email to initiate the password reset process.
 	@PostMapping(value = Constants.FORGOT_PASSWORD_PATH)
-	public ResponseEntity<StandardResponse> forgotPassword(@RequestParam @NotBlank @Email 
+	public ResponseEntity<StandardResponse> forgotPassword(@RequestBody @NotBlank @Email 
 			String email) {
 		accountOrchestrationService.forgotPassword(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -92,7 +92,7 @@ public class UserController {
 	// See the comment in PasswordServiceImpl.resetPassword() to better understand the difference 
 	// between the resetPassword and changePassword functionalities, and why they are two separate flows.
 	@PutMapping(value = Constants.RESET_PASSWORD_PATH)
-	public ResponseEntity<StandardResponse> resetPassword(@RequestParam @NotBlank String newPassword, 
+	public ResponseEntity<StandardResponse> resetPassword(@RequestBody @NotBlank String newPassword, 
 			HttpServletRequest request) {
 		accountOrchestrationService.resetPassword(newPassword, request);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -101,8 +101,14 @@ public class UserController {
 	}
 		
 	@PutMapping(value = "/changePassword")
-	public ResponseEntity<StandardResponse> changePassword(@RequestParam @NotBlank String oldPassword, 
-			@RequestParam @NotBlank String newPassword) {
+	public ResponseEntity<StandardResponse> changePassword(@RequestBody @NotNull Map<String, String> passwordsAsMap) {
+		String oldPassword = passwordsAsMap.get("oldPassword");
+	    String newPassword = passwordsAsMap.get("newPassword");
+
+	    if (oldPassword.isBlank() || newPassword.isBlank()) {
+	        throw new IllegalArgumentException("Both oldPassword and newPassword are required");
+	    }
+	    
 		accountOrchestrationService.changePassword(oldPassword, newPassword);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"Password changed successfully", null, HttpStatus.OK);
@@ -113,7 +119,7 @@ public class UserController {
 	//
 	// Upgrades user from USER to ADMIN. Only accesible to SUPER_ADMIN users.
 	@PutMapping(value = "/upgradeUser")
-	public ResponseEntity<StandardResponse> upgradeUser(@RequestParam @NotBlank @Email String email) {
+	public ResponseEntity<StandardResponse> upgradeUser(@RequestBody @NotBlank @Email String email) {
 		accountOrchestrationService.upgradeUser(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
 				"User upgraded successfully to admin", null, HttpStatus.OK);
@@ -138,7 +144,7 @@ public class UserController {
 	//
 	// Accepted values: ACTIVE, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
 	@PutMapping(value = "/updateAccountStatus")
-	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestParam @NotBlank String email, 
+	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestBody @NotBlank String email, 
 			@RequestParam @NotNull AccountStatus newAccountStatus) {
 		accountOrchestrationService.updateAccountStatus(email, newAccountStatus);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -155,7 +161,7 @@ public class UserController {
 	// "Subject"   : String
 	// "Message"   : String
 	@PostMapping(value = "/sendNotification")
-	public ResponseEntity<StandardResponse> sendNotification(@RequestParam @NotNull Map<String, String> messageAsMap) {
+	public ResponseEntity<StandardResponse> sendNotification(@RequestBody @NotNull Map<String, String> messageAsMap) {
 		// Validamos que el mensaje tenga un formato válido.
 		//
 		// We validate the message has a a valid format.
