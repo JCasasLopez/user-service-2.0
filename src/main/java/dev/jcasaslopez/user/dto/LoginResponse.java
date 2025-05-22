@@ -1,14 +1,12 @@
 package dev.jcasaslopez.user.dto;
 
-import dev.jcasaslopez.user.entity.User;
-
 public class LoginResponse {
 	
-	private User user;
+	private UserDto user;
     private String refreshToken;
     private String accessToken;
 
-    public LoginResponse(User user, String refreshToken, String accessToken) {
+    public LoginResponse(UserDto user, String refreshToken, String accessToken) {
         this.user = user;
         this.refreshToken = refreshToken;
         this.accessToken = accessToken;
@@ -17,11 +15,11 @@ public class LoginResponse {
 	public LoginResponse() {
 	}
 
-	public User getUser() {
+	public UserDto getUser() {
 		return user;
 	}
 
-	public void setUser(User user) {
+	public void setUser(UserDto user) {
 		this.user = user;
 	}
 
@@ -40,4 +38,5 @@ public class LoginResponse {
 	public void setAccessToken(String accessToken) {
 		this.accessToken = accessToken;
 	}
+
 }
