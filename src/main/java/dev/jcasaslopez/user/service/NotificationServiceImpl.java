@@ -2,6 +2,7 @@ package dev.jcasaslopez.user.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -20,8 +21,12 @@ public class NotificationServiceImpl implements NotificationService {
 	
 	private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
 
-	String urlAngular = "http://classrooms.com/user-service/";
-
+    @Value("${frontend.url.angular.registration}") 
+    private String urlAngularRegistration;
+    
+    @Value("${frontend.url.angular.forgotPassword}") 
+    private String urlAngularForgotPassword;
+    
 	private EmailService emailService;
     
 	public NotificationServiceImpl(EmailService emailService) {
@@ -45,7 +50,7 @@ public class NotificationServiceImpl implements NotificationService {
 	        <p><a href="%s/verifyEmail?token=%s">Verify my email</a></p>
 	        <p>Best regards,<br>
 	        The Team</p>
-	        """.formatted(username, urlAngular, token);
+	        """.formatted(username, urlAngularRegistration, token);
 
 	    emailService.sendEmail(email, subject, message);
 	}
@@ -84,7 +89,7 @@ public class NotificationServiceImpl implements NotificationService {
 	        <p><a href="%s/forgotPassword?token=%s">Reset my password</a></p>
 	        <p>Best regards,<br>
 	        The Team</p>
-	        """.formatted(username, urlAngular, token);
+	        """.formatted(username, urlAngularForgotPassword, token);
 
 	    emailService.sendEmail(email, subject, message);
 	}
