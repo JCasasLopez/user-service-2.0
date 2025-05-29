@@ -78,7 +78,7 @@ public class PasswordServiceImpl implements PasswordService {
 		
 		boolean newPasswordSameAsOldOne = passwordEncoder.matches(newPassword, user.getPassword());
 		if(newPasswordSameAsOldOne) {
-			throw new IllegalArgumentException("The new password has to be different from the old one");
+			throw new IllegalArgumentException("Invalid password");
 		}
 		
 		userRepository.updatePassword(user.getUsername(), passwordEncoder.encode(newPassword));
