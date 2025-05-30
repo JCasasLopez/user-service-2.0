@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
     FOREIGN KEY (role_id) REFERENCES roles(idRole)
 );
 
-CREATE TABLE IF NOT EXISTS loginAttempts (
+CREATE TABLE IF NOT EXISTS login_attempts (
     idLoginAttempt BIGINT AUTO_INCREMENT PRIMARY KEY,
     timestamp DATETIME(6),
     successful BIT NOT NULL,
