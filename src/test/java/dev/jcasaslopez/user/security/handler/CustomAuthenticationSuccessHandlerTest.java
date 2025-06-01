@@ -1,6 +1,7 @@
 package dev.jcasaslopez.user.security.handler;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -25,15 +26,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
+import dev.jcasaslopez.user.dto.LoginResponse;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.LoginAttempt;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
+import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.LoginAttemptRepository;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
+import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -46,6 +50,8 @@ public class CustomAuthenticationSuccessHandlerTest {
 	@Autowired private RoleRepository roleRepository;
 	@Autowired private LoginAttemptRepository loginAttemptRepository;
 	@Autowired private PasswordEncoder passwordEncoder;
+	@Autowired private UserMapper userMapper;
+	@Autowired private TokenService tokenService;
 	
 	private static User user;
 	private static final String username = "Yorch";
@@ -100,25 +106,29 @@ public class CustomAuthenticationSuccessHandlerTest {
 		
 		// Assert
 		assertAll(
-				() -> assertNull(redisTemplate.opsForValue().get(redisKey), 
-						"Redis entry for that should have been deleted"),
-				() -> assertEquals(HttpStatus.OK, response.getStatusCode(),
-						"Response HTTP status should be 200 OK"),
-				() -> assertEquals("Login attempt successful", response.getBody().getMessage(),
-						"Unexpected response message"),
-				() -> {
-			        Object details = response.getBody().getDetails();
-			        assertNotNull(details, "Response should contain details (tokens)");
-			        List<?> tokenList = null;
-			        if ((details instanceof List<?>)) {
-				        tokenList = (List<?>) details;
-			        }
-			        assertEquals(2, tokenList.size(), "Expected 2 tokens in the response");
-			    },
-				() -> assertEquals(user.getIdUser(), matchingAttempt.getUser().getIdUser(),
-						"User's ID in persisted login attempt should be user's ID"),
-				() -> assertTrue(matchingAttempt.isSuccessful(),
-						"Persisted login attempt should be successful")
+		    () -> assertNull(redisTemplate.opsForValue().get(redisKey), 
+		            "Redis entry for that should have been deleted"),
+		    () -> assertEquals(HttpStatus.OK, response.getStatusCode(),
+		            "Response HTTP status should be 200 OK"),
+		    () -> assertEquals("Login attempt successful", response.getBody().getMessage(),
+		            "Unexpected response message"),
+		    () -> {
+		        LoginResponse loginResponse = (LoginResponse) response.getBody().getDetails();
+		        assertNotNull(loginResponse, "Response should contain details (user & tokens)");
+		        assertAll(
+		            () -> assertEquals(userMapper.userToUserDtoMapper(user).getIdUser(), 
+		                    loginResponse.getUser().getIdUser(),
+		                    "Authenticated user and returned user should be the same"),
+		            () -> assertDoesNotThrow(() -> tokenService.getValidClaims(loginResponse.getRefreshToken()),
+		                    "Returned refresh token should be a valid token"),
+		            () -> assertDoesNotThrow(() -> tokenService.getValidClaims(loginResponse.getAccessToken()),
+		                    "Returned access token should be a valid token")
+		        );
+		    },
+		    () -> assertEquals(user.getIdUser(), matchingAttempt.getUser().getIdUser(),
+		            "User's ID in persisted login attempt should be user's ID"),
+		    () -> assertTrue(matchingAttempt.isSuccessful(),
+		            "Persisted login attempt should be successful")
 		);
 	}
 }
