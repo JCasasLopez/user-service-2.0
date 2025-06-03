@@ -8,8 +8,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -30,13 +32,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
+import dev.jcasaslopez.user.repository.LoginAttemptRepository;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
@@ -44,7 +46,6 @@ import dev.jcasaslopez.user.service.UserAccountService;
 import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
 @TestInstance(Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CustomUsernamePasswordAuthenticationFilterTest {
@@ -54,6 +55,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	@Autowired private UserAccountService userAccountService;
 	@Autowired private UserRepository userRepository;
 	@Autowired private RoleRepository roleRepository;
+	@Autowired private LoginAttemptRepository loginAttemptRepository;
 	@Autowired private PasswordEncoder passwordEncoder;
 	@MockBean private EmailService emailService;
 	
@@ -68,10 +70,20 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		
 		user = new User(username, password, "Jorge García", "jorgegarcia22@hotmail.com", LocalDate.of(1978, 11, 26));
 		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
-		user.setPassword(passwordEncoder.encode(password));		
+		user.setPassword(passwordEncoder.encode(password));	
+		user.setRoles(Set.of(roleUser));
 		userRepository.save(user);
+		userRepository.flush();
 		
 		redisTemplate.delete(Constants.LOGIN_ATTEMPTS_REDIS_KEY + username);
+	}
+	
+	@AfterAll
+	void cleanDatabase() {
+		loginAttemptRepository.deleteAll();
+        userRepository.deleteAll();
+        roleRepository.deleteAll();
+        redisTemplate.getConnectionFactory().getConnection().flushAll();
 	}
 
 	@Test
@@ -106,6 +118,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		// Arrange
 		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 		userRepository.save(user);
+		userRepository.flush();
 		
     	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		redisTemplate.opsForValue().set(redisKey, "3", 5, TimeUnit.MINUTES);
