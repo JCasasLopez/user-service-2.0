@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
@@ -26,17 +26,12 @@ import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
 @DataJpaTest
-@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class UserRoleRelationshipTest {
 	
-	@Autowired
-	private UserRepository userRepository;
-	
-	@Autowired
-	private RoleRepository roleRepository;
-	
-	@Autowired
-	private EntityManager entityManager;
+	@Autowired private UserRepository userRepository;
+	@Autowired private RoleRepository roleRepository;
+	@Autowired private EntityManager entityManager;
 	
 	private User persistedUser1;
 	private User persistedUser2;
@@ -50,10 +45,10 @@ public class UserRoleRelationshipTest {
 		roleRepository.save(roleAdmin);
 		
 		User user1 = new User(
-			    "Johnny",
-			    "securePassword123",
-			    "John Doe",
-			    "123@example.com",
+				"Yorch22",
+			    "Password123!",
+			    "Jorge Garcia",
+			    "jc90@gmail.com",
 			    LocalDate.of(1990, 5, 15)
 			    );
 		
@@ -68,7 +63,7 @@ public class UserRoleRelationshipTest {
 			    		
 		User user2 = new User(
 			    "Laura",
-			    "securePassword456",
+			    "Password456!",
 			    "Laura Smith",
 			    "laura92@example.com",
 			    LocalDate.of(1992, 6, 11)
