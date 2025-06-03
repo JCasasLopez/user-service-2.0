@@ -10,8 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +26,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.jcasaslopez.user.dto.LoginResponse;
 import dev.jcasaslopez.user.dto.StandardResponse;
@@ -41,7 +44,6 @@ import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
 public class CustomAuthenticationSuccessHandlerTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
@@ -52,11 +54,20 @@ public class CustomAuthenticationSuccessHandlerTest {
 	@Autowired private PasswordEncoder passwordEncoder;
 	@Autowired private UserMapper userMapper;
 	@Autowired private TokenService tokenService;
+	@Autowired private ObjectMapper objectMapper;
 	
 	private static User user;
 	private static final String username = "Yorch";
 	private static final String password = "Yorch22!";
 	private static final String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+	
+	@AfterEach
+	void cleanDatabase() {
+		loginAttemptRepository.deleteAll();
+        userRepository.deleteAll();
+        roleRepository.deleteAll();
+        redisTemplate.getConnectionFactory().getConnection().flushAll();
+	}
 	
 	// Persistimos un usuario que usaremos posteriormente para el login y simulamos que su
 	// cuenta de intentos fallidos en Redis está a 2. Si el handler funciona correctamente,
@@ -75,30 +86,29 @@ public class CustomAuthenticationSuccessHandlerTest {
 	@DisplayName("If login attempt is successful, Redis entry is deleted and 200 OK returned")
 	void CustomAuthenticationSuccessHandler_WhenLoginSuccessful_ShouldReturn200OkAndDeleteRedisEntry() {
 		// Arrange
-		LocalDateTime startTest = LocalDateTime.now();
+		LocalDateTime startTest = LocalDateTime.now().minusSeconds(1);;
 		
-		Role roleUser = new Role(RoleName.ROLE_USER);
-		roleRepository.save(roleUser);
+		persistRoleAndUser();
 		
-		user = new User(username, password, "Jorge García", "jorgegarcia22@hotmail.com", LocalDate.of(1978, 11, 26));
-		user.setAccountStatus(AccountStatus.ACTIVE);
-		user.setPassword(passwordEncoder.encode(password));		
-		userRepository.save(user);
-		
+		// Simulamos 2 intentos fallidos previos para el usuario almacenando la clave 
+		// 'redisKey' con valor 2 en Redis
+		//
+		// Simulate 2 previous failed login attempts by setting the 'redisKey' entry 
+		// to 2 in Redis
 		redisTemplate.opsForValue().set(redisKey, "2", 5, TimeUnit.MINUTES);
 		
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);		
-		String body = "username=" + username + "&password=" + password;
-		HttpEntity<String> request = new HttpEntity<>(body, headers);
+		HttpEntity<String> request = configHttpRequest();
 		
 		// Act
 		ResponseEntity<StandardResponse> response = testRestTemplate
 				.postForEntity("/login", request, StandardResponse.class);
 		
-		LocalDateTime endTest = LocalDateTime.now();
+		LocalDateTime endTest = LocalDateTime.now().plusSeconds(1);;
 		List<LoginAttempt> loginAttemptsDuringTestExecution = loginAttemptRepository.findAll();		
 		
+		// Buscamos el intento de login entre 'startTest' y 'endTest'
+		//
+		// We search for loginAttempts between 'startTest' and 'endTest'
 		LoginAttempt matchingAttempt = loginAttemptsDuringTestExecution.stream()
 			    .filter(a -> a.getTimestamp().isAfter(startTest) && a.getTimestamp().isBefore(endTest))
 			    .findFirst()
@@ -113,7 +123,10 @@ public class CustomAuthenticationSuccessHandlerTest {
 		    () -> assertEquals("Login attempt successful", response.getBody().getMessage(),
 		            "Unexpected response message"),
 		    () -> {
-		        LoginResponse loginResponse = (LoginResponse) response.getBody().getDetails();
+		    	LoginResponse loginResponse = objectMapper.convertValue(
+		    		    response.getBody().getDetails(),
+		    		    LoginResponse.class
+		    		);
 		        assertNotNull(loginResponse, "Response should contain details (user & tokens)");
 		        assertAll(
 		            () -> assertEquals(userMapper.userToUserDtoMapper(user).getIdUser(), 
@@ -130,5 +143,24 @@ public class CustomAuthenticationSuccessHandlerTest {
 		    () -> assertTrue(matchingAttempt.isSuccessful(),
 		            "Persisted login attempt should be successful")
 		);
+	}
+	
+	private void persistRoleAndUser() {
+		Role roleUser = new Role(RoleName.ROLE_USER);
+		roleRepository.save(roleUser);
+		
+		user = new User(username, password, "Jorge García", "jorgegarcia22@hotmail.com", LocalDate.of(1978, 11, 26));
+		user.setAccountStatus(AccountStatus.ACTIVE);
+		user.setRoles(Set.of(roleUser));
+		user.setPassword(passwordEncoder.encode(password));		
+		userRepository.save(user);
+		userRepository.flush();
+	}
+	
+	private HttpEntity<String> configHttpRequest(){
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);		
+		String body = "username=" + username + "&password=" + password;
+		return new HttpEntity<>(body, headers);
 	}
 }
