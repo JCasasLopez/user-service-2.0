@@ -30,7 +30,9 @@ services:
       retries: 5
 
   user-service:
-    build: .
+    build:
+      context: .
+      target: production  
     container_name: user-service
     depends_on:
       mysql:
@@ -48,10 +50,11 @@ services:
       JWT_SECRETKEY: ${JWT_SECRETKEY}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-    command: ["java", "-jar", "app.jar"]
 
   user-tests:
-    build: .
+    build:
+      context: .
+      target: development  
     container_name: user-tests
     depends_on:
       mysql:
