@@ -7,12 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
-import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -32,18 +34,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
-import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
-import dev.jcasaslopez.user.service.TokenServiceImpl;
-import dev.jcasaslopez.user.service.UserDetailsManagerImpl;
+import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
@@ -73,31 +70,31 @@ import io.jsonwebtoken.Claims;
 // 3) Failed password change: if the user is not authenticated, a 401 error is returned.
 // 4) Successful password change: an authenticated user can change their password, and it is updated in the database.
 
-@Transactional
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@ActiveProfiles("prod")
 public class FullResetAndChangePasswordIntegrationTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
-	@Autowired private TokenServiceImpl tokenServiceImpl;
+	@Autowired private TokenService tokenService;
+	@Autowired private TestHelper testHelper;
 	@Autowired private UserRepository userRepository;
 	@Autowired private PasswordEncoder passwordEncoder;
-	@Autowired private UserMapper userMapper;
-	@Autowired private TestHelper testHelper;
-	@Autowired private UserDetailsManagerImpl userDetailsManagerImpl;
 	@MockBean private EmailService emailService;
 	
 	private static String token;
 	private static User user;
-	private static String username;
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 	
 	@BeforeAll
 	void setup() {
-		username = "Yorch123";
-		user = new User(username, "Jorge22!", "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
-		userDetailsManagerImpl.createUser(userMapper.userToCustomUserDetailsMapper(user));
+		user = testHelper.createUser(username, password);
+	}
+	
+	@AfterAll
+	void cleanAfterTest() {
+		testHelper.cleanDataBaseAndRedis();
 	}
 	
 	@Order(1)
@@ -106,11 +103,15 @@ public class FullResetAndChangePasswordIntegrationTest {
 	public void forgotPassword_whenValidDetails_ShouldSendEmailAndReturn200() {
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
 	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-	    HttpEntity<Void> request = new HttpEntity<>(headers);
-	    String url = Constants.FORGOT_PASSWORD_PATH + "?email=" + user.getEmail();
 	    
-	    token = tokenServiceImpl.createVerificationToken(username);
+	    String body = user.getEmail();
+	    HttpEntity<String> request = new HttpEntity<>(body, headers);
+	    
+	    String url = Constants.FORGOT_PASSWORD_PATH;
+	    
+	    token = tokenService.createVerificationToken(username);
 
 	    // Act
 	    ResponseEntity<StandardResponse> response = testRestTemplate
@@ -126,7 +127,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 		assertTrue(matcher.find(), "Token not found in email body");
 		
 		token = matcher.group(1);
-		Optional<Claims> optionalClaims = tokenServiceImpl.getValidClaims(token);
+		Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
 		assertTrue(optionalClaims.isPresent());
 		
 		assertAll(
@@ -143,12 +144,14 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Resets password correctly")
 	public void resetPassword_whenValid_ShouldReturn200AndResetPassword() {
 		// Arrange
-		String url = Constants.RESET_PASSWORD_PATH + "?newPassword=Garcia22!";
-		
+		String url = Constants.RESET_PASSWORD_PATH;
 		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
 		headers.setBearerAuth(token);
 	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-	    HttpEntity<Void> request = new HttpEntity<>(headers);
+	    
+	    String newPassword = "Garcia22!";
+	    HttpEntity<String> request = new HttpEntity<>(newPassword, headers);
 	    
 	    // Act
 	    ResponseEntity<StandardResponse> response = testRestTemplate.
@@ -178,7 +181,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Fails to change password when user is not authenticated")
 	public void changePassword_whenNoUserAuthenticated_ShouldReturn401() {
 		// Arrange
-		String url = "/changePassword?newPassword=Jorge22!&oldPassword=Garcia22!";
+		String url = "/changePassword";
 		HttpHeaders headers = new HttpHeaders();
 		
 		// Sin token de autenticación en el encabezado = no hay usuario autenticado.
@@ -206,10 +209,15 @@ public class FullResetAndChangePasswordIntegrationTest {
 	public void changePassword_whenUserLoggedIn_ShouldSendEmailChangePasswordReturn200() {
 		// Arrange
 		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
-		String url = "/changePassword?newPassword=Jorge22!&oldPassword=Garcia22!";
+		
+		Map<String, String> passwords = new HashMap<>();
+		passwords.put("oldPassword", "Garcia22!");
+		passwords.put("newPassword", "Jorge22!");
+		String url = "/changePassword";
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
-	    HttpEntity<Void> request = new HttpEntity<>(headers);
+	    headers.setContentType(MediaType.APPLICATION_JSON); 
+	    HttpEntity<Map<String, String>> request = new HttpEntity<>(passwords, headers);
 
 	    // Act
 	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(
@@ -229,27 +237,5 @@ public class FullResetAndChangePasswordIntegrationTest {
 		        () -> assertTrue(passwordEncoder.matches("Jorge22!", user.getPassword()), 
 						"Passwords should match")
 		    );
-	}
-	
-	// Por último, borramos el usuario persistido para los tests, para que estos no tengan efectos 
-	// en la base de datos.
-	// 
-	// Finally, we delete the user persisted for testing purposes
-	// to avoid leaving any data in the database.
-	@Order(5)
-	@Test
-
-	// Ejecutar fuera de la transacción para evitar rollback al final del test.
-	//
-	// Run outside the transaction to avoid rollback at the end of the test.
-	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	@DisplayName("Cleans up the test user from the database")
-	public void cleanupTestUser_shouldRemoveUserFromDatabase() {
-	    // Act
-	    userRepository.findByUsername(username).ifPresent(userRepository::delete);
-
-	    // Assert
-	    assertTrue(userRepository.findByUsername(username).isEmpty(), 
-	        "User should no longer exist in the database after cleanup");
 	}
 }

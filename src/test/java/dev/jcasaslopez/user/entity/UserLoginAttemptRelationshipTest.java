@@ -6,44 +6,49 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
 
+import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
+import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.LoginAttemptRepository;
+import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
 @DataJpaTest
-@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class UserLoginAttemptRelationshipTest {
 	
-	@Autowired
-	private UserRepository userRepository;
-	
-	@Autowired
-	private LoginAttemptRepository loginAttemptRepository;
-	
-	@Autowired
-	private EntityManager entityManager;
+	@Autowired private UserRepository userRepository;
+	@Autowired private LoginAttemptRepository loginAttemptRepository;
+	@Autowired private EntityManager entityManager;
+	@Autowired private RoleRepository roleRepository;
 	
 	private User persistedUser1;
 	
 	@BeforeEach
 	private void setUp() {
+		Role roleUser = new Role(RoleName.ROLE_USER);
+	    roleRepository.save(roleUser);
+	    
 		User user1 = new User(
-			    "Johnny",
-			    "securePassword123",
-			    "John Doe",
-			    "123@example.com",
+			    "Yorch22",
+			    "Password123!",
+			    "Jorge Garcia",
+			    "jc90@gmail.com",
 			    LocalDate.of(1990, 5, 15)
 			);
 		
+		user1.setAccountStatus(AccountStatus.ACTIVE);
+		user1.setRoles(Set.of(roleUser));
 		persistedUser1 = userRepository.save(user1);
 		
 		LoginAttempt attempt1 = new LoginAttempt(

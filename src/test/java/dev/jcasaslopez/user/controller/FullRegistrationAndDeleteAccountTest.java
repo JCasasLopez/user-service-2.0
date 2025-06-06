@@ -7,12 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
-import java.time.LocalDate;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONException;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -33,7 +33,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +41,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
+import dev.jcasaslopez.user.enums.AccountStatus;
+import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
@@ -49,7 +50,6 @@ import dev.jcasaslopez.user.service.TokenServiceImpl;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
-import jakarta.transaction.Transactional;
 
 // Estos tests verifican exclusivamente el happy path del flujo de creación de cuenta.
 // Los escenarios relacionados con la validez, expiración o firma del token
@@ -76,11 +76,9 @@ import jakarta.transaction.Transactional;
 // 3) Failed deletion: unauthenticated users receive a 401 error when trying to delete.
 // 4) Successful deletion: an authenticated user can delete their account, and it's removed from the database.
 
-@Transactional
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@ActiveProfiles("prod")
 public class FullRegistrationAndDeleteAccountTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
@@ -95,7 +93,8 @@ public class FullRegistrationAndDeleteAccountTest {
 	private static String token;
 	private static User user;
 	private static String userJson;
-	private static String username;
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 	
 	@BeforeAll
 	void setup() throws JsonProcessingException {
@@ -106,9 +105,22 @@ public class FullRegistrationAndDeleteAccountTest {
 		// You need to register the JavaTimeModule with the ObjectMapper.
 		mapper.registerModule(new JavaTimeModule());
 		
-		username = "Yorch123";
-		user = new User(username, "Jorge22!", "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
+		user = testHelper.createUser(username, password);
+		
+		// createUser() devuelve el usuario con la contraseña codificada, pero 'userJson'
+		// espera la contraseña en texto plano (ya que se vuelve a codificar en 
+		// AccountOrchestrationService.initiateRegistration())
+		//
+		// createUser() returns the user with the password encoded, but 'userJson'
+		// expects the password in plain text (since it gets encoded again in 
+		// AccountOrchestrationService.initiateRegistration())
+		user.setPassword(password);
 		userJson = mapper.writeValueAsString(user);
+	}
+	
+	@AfterAll
+	void cleanDatabase() {
+		testHelper.cleanDataBaseAndRedis();
 	}
 	
 	// Este test de integración verifica que:
