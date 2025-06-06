@@ -20,51 +20,43 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UpdateAccountStatusIntegrationTest {
 	
-	@Autowired private RoleRepository roleRepository;
 	@Autowired private UserRepository userRepository;
 	@Autowired private TestHelper testHelper; 
 	@Autowired private MockMvc mockMvc;
 	@Autowired private ObjectMapper objectMapper;
 	
 	private static User user;
+	private static String userEmail;
 	
 	@BeforeAll
 	void setup() {
-	    if (roleRepository.count() == 0) {
-	        roleRepository.save(new Role(RoleName.ROLE_USER));
-	        roleRepository.save(new Role(RoleName.ROLE_ADMIN));
-	        roleRepository.save(new Role(RoleName.ROLE_SUPERADMIN));
-	    }	    
-		user = testHelper.createUser();
+		user = testHelper.createUser("Yorch22", "Jorge22!");
+		userEmail = user.getEmail();	
 	}
 	
 	@AfterAll
 	void cleanup() {
-	    userRepository.deleteById(user.getIdUser());
+	    testHelper.cleanDataBaseAndRedis();
 	}
 	
 	@Test
@@ -84,10 +76,13 @@ public class UpdateAccountStatusIntegrationTest {
 
 		// Assert
 		assertAll(
-				() -> assertEquals(403, mvcResult.getResponse().getStatus(), "HTTP status should be 403 Forbidden"),
-				() -> assertNotNull(response.getMessage(), "Response body should not be null"),
-				() -> assertTrue(response.getMessage().contains("Access denied"), "Unexpected response message"),
-				() -> assertFalse(user.getAccountStatus() == newAccountStatus)
+		    () -> assertEquals(403, mvcResult.getResponse().getStatus(),
+		        "HTTP status should be 403 Forbidden"),
+		    () -> assertNotNull(response.getMessage(), "Response body should not be null"),
+		    () -> assertTrue(response.getMessage().contains("Access denied"),
+		        "Unexpected response message"),
+		    () -> assertFalse(user.getAccountStatus() == newAccountStatus,
+		        "Account status is " + user.getAccountStatus() + " but should be " + AccountStatus.PERMANENTLY_SUSPENDED)
 		);
 	}
 	
@@ -108,11 +103,14 @@ public class UpdateAccountStatusIntegrationTest {
 
 		// Assert
 		assertAll(
-				() -> assertEquals(200, mvcResult.getResponse().getStatus(), "HTTP status should be 200 OK"),
+				() -> assertEquals(200, mvcResult.getResponse().getStatus(), 
+						"HTTP status should be 200 OK"),
 				() -> assertNotNull(response.getMessage(), "Response body should not be null"),
 				() -> assertTrue(response.getMessage().contains("status successfully updated"), 
 						"Unexpected response message"),
-				() -> assertTrue(user.getAccountStatus() == newAccountStatus));
+				() -> assertTrue(user.getAccountStatus() == newAccountStatus,
+				        "Account has unexpected status after the test")
+			);
 	}
 	
 	@Test
@@ -178,16 +176,18 @@ public class UpdateAccountStatusIntegrationTest {
 								response.getMessage(), "Unexpected response message")
 				);
 	}
+
 	
 	// Métodos auxiliares para reducir código repetido.
 	//
 	// Helper methods to reduce boilerplate code.
-	private RequestBuilder buildMockMvcRequest(AccountStatus newAccountStatus) {
+	private RequestBuilder buildMockMvcRequest(AccountStatus newAccountStatus) throws JsonProcessingException {
 		return MockMvcRequestBuilders
-				.put("/updateAccountStatus")
-				.param("email", user.getEmail())
-				.param("newAccountStatus", newAccountStatus.name())
-				.accept(MediaType.APPLICATION_JSON);
+		        .put("/updateAccountStatus")
+		        .param("newAccountStatus", newAccountStatus.name())
+		        .contentType(MediaType.APPLICATION_JSON)
+		        .content(userEmail)
+		        .accept(MediaType.APPLICATION_JSON);
 	}
 
 	// Ejecuta la petición y recarga la entidad 'user' desde la base de datos,

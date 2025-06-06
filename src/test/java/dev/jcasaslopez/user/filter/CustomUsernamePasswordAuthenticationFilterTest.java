@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
-import java.time.LocalDate;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
@@ -31,18 +29,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.repository.LoginAttemptRepository;
-import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.UserAccountService;
+import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -54,36 +49,28 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	@Autowired private RedisTemplate<String, String> redisTemplate;
 	@Autowired private UserAccountService userAccountService;
 	@Autowired private UserRepository userRepository;
-	@Autowired private RoleRepository roleRepository;
-	@Autowired private LoginAttemptRepository loginAttemptRepository;
-	@Autowired private PasswordEncoder passwordEncoder;
 	@MockBean private EmailService emailService;
+	@Autowired private TestHelper testHelper;
 	
 	private static User user;
-	private static final String username = "Yorch";
-	private static final String password = "Yorch22!";
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 
 	@BeforeAll
 	void setUp() {
-		Role roleUser = new Role(RoleName.ROLE_USER);
-		roleRepository.save(roleUser);
+		user = testHelper.createUser(username, password);
 		
-		user = new User(username, password, "Jorge García", "jorgegarcia22@hotmail.com", LocalDate.of(1978, 11, 26));
+		// Por defecto, la cuenta se pone como ACTIVE, así que hay que bloquear la cuenta 'a mano'.
+		//
+		// By default, account is set as ACTIVE, so we have to block the account.
 		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
-		user.setPassword(passwordEncoder.encode(password));	
-		user.setRoles(Set.of(roleUser));
 		userRepository.save(user);
 		userRepository.flush();
-		
-		redisTemplate.delete(Constants.LOGIN_ATTEMPTS_REDIS_KEY + username);
 	}
 	
 	@AfterAll
-	void cleanDatabase() {
-		loginAttemptRepository.deleteAll();
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
-        redisTemplate.getConnectionFactory().getConnection().flushAll();
+	void cleanAfterTest() {
+		testHelper.cleanDataBaseAndRedis();
 	}
 
 	@Test
@@ -96,18 +83,23 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		// Act
 		ResponseEntity<StandardResponse> response = testRestTemplate
 				.postForEntity("/login", request, StandardResponse.class);
-				
+								
 		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		String emailBody = bodyCaptor.getValue();
 	
 		// Assert
 		assertAll(
-				() -> assertEquals(AccountStatus.ACTIVE, userAccountService.findUser(username).getAccountStatus()),
-				() -> assertTrue(emailBody.contains("Your account is active again.")),
-				() -> assertEquals(HttpStatus.OK, response.getStatusCode()),
-				() -> assertEquals("Login attempt successful", response.getBody().getMessage()),
-				() -> assertNotNull(response.getBody().getDetails())
+				() -> assertEquals(AccountStatus.ACTIVE, userAccountService.findUser(username).getAccountStatus(),
+						"User account status should be ACTIVE"),
+				() -> assertTrue(emailBody.contains("Your account is active again."),
+						"Email body does not contain expected content"),
+				() -> assertEquals(HttpStatus.OK, response.getStatusCode(),
+						"HTTP response status should be 200 OK"),
+				() -> assertEquals("Login attempt successful", response.getBody().getMessage(),
+						"Unexpected HTTP response message"),
+				() -> assertNotNull(response.getBody().getDetails(),
+						"Response body should not be null")
 		);
 	}
 	
@@ -131,9 +123,12 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 				
 		// Assert
 		assertAll(
-				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(username).getAccountStatus()),
-				() -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode()),
-				() -> assertEquals("Account is locked", response.getBody().getMessage())
+				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(username).getAccountStatus(),
+						"User account status shoud be TEMPORARILY_BLOCKED"),
+				() -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(),
+						"HTTP response status should be 403 FORBIDDEN"),
+				() -> assertEquals("Account is locked", response.getBody().getMessage(),
+						"Unexpected HTTP response message")
 		);
 	}
 	
@@ -153,9 +148,10 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		
 		// Assert
 		assertAll(
-				() -> assertEquals(HttpStatus.BAD_REQUEST, response.getBody().getStatus()),
-				() -> assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode()),
-				() -> assertEquals("Username and password are required", response.getBody().getMessage())
+				() -> assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode(),
+						"HTTP response status should be 400 BAD_REQUEST"),
+				() -> assertEquals("Username and password are required", response.getBody().getMessage(),
+						"Unexpected HTTP response message")
 		);
 	}
 	

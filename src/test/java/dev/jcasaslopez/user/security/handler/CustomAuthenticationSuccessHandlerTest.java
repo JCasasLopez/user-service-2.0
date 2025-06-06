@@ -7,13 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,22 +22,17 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.jcasaslopez.user.dto.LoginResponse;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.LoginAttempt;
-import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.LoginAttemptRepository;
-import dev.jcasaslopez.user.repository.RoleRepository;
-import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.TokenService;
+import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -48,26 +40,14 @@ public class CustomAuthenticationSuccessHandlerTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private RedisTemplate<String, String> redisTemplate;
-	@Autowired private UserRepository userRepository;
-	@Autowired private RoleRepository roleRepository;
 	@Autowired private LoginAttemptRepository loginAttemptRepository;
-	@Autowired private PasswordEncoder passwordEncoder;
 	@Autowired private UserMapper userMapper;
 	@Autowired private TokenService tokenService;
 	@Autowired private ObjectMapper objectMapper;
+	@Autowired private TestHelper testHelper;
 	
-	private static User user;
-	private static final String username = "Yorch";
-	private static final String password = "Yorch22!";
-	private static final String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
-	
-	@AfterEach
-	void cleanDatabase() {
-		loginAttemptRepository.deleteAll();
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
-        redisTemplate.getConnectionFactory().getConnection().flushAll();
-	}
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 	
 	// Persistimos un usuario que usaremos posteriormente para el login y simulamos que su
 	// cuenta de intentos fallidos en Redis está a 2. Si el handler funciona correctamente,
@@ -86,9 +66,10 @@ public class CustomAuthenticationSuccessHandlerTest {
 	@DisplayName("If login attempt is successful, Redis entry is deleted and 200 OK returned")
 	void CustomAuthenticationSuccessHandler_WhenLoginSuccessful_ShouldReturn200OkAndDeleteRedisEntry() {
 		// Arrange
+		User user = testHelper.createUser(username, password);
+		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+		redisTemplate.delete(redisKey);
 		LocalDateTime startTest = LocalDateTime.now().minusSeconds(1);;
-		
-		persistRoleAndUser();
 		
 		// Simulamos 2 intentos fallidos previos para el usuario almacenando la clave 
 		// 'redisKey' con valor 2 en Redis
@@ -96,7 +77,6 @@ public class CustomAuthenticationSuccessHandlerTest {
 		// Simulate 2 previous failed login attempts by setting the 'redisKey' entry 
 		// to 2 in Redis
 		redisTemplate.opsForValue().set(redisKey, "2", 5, TimeUnit.MINUTES);
-		
 		HttpEntity<String> request = configHttpRequest();
 		
 		// Act
@@ -143,18 +123,9 @@ public class CustomAuthenticationSuccessHandlerTest {
 		    () -> assertTrue(matchingAttempt.isSuccessful(),
 		            "Persisted login attempt should be successful")
 		);
-	}
-	
-	private void persistRoleAndUser() {
-		Role roleUser = new Role(RoleName.ROLE_USER);
-		roleRepository.save(roleUser);
 		
-		user = new User(username, password, "Jorge García", "jorgegarcia22@hotmail.com", LocalDate.of(1978, 11, 26));
-		user.setAccountStatus(AccountStatus.ACTIVE);
-		user.setRoles(Set.of(roleUser));
-		user.setPassword(passwordEncoder.encode(password));		
-		userRepository.save(user);
-		userRepository.flush();
+		// Cleanup
+	    testHelper.cleanDataBaseAndRedis();
 	}
 	
 	private HttpEntity<String> configHttpRequest(){

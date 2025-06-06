@@ -3,10 +3,13 @@ package dev.jcasaslopez.user.controller;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -30,8 +32,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
-import dev.jcasaslopez.user.exception.MalformedMessageException;
-import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 
@@ -43,23 +43,34 @@ import dev.jcasaslopez.user.testhelper.TestHelper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(Lifecycle.PER_CLASS)
-@ActiveProfiles("test")
 public class SendNotificationIntegrationTest {
 	
-	@Autowired private UserRepository userRepository;
 	@Autowired private ObjectMapper objectMapper;
 	@Autowired private MockMvc mockMvc;
 	@Autowired private TestHelper testHelper;
 	@SpyBean private EmailService emailService;
 	
 	private User user;
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 	
 	@BeforeAll
 	void setup() {
-	    user = new User();
-	    user.setIdUser(0);
-	    user.setEmail("test@example.com");
-	    userRepository.save(user);
+	    user = testHelper.createUser(username, password);
+	    
+		// createUser() devuelve el usuario con la contraseña codificada, pero
+		// 'userJson' espera la contraseña en texto plano (ya que se vuelve a codificar en
+		// AccountOrchestrationService.initiateRegistration())
+		//
+		// createUser() returns the user with the password encoded, but 'userJson'
+		// expects the password in plain text (since it gets encoded again in
+		// AccountOrchestrationService.initiateRegistration())
+		user.setPassword(password);
+	}
+	
+	@AfterAll
+	void cleanUp() {
+		testHelper.cleanDataBaseAndRedis();
 	}
 	
 	@Test
@@ -77,12 +88,16 @@ public class SendNotificationIntegrationTest {
 		// so we pass any valid value.
 		testHelper.loginUser(user, TokenType.ACCESS);
 		
-		RequestBuilder requestBuilder = MockMvcRequestBuilders
-		        .post("/sendNotification")
-		        .param("Recipient", recipient)
-		        .param("Subject", subject)
-		        .param("Message", message)
-		        .accept(MediaType.APPLICATION_JSON);
+		Map<String, String> payload = new HashMap<>();
+	    payload.put("Recipient", recipient);
+	    payload.put("Subject", subject);
+	    payload.put("Message", message);
+		
+	    RequestBuilder requestBuilder = MockMvcRequestBuilders
+	            .post("/sendNotification")
+	            .contentType(MediaType.APPLICATION_JSON)
+	            .content(objectMapper.writeValueAsString(payload))
+	            .accept(MediaType.APPLICATION_JSON);
 
 		// Act
 		MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();
@@ -127,13 +142,17 @@ public class SendNotificationIntegrationTest {
 		
 		testHelper.loginUser(user, TokenType.ACCESS);
 		
-		RequestBuilder requestBuilder = MockMvcRequestBuilders
-		        .post("/sendNotification")
-		        // Typo
-		        .param("Recipie", recipient)
-		        .param("Subject", subject)
-		        .param("Message", message)
-		        .accept(MediaType.APPLICATION_JSON);
+		Map<String, String> payload = new HashMap<>();
+		// Typo
+	    payload.put("Recipien", recipient);
+	    payload.put("Subject", subject);
+	    payload.put("Message", message);
+		
+	    RequestBuilder requestBuilder = MockMvcRequestBuilders
+	            .post("/sendNotification")
+	            .contentType(MediaType.APPLICATION_JSON)
+	            .content(objectMapper.writeValueAsString(payload))
+	            .accept(MediaType.APPLICATION_JSON);
 		
 		// Act 
 		MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();

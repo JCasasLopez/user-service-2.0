@@ -17,38 +17,32 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.ActiveProfiles;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
-import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("prod")
 public class RefreshTokenIntegrationTest {
 	
 	@Autowired private TokenService tokenService;
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TestHelper testHelper;
-	@Autowired private UserRepository userRepository;
 	
-	private User user;
+	private static User user;
 
 	@BeforeEach
 	void setUp() {
-	    user = testHelper.createUser();
+	    user = testHelper.createUser("Yorch22", "Jorge22!");
 	}
 
 	@AfterEach
 	void cleanUp() {
-	    if (user != null) {
-	        userRepository.deleteById(user.getIdUser());
-	    }
+	    testHelper.cleanDataBaseAndRedis();
 	}
 	
 	@Test

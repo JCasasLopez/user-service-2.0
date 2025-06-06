@@ -20,7 +20,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -29,7 +28,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
@@ -38,7 +36,6 @@ import dev.jcasaslopez.user.testhelper.TestHelper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UpgradeUserIntegrationTest {
@@ -50,20 +47,17 @@ public class UpgradeUserIntegrationTest {
 	@Autowired private ObjectMapper objectMapper;
 	
 	private static User user;
+	private static String userEmail;
 	
 	@BeforeAll
 	void setup() {
-	    if (roleRepository.count() == 0) {
-	        roleRepository.save(new Role(RoleName.ROLE_USER));
-	        roleRepository.save(new Role(RoleName.ROLE_ADMIN));
-	        roleRepository.save(new Role(RoleName.ROLE_SUPERADMIN));
-	    }	    
-		user = testHelper.createUser();
+		user = testHelper.createUser("Yorch22", "Jorge22!");
+		userEmail = user.getEmail();	
 	}
 	
 	@AfterAll
 	void cleanup() {
-	    userRepository.deleteById(user.getIdUser());
+	    testHelper.cleanDataBaseAndRedis();
 	}
 	
 	@Test
@@ -153,7 +147,8 @@ public class UpgradeUserIntegrationTest {
 	private RequestBuilder buildMockMvcRequest() {
 		return MockMvcRequestBuilders
 				.put("/upgradeUser")
-				.param("email", user.getEmail())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(userEmail)
 				.accept(MediaType.APPLICATION_JSON);
 	}
 	
