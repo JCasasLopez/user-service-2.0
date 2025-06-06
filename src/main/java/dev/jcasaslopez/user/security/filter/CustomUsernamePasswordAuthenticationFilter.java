@@ -42,8 +42,7 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
     
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
-	        throws AuthenticationException {
-		
+	        throws AuthenticationException {		
 		String username = request.getParameter("username");
 	    String password = request.getParameter("password");
 
@@ -51,8 +50,6 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	        password == null || password.trim().isEmpty()) {
 	        throw new MissingCredentialException("Username and password are required");
 	    }
-
-	    request.setAttribute("attemptedUsername", username);
 	    
 	    // Necesitamos el username en los handlers para usarlo como clave en Redis,
 	    // donde llevamos el control de los intentos fallidos de autenticación.
