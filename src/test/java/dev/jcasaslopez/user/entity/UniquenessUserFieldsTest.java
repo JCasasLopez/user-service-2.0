@@ -68,7 +68,7 @@ class UniquenessUserFieldsTest {
 				"Jorge92",
 			    "Password456!",
 			    "Jorge Lopez",
-			    "jc90@example.com",
+			    "jc90@gmail.com",
 			    LocalDate.of(1992, 8, 22)
 			    );
 
