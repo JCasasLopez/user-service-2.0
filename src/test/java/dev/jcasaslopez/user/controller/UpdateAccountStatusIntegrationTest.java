@@ -144,9 +144,6 @@ public class UpdateAccountStatusIntegrationTest {
 	public void updateAccountStatus_WhenAccountIsPermanentlySuspended_ShouldThrowException() throws Exception{
 		// Arrange
 		
-		// Primero, establecemos 'account status' como suspendida permanentemente. 
-		// En vez de usar el 'setter', usamos el endpoint siguiendo las buenas prácticas de desacoplamiento.
-		//
 		// First of all, we set the account status to 'permanetly suspended'.
 		// Instad of using the 'setter', we use the endpoint following good practices to decouple 
 		// base code and tests.
@@ -156,9 +153,6 @@ public class UpdateAccountStatusIntegrationTest {
 
 		// Act
 		
-		// Después, intentamos actualizar la cuenta a 'activa'. El resultado de esta llamada es 
-		// el sujeto real del test.
-		//
 		// Secondly, we try to update the account to 'active'. The result of this call is the 
 		// test's real subject.
 		AccountStatus accountStatusSecondCall = AccountStatus.ACTIVE;
@@ -179,8 +173,6 @@ public class UpdateAccountStatusIntegrationTest {
 
 	
 	// Métodos auxiliares para reducir código repetido.
-	//
-	// Helper methods to reduce boilerplate code.
 	private RequestBuilder buildMockMvcRequest(AccountStatus newAccountStatus) throws JsonProcessingException {
 		return MockMvcRequestBuilders
 		        .put("/updateAccountStatus")
@@ -190,16 +182,11 @@ public class UpdateAccountStatusIntegrationTest {
 		        .accept(MediaType.APPLICATION_JSON);
 	}
 
-	// Ejecuta la petición y recarga la entidad 'user' desde la base de datos,
-	// simulando un ciclo completo de solicitud-controlador-base de datos.
-	// 
 	// Performs the request and refreshes the 'user' entity from the database,
 	// simulating a full controller-to-database roundtrip.
 	private MvcResult callEndpointAndUReloadUser(RequestBuilder requestBuilder) throws Exception {
 		MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();
 
-		// Recarga el usuario desde la base de datos con los roles ya actualizados.
-		//
 		// Reloads user from the database with the upgraded roles.
 		user = userRepository.findById(user.getIdUser()).orElseThrow(
 				() -> new UsernameNotFoundException(user.getUsername() + " was not found in the database"));

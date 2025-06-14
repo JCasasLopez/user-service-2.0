@@ -24,9 +24,6 @@ public class LoginAttempt {
 	private LoginFailureReason loginFailureReason;
 	
 	@ManyToOne
-	// Nullable = true indica que cuando se borre un usuario no se borren sus intentos de login,
-	// que siguen teniendo valor estadístico.
-	//
 	// Setting nullable = true allows login attempts to persist even if the associated user is deleted,
 	// since they still hold statistical value.
 	@JoinColumn(name = "idUser", referencedColumnName = "idUser", nullable = true)

@@ -22,9 +22,6 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 
-// Estas anotaciones permiten evitar la carga completa del contexto con @SpringBootTest.  
-// En su lugar, inicializamos solo UserMapper y la configuración mínima necesaria.  
-//
 // Instead of loading the full context with @SpringBootTest, we initialize only  
 // UserMapper and the minimal required configuration.
 @ExtendWith(SpringExtension.class)

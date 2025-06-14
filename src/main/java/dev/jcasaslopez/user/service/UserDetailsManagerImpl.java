@@ -39,10 +39,6 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 		this.roleRepository = roleRepository;
 	}
 
-	// Las excepciones por violaciones de restricciones de base de datos (como valores duplicados)
-	// no se capturan aquí. Se propagan hasta el controlador, donde son manejadas por el 
-	// GlobalExceptionHandler.
-	//
 	// Exceptions caused by database constraint violations (e.g., duplicate values) 
 	// are not caught here. They propagate to the controller level, where they are 
 	// handled by the GlobalExceptionHandler.
@@ -50,18 +46,12 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 	public void createUser(UserDetails user) {
 		if (user instanceof CustomUserDetails) {
 			
-			// Ya se ha codificado la contraseña en AccountOrchestrationServiceImpl.initiateRegistration(),
-			// al establecer el objeto 'user' como valor de la entrada de Redis, así que no 
-			// hace falta hacerlo otra vez.
-			//
 			// The password has already been encoded in AccountOrchestrationServiceImpl.initiateRegistration(),
 			// when setting the 'user' object as the value in the Redis entry, 
 			// so there's no need to do it again.
 			CustomUserDetails customUser = (CustomUserDetails) user;
 			User userJPA = customUser.getUser();
 	
-			// Según las reglas de negocio, se establece el role USER por defecto.
-			//
 			// Assign default role ROLE_USER as per business rules.
 			Role userRole = roleRepository.findByRoleName(RoleName.ROLE_USER)
 				    .orElseThrow(() -> new IllegalStateException("Role ROLE_USER not found in database"));
@@ -78,9 +68,6 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 		}
 	}
 
-	// Este método es requerido por la interfaz UserDetailsManager, pero su uso está 
-	// deshabilitado por diseño.
-	//
 	// This method is required by the UserDetailsManager interface but is intentionally not supported.
 	@Override
 	public void updateUser(UserDetails user) {
@@ -100,9 +87,6 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 		return userRepository.existsByUsername(username);
 	}
 
-	// Método interno usado por Spring Security durante el proceso de autenticación
-	// No debe exponerse directamente a los usuarios.
-	//
 	// Internal method used by Spring Security during the authentication process
 	// Should not be exposed directly to users.
 	@Override
@@ -111,11 +95,6 @@ public class UserDetailsManagerImpl implements UserDetailsManager {
 		return userMapper.userToCustomUserDetailsMapper(accountService.findUser(username));
 	}
 
-	// Este método se define aquí porque forma parte de la interfaz UserDetailsManager, que  
-	// Spring Security requiere. Sin embargo, la lógica real del cambio de contraseña se 
-	// delega a PasswordService para mantener la separación de responsabilidades y facilitar 
-	// las pruebas y el mantenimiento.
-	//
 	// This method is defined here because it is part of the UserDetailsManager interface, 
 	// which is required by Spring Security. However, the actual password change logic is 
 	// delegated to PasswordService to preserve separation of concerns 

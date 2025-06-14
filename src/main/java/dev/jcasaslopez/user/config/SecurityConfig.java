@@ -58,10 +58,7 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
-        // Permite que UsernameNotFoundException no se encapsule como InternalAuthenticationServiceException,
-        // pudiendo capturarla directamente en el AuthenticationFailureHandler y persistir la 
-        // causa real del fallo (usuario no encontrado).
-        //
+     
         // Prevents UsernameNotFoundException from being wrapped as InternalAuthenticationServiceException,
         // so it can be handled directly in the AuthenticationFailureHandler and the 
         // actual failure reason (user not found) can be logged.
@@ -122,8 +119,7 @@ public class SecurityConfig {
             .sessionManagement(sessMang -> sessMang.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterAt(loginFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            // Deshabilito LogoutFilter poque voy a usar una implementación personalizada.
-            //
+            
             // We disable LogoutFilter because we are using custom implementation.
             .logout(logout -> logout.disable()) 
             .authorizeHttpRequests(authorize -> authorize

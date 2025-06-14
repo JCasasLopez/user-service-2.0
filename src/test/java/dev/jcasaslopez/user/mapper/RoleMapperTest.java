@@ -13,11 +13,8 @@ import dev.jcasaslopez.user.dto.RoleDto;
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.enums.RoleName;
 
-//Estas anotaciones permiten evitar la carga completa del contexto con @SpringBootTest.  
-//En su lugar, inicializamos solo UserMapper y la configuración mínima necesaria.  
-//
-//Instead of loading the full context with @SpringBootTest, we initialize only  
-//UserMapper and the minimal required configuration.
+// Instead of loading the full context with @SpringBootTest, we initialize only  
+// UserMapper and the minimal required configuration.
 @ExtendWith(SpringExtension.class)
 @Import(RoleMapper.class)
 public class RoleMapperTest {
@@ -50,6 +47,4 @@ public class RoleMapperTest {
 	    // Assert
 	    assertEquals(roleDto.getRoleName(), role.getRoleName(), "Role names should match");
 	}
-
-
 }

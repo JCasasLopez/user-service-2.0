@@ -81,8 +81,7 @@ public class UserLoginAttemptRelationshipTest {
 		// Arrange
 		
 		// Act
-		// Necesitamos recargar el usuario desde la base de datos.
-		//
+		
 		// We need to reload the user from the database.
 		User userReloaded = userRepository.findById(persistedUser1.getIdUser()).get();
 		

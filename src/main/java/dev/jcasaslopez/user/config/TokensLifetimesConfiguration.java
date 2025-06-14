@@ -12,11 +12,6 @@ import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import jakarta.annotation.PostConstruct;
 
-// Esta clase lee los valores de tiempo de expiración para los distintos tipos de token 
-// desde application.properties y los convierte en un Map, donde la clave es el tipo de token 
-// (según lo definido en la enumeración TokenType) y el valor es el tiempo de expiración en minutos.
-// De este modo, esta clase puede ser inyectada en otras, permitiendo obtener fácilmente estos tiempos.
-//
 // This class reads the expiration time values for the different token types from application.properties
 // and converts them into a Map, where the key is the token type (as defined in the TokenType enum)
 // and the value is the expiration time in minutes.
@@ -37,8 +32,7 @@ public class TokensLifetimesConfiguration {
 
 	@PostConstruct
     private void init() {
-    // Se inicializa aquí porque los valores @Value se asignan después de la inyección de dependencias
-    //
+   
     // It is initialized here because the @Value values are assigned after dependency injection.
 		tokensLifetimes = Map.of(
 			    TokenType.VERIFICATION, verificationToken,

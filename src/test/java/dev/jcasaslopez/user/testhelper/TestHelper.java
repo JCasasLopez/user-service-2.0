@@ -36,8 +36,7 @@ public class TestHelper {
 	@Autowired private PasswordEncoder passwordEncoder;
 	
 	public User createUser(String username, String password) {
-		// Prepara la tabla de 'roles' de la base de datos persistiendo todos los roles posibles.
-		// 
+		
 		// Prepares the table 'roles' in the DB by persisting all possible roles.
 		Role userRole = new Role(RoleName.ROLE_USER);
 		roleRepository.save(userRole);
@@ -53,9 +52,6 @@ public class TestHelper {
 								LocalDate.of(1978, 11, 26)
 							  );
 		
-		// Sería menos farragoso usar UserDetailsManagerImpl.createUser(), pero dicho método no 		
-		// devuelve el usuario.
-		//
 		// It would be less cumbersome to use UserDetailsManagerImpl.createUser(), but this method 
 		// does not return the user.
 		Set<Role> roles = new HashSet<>();

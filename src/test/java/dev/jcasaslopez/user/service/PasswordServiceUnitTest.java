@@ -21,8 +21,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.repository.UserRepository;
 
-// El 'happy path' se verifica en "FullRestAndChangePasswordIntegrationTest".
-//
 // The happy path is verified in "FullRestAndChangePasswordIntegrationTest".
 @ExtendWith(MockitoExtension.class)
 public class PasswordServiceUnitTest {

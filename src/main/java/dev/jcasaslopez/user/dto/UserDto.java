@@ -56,8 +56,6 @@ public class UserDto {
 	@Schema(hidden = true)
 	private AccountStatus accountStatus;
 	
-	// UserDto -> User. Sirve para crear un nuevo User. No tiene idUser puesto que no se ha creado aún.
-	//
 	// UserDto -> User. To create a new User. No idUser since it has been created yet.
 	public UserDto(String username, String password, String fullName, String email, LocalDate dateOfBirth) {
 		this.username = username;
@@ -67,8 +65,6 @@ public class UserDto {
 		this.dateOfBirth = dateOfBirth;
 	}
 	
-	// User -> UserDto. Sirve para enviar información sobre User al front-end.
-	//
 	// User -> UserDto. To send User info to the front-end.
 	public UserDto(int idUser, String username, String fullName, String email, 
 			LocalDate dateOfBirth, Set<RoleDto> roles, AccountStatus accountStatus) {

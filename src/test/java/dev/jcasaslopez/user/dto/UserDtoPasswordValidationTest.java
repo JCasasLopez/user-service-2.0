@@ -18,11 +18,6 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 
-// No se verifican las validaciones estándar como @NotNull, @Past o @Email, ya que 
-// asumimos que Hibernate Validator las maneja correctamente. En su lugar, nos enfocamos en probar  
-// los escenarios generales (objeto válido/todos los datos inválidos) y las validaciones  
-// de la contraseña, donde podría haber errores en la expresión regular.
-//
 // We do not test standard validations like @NotNull, @Past or @Email, as we assume  
 // that Hibernate Validator handles them correctly. Instead, we focus on testing  
 // general scenarios (valid object/all data invalid) and the password validation,  
@@ -83,8 +78,7 @@ public class UserDtoPasswordValidationTest {
     }
     
     @ParameterizedTest
-    // Falta: un signo - una mayúscula - un número - una minúscula - Menos de 8 caracteres.
-    //
+    
     // Missing: a symbol - capital letter - a number - a lowercase letter - Less than 8 characters.
     @CsvSource({"Qwerty123", "qwerty123!", "Qwerty!%&", "QWERTY123!", "Qwe12%"})
    	@DisplayName("UserDto with password that does not meet requirement should fail validation")

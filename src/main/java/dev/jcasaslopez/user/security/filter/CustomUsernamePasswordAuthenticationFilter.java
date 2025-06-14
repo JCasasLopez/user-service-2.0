@@ -51,18 +51,12 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 	        throw new MissingCredentialException("Username and password are required");
 	    }
 	    
-	    // Necesitamos el username en los handlers para usarlo como clave en Redis,
-	    // donde llevamos el control de los intentos fallidos de autenticación.
-	    //
 	    // We need the username in the handlers to use it as the key in Redis,
 	    // where we track failed authentication attempts.
 		request.setAttribute("attemptedUsername", username);
 		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		User user = userAccountService.findUser(username);
 		
-		// La cuenta fue bloqueada por un admin por razones administrativas o de seguridad,
-		// y solo un admin puede volver a desbloquearla.
-		//
 		// The account was locked by an admin due to administrative or security reasons,
 		// and only an admin can unblock it.
 		if (user.getAccountStatus() == AccountStatus.BLOCKED) {
@@ -70,9 +64,6 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 			throw new LockedException("Account is locked");
 		}
 
-		// Si no existe una entrada en Redis para este usuario (y su cuenta está bloqueada)
-		// significa que ha expirado el periodo de bloqueo y la cuenta puede ser reactivada automáticamente.
-		//
 		// If there is no Redis entry for this user (and his account is blocked)
 		// it means the lock period has expired and the account can be automatically reactivated.
 		if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED && !redisTemplate.hasKey(redisKey)) {

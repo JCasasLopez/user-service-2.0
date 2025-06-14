@@ -71,11 +71,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		this.emailService = emailService;
 	}
 
-	// Se añade una entrada en Redis para almacenar temporalmente los datos del usuario que necesitaremos 
-	// en el siguiente paso, una vez que se haya verificado el correo electrónico y se proceda a crear la cuenta. 
-	// La clave es el JTI del token y el valor, los datos del usuario en formato JSON. 
-	// En el siguiente paso, recuperamos esta información a partir del token que el usuario recibe por email.
-	//
 	// A Redis entry is added to temporarily store the user's data needed in the next step—after email verification—
 	// for the actual account creation. The key is the token's JTI, and the value is the user data serialized as JSON.
 	// In the next step, we retrieve the user's data using the token received via email.
@@ -88,8 +83,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		String redisKey = Constants.CREATE_ACCOUNT_REDIS_KEY + tokenJti;
 		int expirationInSeconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60;
 		
-		// Codificamos la contraseña ANTES de subir todo a Redis.
-		//
 		// We encode the password BEFORE saving all the info in Redis.
 		user.setPassword(passwordEncoder.encode(user.getPassword())); 
 		String userJson = objectMapper.writeValueAsString(user);
@@ -104,14 +97,10 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@Override
 	@Transactional
 	public void userRegistration(HttpServletRequest request) throws JsonMappingException, JsonProcessingException {
-		// Hemos establecido el token como atributo en AuthenticationFilter.
-		//
+		
 		// We have set the token as an attribute in AuthenticationFilter.
 		String token = (String) request.getAttribute("token");
 		
-		// A partir del token, podemos obtener la entrada de Redis correspondiente, cuyo valor 
-		// contiene el usuario (como cadena).
-		//
 		// From the token, we can retrieve the corresponding Redis entry, whose value 
 		// contains the user (as a string).
 		String tokenJti = tokenService.getJtiFromToken(token);
@@ -120,8 +109,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		User user = objectMapper.readValue(userJson, User.class);
 		logger.info("User {} obtained from Redis entry with Redis key {}", user.getUsername(), redisKey);
 		 
-	    // Los atributos ya se habían validado con la llamada al endpoint "initiateRegistration".
-	 	//
 	 	// Attributes already validated when calling "initiateRegistration" endpoint.
 	    CustomUserDetails userAsCustomUserDetails = userMapper.userToCustomUserDetailsMapper(user);
 		userDetailsManager.createUser(userAsCustomUserDetails);
@@ -152,8 +139,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@Override
 	@Transactional
 	public void resetPassword(String newPassword, HttpServletRequest request) {
-		// Hemos establecido el token como atributo en AuthenticationFilter.
-		//
+	
 		// We have set the token as an attribute in AuthenticationFilter.
 		String token = (String) request.getAttribute("token");
 		String username = tokenService.parseClaims(token).getSubject();

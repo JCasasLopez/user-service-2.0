@@ -57,8 +57,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			String token = authHeader.substring(7);
 			logger.debug("Authorization header found, token extracted");
 
-			// Verifica que el token es técnicamente válido.
-			//
 			// Verifies that the token is technically valid.
 			Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
 			if(optionalClaims.isEmpty()) {
@@ -71,9 +69,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			String username = claims.getSubject();
 			String purposeStr = String.valueOf(claims.get("purpose"));
 
-			// logout
-			// Tienes que recibir el token de refresco, no el de acceso.
-			//
+			// Logout
 			// You have to receive the refresh token, not the access one.
 			if ("POST".equalsIgnoreCase(method) && path.equals(Constants.LOGOUT_PATH)
 					&& !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
@@ -88,9 +84,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 					&& !tokenService.isTokenBlacklisted(token) && purposeStr.equals(TokenType.REFRESH.name())) {
 				authenticateUser(token, username);
 
-				// Tenemos que revocar el token, ya que se va a emitir otro nuevo
-				// en el siguiente paso (controller -> AccountOrchestrationService).
-				//
 				// We have to revoke the token, since the system will issue a new one
 				// in the next step (controller -> AccountOrchestrationService).
 				String redisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenService.getJtiFromToken(token);
@@ -116,9 +109,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			}
 
 			// Access token
-			// El token de acceso es válido para todos los endpoints que necesitan
-			// autenticación excepto 'refresh token'.
-			//
 			// The access token is valid for all endpoints that require authentication
 			// except for 'refresh token' endpoint.
 			if (!path.equals(Constants.REFRESH_TOKEN_PATH) && purposeStr.equals(TokenType.ACCESS.name())) {
@@ -131,8 +121,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		// Si el endpoint no requiere estar autenticado y, por tanto, el encabezado no tenía ningún token.
-		//
 		// If the endpoint does not required authentication, so there was no token in the header.
 		logger.debug("No Authorization header found or token not required for path: {}", path);
 		filterChain.doFilter(request, response);

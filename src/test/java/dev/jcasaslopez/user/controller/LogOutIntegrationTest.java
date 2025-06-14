@@ -23,10 +23,6 @@ import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 
-// Verificamos el endpoint 'logout' porque su lógica es personalizada y no forma parte del flujo 
-// estándar de Spring Security. En cambio, endpoints como 'login' son manejados directamente por 
-// Spring y no requieren tests de integración propios.
-//
 // We verify the 'logout' endpoint because its logic is custom and does not follow Spring Security 
 // standard flow. In contrast, endpoints like 'login' are handled directly by Spring 
 // and do not require dedicated integration tests.
@@ -58,10 +54,6 @@ public class LogOutIntegrationTest {
 		// Assert
 		String redisEntryValue = redisTemplate.opsForValue().get(tokenRedisKey);
 		
-		// Spring Security maneja la petición en un hilo distinto al del test, y como SecurityContextHolder 
-		// es específico de cada hilo (ThreadLocal), no podemos verificar desde aquí los cambios que ocurren
-		// en el filtro. Esta verificación se realiza en los tests unitarios específicos de TokenService.logOut().
-		//
 		// Spring Security handles the request in a different thread than the test, and since SecurityContextHolder
 		// is thread-local, we can't verify in the test the changes made inside the filter. That
 		// verification is done in the dedicated unit tests for TokenService.logOut().

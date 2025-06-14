@@ -29,14 +29,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-// Manejador personalizado de errores de autenticación que centraliza todos los fallos de login.
-// Distingue entre: Credenciales faltantes - Username incorrecto - Cuenta bloqueada - Contraseña incorrecta.
-// Las respuestas son neutras para no revelar información sensible al cliente.
-// Registra todos los intentos con su causa mediante LoginAttemptService.
-// Integra bloqueo de cuenta tras varios intentos fallidos usando Redis y eventos.
-// Evita el uso de AuthenticationEntryPoint para username incorrecto y campos vacíos 
-// mediante excepciones personalizadas.
-//
 // Custom authentication failure handler that centralizes all login failure cases.
 // Distinguishes between: Missing credentials - Invalid username - Locked account - Incorrect password.
 // Responses are neutral to avoid exposing sensitive information to the client.
@@ -77,15 +69,9 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
 	        AuthenticationException exception) throws IOException, ServletException {
 		
-		// Atributo establecido en CustomUsernamePasswordAuthenticationFilter.
-		//
 		// Attribute set by custom UsernamePasswordAuthenticationFilter
 	    String username = (String) request.getAttribute("attemptedUsername");
 	    
-	    // Tratamos las credenciales faltantes aquí en lugar de AuthenticationEntryPoint, que es su 
-	    // lugar natural, es decir, adonde te lleva el flujo de Spring Security por defecto,
-	    // porque así tenemos todos los casos de fallo de login reunidos bajo una misma clase.
-	    //
 	    // We handle missing credentials here instead of in the AuthenticationEntryPoint, 
 	    // which would be their natural place (i.e., where Spring Security would route them by default),
 	    // so that all login failure cases are grouped together in a single class.
@@ -101,19 +87,12 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
                     LoginFailureReason.USER_NOT_FOUND, null);
             logger.info("Failed login attempt - User not found");
             
-            // 401 con un mensaje neutro para no revelar si el fallo fue por username o contraseña, 
-            //
             // 401 with a neutral message to avoid revealing whether the failure was due to  
             // username or password.
             standardResponseHandler.handleResponse(response, 401, "Bad credentials", null);
             return;
 	    }
 	      
-	    // Cargamos el usuario aquí y no antes, por dos razones:
-	    // 1. Solo llegamos a este punto si el username es válido y el usuario existe.
-	    // 2. Si llamáramos a userAccountService.findUser() antes, y el usuario no existiera, se
-	    // lanzaría una excepción fuera de este flujo, impidiendo manejarla correctamente aquí.
-	    //
 	    // We load the user here and not earlier, for two reasons:
 	    // 1. We only reach this point if the username is valid and the user exists.
 	    // 2. If we called userAccountService.findUser() earlier and the user didn't exist, it would 
@@ -128,8 +107,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	        return;
 	        
 	    } else if (exception instanceof BadCredentialsException) {
-	    	// "Bad Credentials" en vez de "Incorrect password" por la razón ya mencionada
-	    	//
+	   
 	    	// "Bad credentials" instead of "Incorrect password" for the reason mentioned above.
 	    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		    int failedAttempts=0;
@@ -146,8 +124,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	                    accountLockedDuration, TimeUnit.SECONDS);
 		        
 		        if (failedAttempts >= maxNumberFailedAttempts) {
-		        	// Si se ha superado el número máximo de intentos fallidos, se bloquea la cuenta.
-		        	//
+		        	
 		        	// If the maximum number of failed attempts is exceeded, the account is locked.
 		        	eventPublisher.publishEvent(new UpdateAccountStatusEvent
 	            			(user, AccountStatus.TEMPORARILY_BLOCKED));

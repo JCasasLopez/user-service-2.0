@@ -49,13 +49,6 @@ public class CustomAuthenticationSuccessHandlerTest {
 	private static final String username = "Yorch22";
 	private static final String password = "Jorge22!";
 	
-	// Persistimos un usuario que usaremos posteriormente para el login y simulamos que su
-	// cuenta de intentos fallidos en Redis está a 2. Si el handler funciona correctamente,
-	// se espera que esta entrada en Redis se elimine (según la lógica de negocio) y que la
-	// respuesta HTTP sea correcta. Además, usamos un método que busca intentos de login 
-	// entre dos instantes de tiempo para localizar el intento generado durante el test,
-	// y verificamos que sea exitoso y que pertenezca al usuario autenticado.
-	//
 	// We persist a user that will be used later for login and simulate that their failed login 
 	// attempt count in Redis is set to 2. If the handler works correctly, this Redis entry 
 	// should be deleted (according to the business logic) and the HTTP response should be valid.
@@ -71,9 +64,6 @@ public class CustomAuthenticationSuccessHandlerTest {
 		redisTemplate.delete(redisKey);
 		LocalDateTime startTest = LocalDateTime.now().minusSeconds(1);;
 		
-		// Simulamos 2 intentos fallidos previos para el usuario almacenando la clave 
-		// 'redisKey' con valor 2 en Redis
-		//
 		// Simulate 2 previous failed login attempts by setting the 'redisKey' entry 
 		// to 2 in Redis
 		redisTemplate.opsForValue().set(redisKey, "2", 5, TimeUnit.MINUTES);
@@ -86,8 +76,6 @@ public class CustomAuthenticationSuccessHandlerTest {
 		LocalDateTime endTest = LocalDateTime.now().plusSeconds(1);;
 		List<LoginAttempt> loginAttemptsDuringTestExecution = loginAttemptRepository.findAll();		
 		
-		// Buscamos el intento de login entre 'startTest' y 'endTest'
-		//
 		// We search for loginAttempts between 'startTest' and 'endTest'
 		LoginAttempt matchingAttempt = loginAttemptsDuringTestExecution.stream()
 			    .filter(a -> a.getTimestamp().isAfter(startTest) && a.getTimestamp().isBefore(endTest))

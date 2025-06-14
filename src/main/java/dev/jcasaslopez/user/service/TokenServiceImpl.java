@@ -46,10 +46,6 @@ public class TokenServiceImpl implements TokenService {
         logger.info("TokenService initialized with decoded secret key");
     }
 
-	// Crea un token de autenticación (ACCESS o REFRESH) para un usuario autenticado.
-	// Utiliza el contexto de seguridad para obtener el usuario actual y sus roles.
-	// Se mantiene separado del token de verificación para no mezclar lógicas diferentes.
-	//
 	// Creates an authentication token (ACCESS or REFRESH) for an authenticated user.
 	// Uses the security context to retrieve the current user and their roles.
 	// Kept separate from verification token logic to avoid mixing different concerns.
@@ -76,10 +72,6 @@ public class TokenServiceImpl implements TokenService {
 		return token;
 	}
 	
-	// Crea un token de verificación (por ejemplo, para activación de cuenta o restablecimiento de contraseña).
-	// No requiere contexto de seguridad: solo necesita el nombre de usuario.
-	// Se separa de los tokens de autenticación para mantener la lógica simple y específica.
-	//
 	// Creates a verification token (e.g., for account activation or password reset).
 	// Does not require a security context: only the username is needed.
 	// Separated from authentication tokens to keep the logic simple and purpose-specific.
@@ -102,20 +94,15 @@ public class TokenServiceImpl implements TokenService {
 	@Override
 	public Claims parseClaims(String token) {
 		try {
-			// Configura cómo queremos verificar el token.
-			//
 			// Configures how we want to verify the token.
 			return Jwts.parser()
-					// Establece la clave que se usará para verificar la firma.
-					//
+			
 					// Sets the key that will be used to verify the signature.
 					.verifyWith(key) 
-					// Construye el parser JWT con la configuración especificada.
-					//
+					
 					// Builds the JWT parser with the specified configuration.
 					.build() 	
-					// Aquí es donde ocurren todas las verificaciones.
-					//
+					
 					// This is where all verifications happen.
 					.parseSignedClaims(token)
 					.getPayload();
@@ -136,9 +123,6 @@ public class TokenServiceImpl implements TokenService {
 		}
 	} 
 	
-	// Parsea y valida las claims del token (firma, expiración, etc.).
-	// Devuelve Optional.empty() si el token no es técnicamente válido.
-	//
 	// Parses and validates the token claims (signature, expiration, etc.).
 	// Returns Optional.empty() if the token is not technically valid.
 	@Override
@@ -164,34 +148,22 @@ public class TokenServiceImpl implements TokenService {
 		Optional<Claims> optionalClaims = getValidClaims(token);
 		String tokenJti = getJtiFromToken(token);
 		
-		// Si el optional está vacío, se lanza una JwtException en getValidClaims(), y no se
-		// llegaría a este punto.
-		//
 		// If the optional is empty, a JwtException is thrown in getValidClaims(), and the
 		// flow would not reach this point.
 		Date expirationTime = optionalClaims.get().getExpiration();
 		Date currentTime = new Date(System.currentTimeMillis());
 		long remainingMillis = expirationTime.getTime() - currentTime.getTime();
 
-		// Asegura al menos 1 segundo para evitar que Redis rechace TTL cero o negativo
-		// (redondea hacia abajo).
-		//
 		// Ensure at least 1 second to avoid Redis rejecting zero/negative TTL (rounds down).
 		long expirationInSeconds = Math.max(1, remainingMillis / 1000);
 		logger.debug("Blacklisting token with JTI {} for {} seconds", tokenJti, expirationInSeconds);
 		String tokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
 		blacklistToken(tokenRedisKey, expirationInSeconds);
 
-		// En lugar de establecer la autenticación a null, utilizamos clearContext()
-		// para eliminar completamente el SecurityContext del hilo actual. Esto es esencial
-		// para evitar que datos de autenticación residuales persistan en hilos reutilizados,
-		// lo cual podría causar comportamientos inesperados en entornos concurrentes o durante pruebas.
-		//
 		// Instead of setting the authentication to null, we use clearContext()
 		// to completely remove the SecurityContext from the current thread. This is crucial
 		// to prevent residual authentication data from persisting in reused threads,
 		// which could lead to unexpected behaviors in concurrent environments or during testing.
-		
 		// Reference: https://master-spring-ter.medium.com/understanding-clearcontext-in-spring-security-enhancing-application-security-17407ea55b4d
 		SecurityContextHolder.clearContext();
 		logger.info("User has been logged out");
@@ -213,8 +185,7 @@ public class TokenServiceImpl implements TokenService {
 		if ("blacklisted".equals(redisValue)) {
 		    result = true;
 		} else {
-			// Incluye el caso de que no se encuentre la entrada en Redis (redisValue == null).
-			//
+			
 			// Programs flow would reach this point also if no Redis entry is found (redisValue == null).
 		    result = false;
 		}

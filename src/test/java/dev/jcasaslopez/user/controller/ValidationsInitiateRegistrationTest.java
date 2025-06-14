@@ -86,9 +86,7 @@ public class ValidationsInitiateRegistrationTest {
 	public void initiateRegistration_whenDetailsNotValid_ShouldResponse400BadRequest
 											(UserDto invalidUser) throws JsonProcessingException {
 		// Arrange
-		// Jackson no puede serializar o deserializar java.time.LocalDate por defecto.
-		// Debes registrar el módulo JavaTimeModule en el ObjectMapper.
-		//
+	
 		// Jackson cannot serialize or deserialize java.time.LocalDate by default.
 		// You need to register the JavaTimeModule with the ObjectMapper.
 		mapper.registerModule(new JavaTimeModule());

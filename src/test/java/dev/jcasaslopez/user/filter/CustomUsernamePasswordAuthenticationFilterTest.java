@@ -60,8 +60,6 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	void setUp() {
 		user = testHelper.createUser(username, password);
 		
-		// Por defecto, la cuenta se pone como ACTIVE, así que hay que bloquear la cuenta 'a mano'.
-		//
 		// By default, account is set as ACTIVE, so we have to block the account.
 		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 		userRepository.save(user);

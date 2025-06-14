@@ -50,8 +50,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication authentication) throws IOException, ServletException {
-		// Reiniciamos el contador de intentos fallidos eliminando su entrada en Redis.
-		// 
+		
 		// Reset the failed login attempts counter by deleting its Redis entry.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		User user = userAccountService.findUser(username);

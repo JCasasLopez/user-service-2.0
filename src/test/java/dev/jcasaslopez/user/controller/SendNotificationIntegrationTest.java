@@ -35,9 +35,6 @@ import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 
-// No se testea acceso sin autenticación aquí porque ya está verificado 
-// en otros endpoints y este utilizar la misma configuración.
-//
 // Access without authentication is not tested here because it has already been verified 
 // in other endpoints and this one uses the same configuration.
 @SpringBootTest
@@ -58,10 +55,6 @@ public class SendNotificationIntegrationTest {
 	void setup() {
 	    user = testHelper.createUser(username, password);
 	    
-		// createUser() devuelve el usuario con la contraseña codificada, pero
-		// 'userJson' espera la contraseña en texto plano (ya que se vuelve a codificar en
-		// AccountOrchestrationService.initiateRegistration())
-		//
 		// createUser() returns the user with the password encoded, but 'userJson'
 		// expects the password in plain text (since it gets encoded again in
 		// AccountOrchestrationService.initiateRegistration())
@@ -81,9 +74,6 @@ public class SendNotificationIntegrationTest {
 		String subject = "Test";
 		String message = "This is a test email";
 		
-		// El token es irrelevante para nuestro test, pero necesitamos cumplir con la firma 
-		// del método, así que le asignamos un tipo válido cualquiera.
-		// 
 		// The token type is not relevant for this test, but required by the method signature,
 		// so we pass any valid value.
 		testHelper.loginUser(user, TokenType.ACCESS);

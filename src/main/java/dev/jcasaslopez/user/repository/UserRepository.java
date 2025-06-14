@@ -11,8 +11,6 @@ import dev.jcasaslopez.user.enums.AccountStatus;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
 	
-	// Estos métodos sirven para nuestra implementación personalizada de UserDetailsManager (Spring Security):
-	//
 	// These methods are part of our custom UserDetailsManager implementation (Spring Security):
 	//
 	// Repository 		-> 	UserDetailsManager

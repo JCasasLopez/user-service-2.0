@@ -13,14 +13,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import jakarta.servlet.http.HttpServletResponse;
 
-// StandardResponseHandler convierte una StandardResponse en una respuesta HTTP estándar.
-// Es necesario en clases como AuthenticationFilter, donde StandardResponse no puede usarse 
-// directamente, ya que las excepciones lanzadas en un filtro no son gestionadas por 
-// GlobalExceptionHandler.
-//
 // StandardResponseHandler converts a StandardResponse into a standard HTTP response.
 // It is necessary in classes like AuthenticationFilter, where StandardResponse cannot be used 
-//directly, as exceptions thrown in a filter are not handled by GlobalExceptionHandler.*/
+// directly, as exceptions thrown in a filter are not handled by GlobalExceptionHandler.*/
 @Component
 public class StandardResponseHandler {
 	
@@ -45,4 +40,3 @@ public class StandardResponseHandler {
   }
   
 }
-

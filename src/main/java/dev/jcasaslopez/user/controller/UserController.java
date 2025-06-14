@@ -172,12 +172,9 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	// Ver comentario en PasswordServiceImpl.resetPassword() para entender mejor la diferencia 
-	// entre las funcionalidades resetPassword y changePassword, y por qué son 2 lógicas diferenciadas.
-	//
+	
 	// See the comment in PasswordServiceImpl.resetPassword() to better understand the difference 
 	// between the resetPassword and changePassword functionalities, and why they are two separate flows.
-	
 	@Operation(
 		    summary = "Resets the user password",
 		    description = "Consumes a new password and the token from the request to reset the user password"
@@ -323,14 +320,6 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	// Permite cambiar el estado de una cuenta, ya sea para suspenderla temporalmente o 
-	// desactivarla de forma definitiva. Este método se utiliza en situaciones como problemas 
-	// administrativos, detección de actividad sospechosa, etc.	
-	// Solo accesible para usuarios ADMIN.
-	// Desbloqueo de cuenta automático tras el período de tiempo estipulado en application.properties.
-	// Spring permite pasar una enumeración como parámetro en un @RequestParam,
-	// pero solo si el valor en la URL coincide exactamente con el nombre del enumeración.
-	//
 	// Allows changing the status of an account, either by temporarily suspending it or 
 	// permanently deactivating it. This method is typically used in cases such as administrative 
 	// issues, suspicious activity, etc.
@@ -338,9 +327,7 @@ public class UserController {
 	// Automatic account unlock after the time period specified in application.properties.
 	// Spring allows passing an enumeration as a parameter in a @RequestParam,
 	// but only if the value in the URL exactly matches the enumeration name.
-	//
 	// Accepted values: ACTIVE, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
-	
 	@Operation(
 		    summary = "Updates the account status of a user",
 		    description = "Takes an email and a new account status to update the user. Only accessible to ADMIN and SUPERADMIN roles."
@@ -459,8 +446,7 @@ public class UserController {
 	@SecurityRequirement(name = "bearerAuth")
 	@PostMapping(value = "/sendNotification")
 	public ResponseEntity<StandardResponse> sendNotification(@RequestBody @NotNull Map<String, String> messageAsMap) {
-		// Validamos que el mensaje tenga un formato válido.
-		//
+		
 		// We validate the message has a a valid format.
 		MessageNotificationValidation.validateMessage(messageAsMap);
 		accountOrchestrationService.sendNotification(messageAsMap);
@@ -469,18 +455,11 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	// Endpoint para la funcionalidad de refrescado de tokens.
-	// El sistema deberá recibir un token de refresco que se intercepta en AuthenticationFilter:
-	// si el token es válido, se revoca en el filtro. 
-	// accountOrchestrationService.refreshToken() simplemente devuelve otra pareja de tokens refresco/acceso.
-	// IMPORTANTE: En la lista, el primer token corresponde al de refresco y el segundo al de acceso.
-	//
 	// Endpoint for token refresh functionality.
 	// The system should receive a refresh token, which is intercepted in AuthenticationFilter:
 	// if the token is valid, it is revoked in the filter. 
 	// accountOrchestrationService.refreshToken() simply returns another pair of refresh/access tokens.
 	// IMPORTANT: In the list, the first token is the refresh token and the second one is the access token.
-	
 	@Operation(
 		    summary = "Generates new refresh and access tokens",
 		    description = "Generates and returns a new pair of refresh and access tokens for an authenticated user. Requires a valid refresh token."

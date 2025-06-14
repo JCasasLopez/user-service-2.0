@@ -45,19 +45,6 @@ import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
-// Los escenarios relacionados con la validez, expiración o firma del token
-// se testean de forma aislada en AuthenticationFilterTest.
-// Los relacionados con el funcionamiento propio del mecanismo de cambio de contraseña, se decir,
-// la validación de la nueva contraseña en lo que respecta a su formato y a que sea diferente
-// de la antigua, se cubre en los tests de PasswordServiceTest.
-// 
-// Esta clase contiene un test de integración completo que cubre el ciclo de vida de una contraseña:
-// 1) Se inicia correctamente el proceso enviando un email con el token de verificación.
-// 2) Reseteo de contraseña: la nueva contraseña se persiste en la base de datos.
-// 3) Cambio de contraseña fallida: si no hay usuario autenticado, se devuelve un error 401.
-// 4) Cambio de contraseña exitosa: un usuario autenticado puede cambiar su contraseña.
-//
-//
 // Scenarios related to token validity, expiration, or signature
 // are tested separately in AuthenticationFilterTest.
 // Those concerning the internal logic of the password change mechanism,
@@ -157,9 +144,6 @@ public class FullResetAndChangePasswordIntegrationTest {
 	    ResponseEntity<StandardResponse> response = testRestTemplate.
 	    		exchange(url, HttpMethod.PUT, request, StandardResponse.class);
 	    
-	    // Actualizamos la variable 'user' con el usuario persistido en base de datos, 
-	    // que ahora contiene la contraseña actualizada.
-	    //
 	    // We refresh the 'user' variable with the persisted user from the database,
 	    // which now has the updated password.
 	    user = userRepository.findByUsername(username).get();
@@ -184,8 +168,6 @@ public class FullResetAndChangePasswordIntegrationTest {
 		String url = "/changePassword";
 		HttpHeaders headers = new HttpHeaders();
 		
-		// Sin token de autenticación en el encabezado = no hay usuario autenticado.
-	    //
 	    // No authentication token in the header = no authenticated user.
 	    HttpEntity<Void> request = new HttpEntity<>(headers);
 

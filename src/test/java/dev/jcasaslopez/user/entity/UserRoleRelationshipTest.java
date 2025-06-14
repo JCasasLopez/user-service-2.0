@@ -52,9 +52,6 @@ public class UserRoleRelationshipTest {
 			    LocalDate.of(1990, 5, 15)
 			    );
 		
-		// No se debe usar Set.of() porque crea una colección inmutable, y Hibernate 
-		// necesita modificarla internamente.
-		//
 		// Set.of() should not be used because it creates an immutable collection, and 
 		// Hibernate needs to modify it internally.
 		Set<Role> user1Roles = new HashSet<>(Arrays.asList(roleUser, roleAdmin));
@@ -89,8 +86,7 @@ public class UserRoleRelationshipTest {
 		// Arrange
 		
 		// Act
-		// Necesitamos recargar el usuario desde la base de datos.
-		//
+		
 		// We need to reload the user from the database.
 		User userReloaded1 = userRepository.findById(persistedUser1.getIdUser()).get();
 		User userReloaded2 = userRepository.findById(persistedUser2.getIdUser()).get();

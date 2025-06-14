@@ -140,8 +140,7 @@ public class UpgradeUserIntegrationTest {
 	    );
 	}
 	
-	// Métodos auxiliares para reducir código repetido.
-	//
+	
 	// Helper methods to reduce boilerplate code.
 	
 	private RequestBuilder buildMockMvcRequest() {
@@ -155,8 +154,6 @@ public class UpgradeUserIntegrationTest {
 	private MvcResult callEndpointAndUReloadUser(RequestBuilder requestBuilder) throws Exception {
 		MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();
 		
-		// Recarga el usuario desde la base de datos con los roles ya actualizados.
-		//
 		// Reloads user from the database with the upgraded roles.
 		user = userRepository.findById(user.getIdUser()).orElseThrow(
 				() -> new UsernameNotFoundException(user.getUsername() + " was not found in the database"));
