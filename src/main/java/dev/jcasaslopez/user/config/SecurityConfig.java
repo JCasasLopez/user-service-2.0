@@ -127,6 +127,13 @@ public class SecurityConfig {
             // We disable LogoutFilter because we are using custom implementation.
             .logout(logout -> logout.disable()) 
             .authorizeHttpRequests(authorize -> authorize
+				            			.requestMatchers(
+				            		        "/swagger-ui.html",
+				            		        "/swagger-ui/index.html",
+				            		        "/swagger-ui/**",
+				            		        "/v3/api-docs/**"
+				            		    ).permitAll()
+				            			
             							.requestMatchers(
             									Constants.INITIATE_REGISTRATION_PATH,
             									Constants.REGISTRATION_PATH,
@@ -135,6 +142,7 @@ public class SecurityConfig {
             									Constants.LOGOUT_PATH,
             									Constants.LOGIN_PATH
             													).permitAll() 
+            							
             							.requestMatchers(
             									Constants.REFRESH_TOKEN_PATH,
             									"/deleteAccount",

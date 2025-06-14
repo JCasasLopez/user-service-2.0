@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.Set;
 
 import dev.jcasaslopez.user.enums.AccountStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -11,14 +12,22 @@ import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+@Schema(
+	    name = "UserDto",
+	    description = "DTO used to persist a user in the database"
+	)
 public class UserDto {
 	
+	@Schema(hidden = true)
 	private int idUser;
 	
+	@Schema(description = "Username between 6 and 20 characters", example = "john_doe")
 	@NotBlank(message = "Username field is required")
 	@Size(min=6, max=20)
 	private String username;
 	
+	@Schema(description = "Secure password (min 8 chars, upper/lowercase, number and symbol)", 
+	        example = "Secure@123")
 	@NotBlank(message = "Password field is required")
 	@Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&.,:;#_\\-])[A-Za-z\\d@$!%*?&.,:;#_\\-]{8,}$",
 		     message = "Password must have at least 8 characters, including one upper case letter"
@@ -26,19 +35,25 @@ public class UserDto {
 		    )
 	private String password;
 	
+	@Schema(description = "Full name of the user", example = "John Doe")
 	@NotBlank(message = "Full name field is required")
 	@Size(max=30)
 	private String fullName;
 	
+	@Schema(description = "User email address", example = "john@example.com")
 	@NotBlank(message = "Email field is required")
 	@Email
 	private String email;
 	
+	@Schema(description = "Date of birth in ISO format (yyyy-MM-dd)", example = "1990-05-20")
 	@NotNull(message = "Date of birth field is required")
 	@Past
 	private LocalDate dateOfBirth;
 	
+	@Schema(hidden = true)
 	private Set<RoleDto> roles;
+	
+	@Schema(hidden = true)
 	private AccountStatus accountStatus;
 	
 	// UserDto -> User. Sirve para crear un nuevo User. No tiene idUser puesto que no se ha creado aún.
