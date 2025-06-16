@@ -327,7 +327,7 @@ public class UserController {
 	// Automatic account unlock after the time period specified in application.properties.
 	// Spring allows passing an enumeration as a parameter in a @RequestParam,
 	// but only if the value in the URL exactly matches the enumeration name.
-	// Accepted values: ACTIVE, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
+	// Accepted values: ACTIVE, BLOCKED, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED
 	@Operation(
 		    summary = "Updates the account status of a user",
 		    description = "Takes an email and a new account status to update the user. Only accessible to ADMIN and SUPERADMIN roles."
@@ -377,7 +377,7 @@ public class UserController {
 		        
 		        - `ACTIVE`: The account is in good standing and fully usable.
 		        - `BLOCKED`: The account is suspended for a period (e.g., due to suspicious activity).
-		        - `TEMPORARILY BLOCKED`: The account is blocked due to too many failed login attempts.
+		        - `TEMPORARILY_BLOCKED`: The account is blocked due to too many failed login attempts.
 		    						It will reactivate automatically after a defined period of time (24h by default).
 		        - `PERMANENTLY_SUSPENDED`: The account is permanently deactivated and cannot be used.
 		        
