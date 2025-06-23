@@ -1,4 +1,4 @@
-# User service 2.0
+# User Service 2.0
 An authentication and user management microservice that uses JWTs (JSON Web Tokens), a classic refresh token system, and Spring Security to implement login and logout 
 capabilities, along with typical account-related features such as:
 - User registration and password reset (via verification tokens sent by email)
@@ -8,7 +8,7 @@ capabilities, along with typical account-related features such as:
 - Account deletion
 - Inter-service notifications (for other microservices)
 
-The microservice prioritizes security through short-lived, purpose-specific JWTs (verification, access and refresh) and an account lockout mechanism after 3 failed login attempts (tracked via Redis), to prevent brute-force attacks. Accounts are automatically unlocked after 24 hours (default values are configurable). Passwords are encripted using BCrypt, and some of the endpoints are role-restricted.
+The microservice prioritizes security through short-lived, purpose-specific JWTs (verification, access and refresh) and an account lockout mechanism after 3 failed login attempts (tracked via Redis), to prevent brute-force attacks. Accounts are automatically unlocked after 24 hours (default values are configurable). Passwords are encrypted using BCrypt, and some of the endpoints are role-restricted.
 
 Basic validation rules are enforced, such as unique usernames/emails and strong password requirements (see section 'Security Features' for details).
 
@@ -34,6 +34,11 @@ This version of the microservice does not yet make use of those records (Logged 
 
   ### Infrastructure:
   - Docker & Docker Compose
+
+
+## Endpoints
+
+API Endpoints SummaryBelow is a summary of the available API endpoints, including their HTTP method, URL, a brief description, and the level of protection.MethodURLDescriptionProtectionPOST/initiateUserRegistrationInitiates the registration process by sending a verification email.PublicPOST/userRegistrationFinalizes user registration using a verification token (in the header).ProtectedDELETE/deleteAccountDeletes the authenticated user account.ProtectedPOST/forgotPasswordInitiates the password reset process by sending a token to the user's email.PublicPUT/resetPasswordResets the user's password using a new password and a verification token (in the header).ProtectedPUT/changePasswordChanges the password of the currently authenticated user (requires old and new passwords).ProtectedPUT/upgradeUserGrants admin privileges to a user specified by email. (For SUPERADMIN role only).ProtectedPUT/updateAccountStatusUpdates a user's account status (ACTIVE, BLOCKED, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED). (For ADMIN/SUPERADMIN roles only).ProtectedPOST/sendNotificationSends an email notification to a user.ProtectedPOST/refreshTokenGenerates a new pair of access and refresh tokens.ProtectedPOST/auth/login[Virtual] Authenticates the user and returns tokens. (Internal handling, documentation only).PublicPOST/auth/logout[Virtual] Logs out the authenticated user. (Internal handling, documentation only).Protected
 
 
   ## Security features
