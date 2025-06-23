@@ -56,9 +56,23 @@ This version of the microservice does not yet make use of those records (Logged 
   
   - Custom login, authentication, and authorization handlers are implemented to return HTTP responses that provide as much relevant information as possible to the user.
   
-  Passwords are encrypted using BCrypt.
-  
-  In accordance with business rules, duplicate usernames or email addresses are not allowed. Furthermore, passwords must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.
+  Passwords must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character, and are encrypted using BCrypt.
+
+
+  ## Design decisions
+
+- HTTPS has not been implemented in the current version, as the focus was placed on core functionalities. However, it is planned for a future release to ensure secure data transmission, especially for sensitive operations such as authentication. HTTPS will be integrated using a reverse proxy (e.g., Nginx) or through Spring Boot’s built-in SSL support, depending on the deployment environment.
+
+- The first version of this microservice (see user-service 1.0) featured a different lockout mechanism: failed login attempts were stored in the `users` table in the database. The move to Redis simplifies the logic and results in cleaner code. In addition, this version introduces a dedicated table to persist all login attempts — whether failed or successful. Although not yet actively used, these records lay the groundwork for improved scalability and advanced security features.
+
+- A `GlobalExceptionHandler` class has been implemented to centralize exception handling and return consistent, structured HTTP responses. This improves code maintainability and ensures clear, informative feedback to API clients.
+
+- The `StandardResponse` class (see DTO folder) was created to encapsulate and standardize HTTP responses. This proved extremely useful when integrating the backend with the frontend, as it ensures consistency and simplifies error handling.
+
+- To prevent the controllers from becoming bloated with business logic, an `AccountOrchestrationService` was introduced as an intermediate layer. This service coordinates the interaction between specialized services — such as those responsible for password management, token handling, email delivery, or notifications — ensuring that the controller remains thin and focused on request handling. This approach improves modularity, readability, and testability of the codebase.
+
+- Token lifetime values (verification, access, and refresh) are not hardcoded but loaded from the application properties file. A configuration class (`TokensLifetimesConfiguration`) maps these values to a `Map<TokenType, Integer>`, which is then wrapped in a `TokensLifetimes` bean and injected wherever needed. This promotes clean separation between configuration and logic, improves testability, and ensures consistency across the application.
+
 
   ## Testing
   This microservice includes a total of 81 tests. While unit tests have been implemented where they provide clear value—such as validating the uniqueness of usernames 
