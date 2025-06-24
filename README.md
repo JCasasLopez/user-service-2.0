@@ -1,12 +1,6 @@
 # User Service 2.0
 An authentication and user management microservice that uses JWTs (JSON Web Tokens), a classic refresh token system, and Spring Security to implement login and logout 
-capabilities, along with typical account-related features such as:
-- User registration and password reset (via verification tokens sent by email)
-- Password change
-- User upgrade to ADMIN role (only allowed for SUPERADMIN users)
-- Account status update (allowed for SUPERADMIN and ADMIN users)
-- Account deletion
-- Inter-service notifications (for other microservices)
+capabilities, along with typical account-related features (see API section for details).
 
 The microservice prioritizes security through short-lived, purpose-specific JWTs (verification, access and refresh) and an account lockout mechanism after 3 failed login attempts (tracked via Redis), to prevent brute-force attacks. Accounts are automatically unlocked after 24 hours (default values are configurable). Passwords are encrypted using BCrypt, and some of the endpoints are role-restricted.
 
@@ -34,6 +28,89 @@ This version of the microservice does not yet make use of those records (Logged 
 
   ### Infrastructure:
   - Docker & Docker Compose
+
+
+Perfecto, gracias por la información adicional. Con eso puedo darte un **apartado completo y mejorado de "Getting Started"** para tu README del microservicio `user-service`, integrando:
+
+* La distinción entre base de datos principal (con datos precargados) y base de tests (vacía).
+* Las variables obligatorias.
+* Los comandos correctos y lo que hace cada servicio.
+* La tabla de usuarios de ejemplo.
+
+Aquí lo tienes:
+
+---
+
+## 🟢 Getting Started
+
+This service can be run locally using Docker. Follow these steps to build and launch the application:
+
+### 1. Prerequisites
+
+* Docker and Docker Compose installed
+* A `.env` file in the project root with the following variables:
+
+```env
+# Required for JWT signing and validation
+JWT_SECRETKEY=1bZB+WJHnYqK+0bL1zZjlEZ7WjZq3FP1eRbF1VKxN25DlRZtk4o2JQ6Tly9X7qVmTO3rJJwnDBIvV6J3hG8e4Q==
+
+# Required to enable email-based features (registration, password reset, etc.)
+SPRING_MAIL_USERNAME=j.casas.lopez.26@gmail.com
+SPRING_MAIL_PASSWORD=uuqlojwafojnzbvv
+```
+
+> ⚠️ **Important:** These values must be exact.
+> Never commit your `.env` file to version control.
+
+---
+
+### 2. Start the service
+
+Run the following command to start the backend, database, and Redis cache:
+
+```bash
+docker-compose -f docker-compose.dev.yml up --build user-service
+```
+
+This will launch:
+
+* `mysql`: MySQL 8.0, preloaded with schema and sample data
+* `redis`: Redis 7.2
+* `user-service`: Spring Boot app available at [http://localhost:8000](http://localhost:8000)
+
+You can access the API documentation at:
+👉 [http://localhost:8000/swagger-ui.html](http://localhost:8000/swagger-ui.html)
+
+---
+
+### 3. Default users
+
+The main database comes preloaded with three example users to help you explore the system:
+
+| Username      | Role         | Email                                                     | Password       |
+| ------------- | ------------ | --------------------------------------------------------- | -------------- |
+| `user1`       | `USER`       | [user1@example.com](mailto:user1@example.com)             | `Password123!` |
+| `admin1`      | `ADMIN`      | [admin1@example.com](mailto:admin1@example.com)           | `Password123!` |
+| `superadmin1` | `SUPERADMIN` | [superadmin1@example.com](mailto:superadmin1@example.com) | `Password123!` |
+
+---
+
+### 4. Run backend tests
+
+To run the integration tests in isolation:
+
+```bash
+docker-compose -f docker-compose.dev.yml up --build user-tests
+```
+
+This will:
+
+* Start a separate MySQL container (`mysql-test`) with the same schema but no initial data
+* Wait until MySQL and Redis are healthy
+* Run all tests inside the `user-tests` container
+* Shut down the test container automatically
+
+---
 
 
 # API Endpoints
@@ -81,7 +158,7 @@ This version of the microservice does not yet make use of those records (Logged 
 
 ---
 
-**Note**: Complete API documentation with request/response formats, validation rules, and status codes is available via Swagger UI at `/swagger-ui.html`
+**Note**: Complete API documentation with request/response formats, validation rules, and status codes is available via Swagger UI at `[/swagger-ui.html](http://localhost:8000/user/swagger-ui/index.html#/)`
 
 
   ## Security features
@@ -92,7 +169,7 @@ This version of the microservice does not yet make use of those records (Logged 
   
   It is worth noting that the Spring Security filters and handlers are heavily customized, as JWTs often do not integrate well with the framework. Below is a brief overview of the security flow:
   
-  - A custom implementation of `UsernamePasswordAuthenticationFilter` checks whether the account is locked before proceeding with the login process. There are three possible statuses (or “states” in the terminology used by the microservice) that indicate a locked account:
+  - A custom implementation of `UsernamePasswordAuthenticationFilter` checks whether the account is locked before proceeding with the login process. There are three possible states (or “account status” in the terminology used by the microservice) that indicate a locked account:
     
     1. **TEMPORARILY_BLOCKED**: The account has been blocked due to too many failed login attempts. It is automatically unlocked after a specified period of time (as verified via the corresponding Redis entry).
     
