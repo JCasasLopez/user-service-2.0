@@ -41,7 +41,7 @@ Aquí lo tienes:
 
 ---
 
-## 🟢 Getting Started
+## How to run the application
 
 This service can be run locally using Docker. Follow these steps to build and launch the application:
 
