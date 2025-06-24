@@ -158,7 +158,7 @@ This will:
 
 ---
 
-**Note**: Complete API documentation with request/response formats, validation rules, and status codes is available via Swagger UI at `[/swagger-ui.html](http://localhost:8000/user/swagger-ui/index.html#/)`
+**Note**: Complete API documentation with request/response formats, validation rules, and status codes is available via Swagger UI at [http://localhost:8000/user/swagger-ui/index.html#/](http://localhost:8000/user/swagger-ui/index.html#/)
 
 
   ## Security features
