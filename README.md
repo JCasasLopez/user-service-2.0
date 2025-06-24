@@ -36,9 +36,77 @@ This version of the microservice does not yet make use of those records (Logged 
   - Docker & Docker Compose
 
 
-## Endpoints
+# API Endpoints
 
-API Endpoints SummaryBelow is a summary of the available API endpoints, including their HTTP method, URL, a brief description, and the level of protection.MethodURLDescriptionProtectionPOST/initiateUserRegistrationInitiates the registration process by sending a verification email.PublicPOST/userRegistrationFinalizes user registration using a verification token (in the header).ProtectedDELETE/deleteAccountDeletes the authenticated user account.ProtectedPOST/forgotPasswordInitiates the password reset process by sending a token to the user's email.PublicPUT/resetPasswordResets the user's password using a new password and a verification token (in the header).ProtectedPUT/changePasswordChanges the password of the currently authenticated user (requires old and new passwords).ProtectedPUT/upgradeUserGrants admin privileges to a user specified by email. (For SUPERADMIN role only).ProtectedPUT/updateAccountStatusUpdates a user's account status (ACTIVE, BLOCKED, TEMPORARILY_BLOCKED, PERMANENTLY_SUSPENDED). (For ADMIN/SUPERADMIN roles only).ProtectedPOST/sendNotificationSends an email notification to a user.ProtectedPOST/refreshTokenGenerates a new pair of access and refresh tokens.ProtectedPOST/auth/login[Virtual] Authenticates the user and returns tokens. (Internal handling, documentation only).PublicPOST/auth/logout[Virtual] Logs out the authenticated user. (Internal handling, documentation only).Protected
+## Authentication Endpoints
+
+| Method | Endpoint | Description | Authentication | Request Body | Response Codes |
+|--------|----------|-------------|----------------|--------------|----------------|
+| `POST` | `/login` | Authenticates user and returns tokens | None | `application/x-www-form-urlencoded`<br>`username=myuser&password=Password123!` | `200` Login successful<br>`400` Username or password missing<br>`401` Bad credentials<br>`403` Account is locked |
+| `POST` | `/logout` | Logs out the authenticated user | Bearer Token | `string` (refresh token) | `200` Logout successful<br>`401` Unauthorized – invalid or missing refresh token |
+| `POST` | `/refreshToken` | Generates new refresh and access tokens | Bearer Token | None | `201` New refresh and access tokens sent successfully<br>`401` Unauthorized – refresh token is missing, expired, blacklisted, or invalid |
+
+## User Registration & Account Management
+
+| Method | Endpoint | Description | Authentication | Request Body | Response Codes |
+|--------|----------|-------------|----------------|--------------|----------------|
+| `POST` | `/initiateUserRegistration` | Initiates the registration process by sending a verification email | None | `UserDto` object (JSON) | `200` Verification token created and sent successfully<br>`400` Validation failed for one or more fields |
+| `POST` | `/userRegistration` | Finalizes user registration | Bearer Token | Request processed from header | `201` Account created successfully<br>`400` Validation failed for one or more fields or invalid input<br>`401` Unauthorized – token is missing, expired, or invalid<br>`409` User with that email or username already exists<br>`500` Error processing the JSON payload |
+| `DELETE` | `/deleteAccount` | Deletes the authenticated user account | Bearer Token | None | `200` Account deleted successfully<br>`401` Unauthorized – token is missing, expired, or invalid |
+
+## Password Management
+
+| Method | Endpoint | Description | Authentication | Request Body | Response Codes |
+|--------|----------|-------------|----------------|--------------|----------------|
+| `POST` | `/forgotPassword` | Initiates password reset process | None | `string` (email address)<br>Example: `"user@example.com"` | `200` Token created successfully and sent to the user to reset password<br>`400` Invalid email format or empty field<br>`404` User not found in the database |
+| `PUT` | `/resetPassword` | Resets the user password | Bearer Token | `string` (new password)<br>Example: `"Password123!"` | `200` Password reset successfully<br>`400` Missing or invalid password format<br>`401` Unauthorized – token is missing, expired, or invalid |
+| `PUT` | `/changePassword` | Changes the password of the currently authenticated user | Bearer Token | JSON object with old and new passwords<br>```json<br>{<br>  "oldPassword": "Password123!",<br>  "newPassword": "NewPassword456!"<br>}<br>``` | `200` Password changed successfully<br>`400` Missing password fields or password does not meet the security criteria<br>`401` Unauthorized – token is missing, expired, or invalid |
+
+## Administrative Endpoints
+
+| Method | Endpoint | Description | Authentication | Required Role | Request Body | Response Codes |
+|--------|----------|-------------|----------------|---------------|--------------|----------------|
+| `PUT` | `/upgradeUser` | Grants admin privileges to a user | Bearer Token | SUPERADMIN | `string` (email address)<br>Example: `"user@example.com"` | `200` User upgraded successfully to admin<br>`400` Invalid or missing email<br>`401` Unauthorized – token is missing, expired, or invalid<br>`403` User does not have SUPERADMIN privileges<br>`404` User not found in the database |
+| `PUT` | `/updateAccountStatus` | Updates the account status of a user | Bearer Token | ADMIN/SUPERADMIN | `string` (email address)<br>Query param: `newAccountStatus` | `200` Account status updated successfully<br>`400` Invalid or missing email or account status value<br>`401` Unauthorized – token is missing, expired, or invalid<br>`403` User does not have ADMIN or SUPERADMIN privileges<br>`404` User not found in the database |
+| `POST` | `/sendNotification` | Sends a notification to a user | Bearer Token | Authenticated User | JSON object with notification details<br>```json<br>{<br>  "Recipient": "123",<br>  "Subject": "Account warning",<br>  "Message": "Your account has been temporarily suspended due to policy violations."<br>}<br>``` | `200` Notification sent successfully<br>`400` Missing or invalid message fields<br>`401` Unauthorized – token is missing, expired, or invalid<br>`404` User not found in the database |
+
+## Account Status Values
+
+When using the `/updateAccountStatus` endpoint, the following values are accepted for the `newAccountStatus` parameter:
+
+| Status | Description |
+|--------|-------------|
+| `ACTIVE` | The account is in good standing and fully usable |
+| `BLOCKED` | The account is suspended for a period (e.g., due to suspicious activity) |
+| `TEMPORARILY_BLOCKED` | The account is blocked due to too many failed login attempts. It will reactivate automatically after a defined period of time (24h by default) |
+| `PERMANENTLY_SUSPENDED` | The account is permanently deactivated and cannot be used |
+
+## Response Format
+
+All endpoints return a standardized response format:
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:00",
+  "message": "Operation completed successfully",
+  "data": null,
+  "status": "OK"
+}
+```
+
+## Authentication
+
+- **Bearer Token**: Include the access token in the Authorization header: `Authorization: Bearer <your_access_token>`
+- **Token Refresh**: Use the refresh token with the `/refreshToken` endpoint to obtain new tokens
+- **Token Format**: JWT tokens are used for authentication and authorization
+
+## Notes
+
+- All timestamps are in ISO 8601 format
+- Email addresses must be valid and properly formatted
+- Passwords must meet the security criteria defined in the application
+- The `/login` and `/logout` endpoints are handled by the authentication filter chain and are not exposed as standard controller endpoints
+- Account unlock happens automatically after the time period specified in application.properties for temporarily blocked accounts
 
 
   ## Security features
