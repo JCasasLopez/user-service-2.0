@@ -52,7 +52,7 @@ public enum NotificationType {
 	
 	UPDATE_ACCOUNT_STATUS(
 			"Change in account status",
-			"Informing user %s of change in account status",
+			"Informing user %s of change in account status"
 			// The message core is defined in NotificationService and its content depends on 
 			// the status the user account has changed to
 			"""
