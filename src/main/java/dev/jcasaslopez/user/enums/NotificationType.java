@@ -2,10 +2,10 @@ package dev.jcasaslopez.user.enums;
 
 public enum NotificationType {
 	
-	// Fields correspond to:
-	// (1) Email subject
-	// (2) Log text
-	// (3) Message text or core, minus the greeting and the farewell
+	// Enum fields represent:
+	// 1. Email subject line
+	// 2. Log message template
+	// 3. Core HTML message content (excluding greeting and farewell)
 	
 	VERIFY_EMAIL(
 	        "Email verification",
