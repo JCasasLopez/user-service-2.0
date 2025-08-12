@@ -35,22 +35,21 @@ public class NotificationService {
 	// Different message constructions are applied depending on notification type and event content.
 
 	@EventListener
-	public void buildNotificationMessage(NotificationType notificationType, 
-			NotifyingEvent event) throws JsonProcessingException {
+	public void handleNotificationEvent(NotifyingEvent event) throws JsonProcessingException {
 		String username = event.getUser().getUsername();
 		String email = event.getUser().getEmail();
-		String subject = notificationType.getSubject();
-		String logText = notificationType.getLogText();
+		String subject = event.getNotificationType().getSubject();
+		String logText = event.getNotificationType().getLogText();
 				
 		// Example: "Starting email verification flow for user: Yorch123"
 	    logger.info(logText + ": {}", username);
 	    
-	    String htmlMessage = buildEmailText(notificationType, event, username);
+	    String htmlMessage = composeEmailBody(event.getNotificationType(), event, username);
 		
 	    emailService.sendEmail(email, subject, htmlMessage);
 	}
 	
-	private String buildEmailText(NotificationType notificationType, NotifyingEvent event,
+	private String composeEmailBody(NotificationType notificationType, NotifyingEvent event,
 				String username) {
 		// Message text minus the greeting and the farewell, defined above as constants.
 		String messageCore = notificationType.getMessageText();
@@ -64,8 +63,10 @@ public class NotificationService {
 			AccountStatus newAccountStatus = event.getAccountStatus();
 			if (newAccountStatus == AccountStatus.TEMPORARILY_BLOCKED) {
 				messageCore = "Your account has been temporarily blocked. It will become active again automatically within 24 hours.";
+			
 			} else if (newAccountStatus == AccountStatus.ACTIVE) {
 				messageCore = "Your account is active again.";
+			
 			} else if (newAccountStatus == AccountStatus.PERMANENTLY_SUSPENDED) {
 				messageCore = "Your account has been permanently suspended.";
 			}
