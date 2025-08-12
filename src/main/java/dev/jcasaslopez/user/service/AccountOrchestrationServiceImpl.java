@@ -34,7 +34,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @Service
 public class AccountOrchestrationServiceImpl implements AccountOrchestrationService {
 	
-	private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(AccountOrchestrationServiceImpl.class);
 	
 	private UserDetailsManager userDetailsManager;
 	private TokenService tokenService;
