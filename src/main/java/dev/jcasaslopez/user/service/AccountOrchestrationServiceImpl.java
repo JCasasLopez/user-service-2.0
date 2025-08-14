@@ -180,7 +180,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	
 	@Override
 	@Transactional
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	@PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SUPERADMIN')")
 	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User user = userAccountService.findUserByEmail(email);
 		String username = user.getUsername();
