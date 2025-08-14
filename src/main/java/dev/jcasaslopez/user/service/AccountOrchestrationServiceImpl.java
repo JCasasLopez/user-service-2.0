@@ -23,13 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
+import dev.jcasaslopez.user.enums.NotificationType;
 import dev.jcasaslopez.user.enums.TokenType;
-import dev.jcasaslopez.user.event.ChangePasswordEvent;
-import dev.jcasaslopez.user.event.CreateAccountEvent;
-import dev.jcasaslopez.user.event.ForgotPasswordEvent;
-import dev.jcasaslopez.user.event.ResetPasswordEvent;
-import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
-import dev.jcasaslopez.user.event.VerifyEmailEvent;
+import dev.jcasaslopez.user.event.NotifyingEvent;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.security.CustomUserDetails;
@@ -39,7 +35,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @Service
 public class AccountOrchestrationServiceImpl implements AccountOrchestrationService {
 	
-	private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(AccountOrchestrationServiceImpl.class);
 	
 	private UserDetailsManager userDetailsManager;
 	private TokenService tokenService;
@@ -90,7 +86,9 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		redisTemplate.opsForValue().set(redisKey, userJson, expirationInSeconds, TimeUnit.SECONDS);
 		logger.info("Redis entry uploaded. RedisKey:{}", redisKey);
 		
-		eventPublisher.publishEvent(new VerifyEmailEvent(user, verifyEmailToken));
+		NotifyingEvent verifyEmailEvent = new NotifyingEvent(userMapper.userDtoToUserMapper(user), 
+				verifyEmailToken, NotificationType.VERIFY_EMAIL);
+		eventPublisher.publishEvent(verifyEmailEvent);
 		logger.debug("Verify email event published for user: {}", user.getEmail());
 	}
 	
@@ -114,7 +112,8 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		userDetailsManager.createUser(userAsCustomUserDetails);
 		logger.info("User account persisted successfully for {}", user.getUsername());
 		
-		eventPublisher.publishEvent(new CreateAccountEvent(user));
+		NotifyingEvent createAccountEvent = new NotifyingEvent(user, NotificationType.CREATE_ACCOUNT);
+		eventPublisher.publishEvent(createAccountEvent);
 	    logger.debug("Create account event published for user: {}", user.getUsername());
 	}
 	
@@ -132,7 +131,9 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		String resetPasswordToken = tokenService.createVerificationToken(user.getUsername());
 		logger.info("Verification token created for user {}", user.getUsername());
 		
-		eventPublisher.publishEvent(new ForgotPasswordEvent(user, resetPasswordToken));
+		NotifyingEvent forgotPasswordEvent = new NotifyingEvent(userMapper.userDtoToUserMapper(user), 
+				resetPasswordToken, NotificationType.FORGOT_PASSWORD);
+		eventPublisher.publishEvent(forgotPasswordEvent);
 	    logger.debug("Forgot password event published for user: {}", user.getUsername());
 	}
 	
@@ -149,7 +150,8 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		logger.debug("Calling resetPassword() in Password Service...");
 		passwordService.resetPassword(newPassword, user);
 		
-		eventPublisher.publishEvent(new ResetPasswordEvent(user));
+		NotifyingEvent resetPasswordEvent = new NotifyingEvent(user, NotificationType.RESET_PASSWORD);
+		eventPublisher.publishEvent(resetPasswordEvent);
 		logger.debug("Change password event published for user: {}", user.getUsername());
 	}
 	
@@ -163,7 +165,8 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		String username = currentUser.getName();
 		User user = userAccountService.findUser(username);
 		
-		eventPublisher.publishEvent(new ChangePasswordEvent(user));
+		NotifyingEvent changePasswordEvent = new NotifyingEvent(user, NotificationType.CHANGE_PASSWORD);
+		eventPublisher.publishEvent(changePasswordEvent);
 		logger.debug("Change password event published for user: {}", user.getUsername());
 	}
 	
@@ -186,7 +189,9 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		logger.debug("Calling updateAccountStatus() in User Account Service...");
 		userAccountService.updateAccountStatus(user, newAccountStatus);
 		
-		eventPublisher.publishEvent(new UpdateAccountStatusEvent(user, newAccountStatus));
+		NotifyingEvent changeAccountStatusEvent = new NotifyingEvent(user, newAccountStatus, 
+				NotificationType.UPDATE_ACCOUNT_STATUS);
+		eventPublisher.publishEvent(changeAccountStatusEvent);
 		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
 	}
 	

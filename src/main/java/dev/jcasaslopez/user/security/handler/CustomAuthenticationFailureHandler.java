@@ -18,7 +18,8 @@ import org.springframework.stereotype.Component;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
-import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
+import dev.jcasaslopez.user.enums.NotificationType;
+import dev.jcasaslopez.user.event.NotifyingEvent;
 import dev.jcasaslopez.user.exception.MissingCredentialException;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.repository.UserRepository;
@@ -126,8 +127,9 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 		        if (failedAttempts >= maxNumberFailedAttempts) {
 		        	
 		        	// If the maximum number of failed attempts is exceeded, the account is locked.
-		        	eventPublisher.publishEvent(new UpdateAccountStatusEvent
-	            			(user, AccountStatus.TEMPORARILY_BLOCKED));
+		        	NotifyingEvent changeAccountStatusEvent = new NotifyingEvent(user, 
+		        			AccountStatus.TEMPORARILY_BLOCKED, NotificationType.UPDATE_ACCOUNT_STATUS);
+					eventPublisher.publishEvent(changeAccountStatusEvent);
 		        	user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 		            userRepository.save(user);
 		            logger.warn("User {} account blocked due to too many failed attempts", username);

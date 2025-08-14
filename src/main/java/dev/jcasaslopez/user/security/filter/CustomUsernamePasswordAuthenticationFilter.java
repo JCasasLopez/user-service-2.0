@@ -11,7 +11,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.event.UpdateAccountStatusEvent;
+import dev.jcasaslopez.user.enums.NotificationType;
+import dev.jcasaslopez.user.event.NotifyingEvent;
 import dev.jcasaslopez.user.exception.MissingCredentialException;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.handler.CustomAuthenticationFailureHandler;
@@ -67,7 +68,9 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 		// If there is no Redis entry for this user (and his account is blocked)
 		// it means the lock period has expired and the account can be automatically reactivated.
 		if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED && !redisTemplate.hasKey(redisKey)) {
-			eventPublisher.publishEvent(new UpdateAccountStatusEvent(user, AccountStatus.ACTIVE));
+			NotifyingEvent changeAccountStatusEvent = new NotifyingEvent(user, AccountStatus.ACTIVE,
+					NotificationType.UPDATE_ACCOUNT_STATUS);
+			eventPublisher.publishEvent(changeAccountStatusEvent);
 			user.setAccountStatus(AccountStatus.ACTIVE);
 			userRepository.save(user);
 			logger.info("User {} reactivated after lock expiration", username);
