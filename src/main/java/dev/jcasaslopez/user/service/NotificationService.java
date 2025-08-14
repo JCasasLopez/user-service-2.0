@@ -62,8 +62,12 @@ public class NotificationService {
 		} else if(notificationType == NotificationType.UPDATE_ACCOUNT_STATUS) {
 			AccountStatus newAccountStatus = event.getAccountStatus();
 			if (newAccountStatus == AccountStatus.TEMPORARILY_BLOCKED) {
-				messageCore = "Your account has been temporarily blocked. It will become active again automatically within 24 hours.";
+				messageCore = "Your account has been temporarily blocked due to too many login failed attempts. "
+						+ "It will become active again automatically within 24 hours.";
 			
+			} else if (newAccountStatus == AccountStatus.BLOCKED) {
+				messageCore = "Your account has been blocked by the administration. Please contact us for further information";
+				
 			} else if (newAccountStatus == AccountStatus.ACTIVE) {
 				messageCore = "Your account is active again.";
 			
