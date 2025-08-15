@@ -1,118 +1,59 @@
-# Classrooms-App 
-Classrooms-App is a fullstack application designed for the management and reservation of classrooms. The system is composed of three microservices, with only the **user management service** currently included in this repository. It handles authentication, registration, email verification, password recovery, and basic 
-account operations.
-This monorepo includes both the backend (Spring Boot) and the frontend (Angular), along with the infrastructure needed to run everything using Docker Compose.
+# User Service 2.0
 
+An authentication and user management microservice that uses **JWTs** (JSON Web Tokens), a classic refresh token system, and **Spring Security** to implement login and logout capabilities, along with typical account-related features (see *API* section for details).
 
-## Project Structure
-```
-.
-├── backend/ # Spring Boot microservice for user management
-├── frontend/ # Angular frontend interface
-├── docker-compose.yml
-└── README.md # This file
-```
+The microservice prioritizes security through:
 
+- **Short-lived, purpose-specific JWTs** (verification, access, and refresh).
+- **Account lockout mechanism** after 3 failed login attempts (tracked via Redis) to prevent brute-force attacks.
+- **Automatic unlock** after 24 hours (default values are configurable).
+- **Password encryption** using BCrypt.
+- **Role-based endpoint restrictions**.
+
+Basic validation rules are enforced, such as:
+
+- Unique usernames and emails.
+- Strong password requirements (see *Security Features* section for details).
+
+All login attempts —whether failed or successful— are logged in a separate database table to enable future analysis for security monitoring and usage patterns.  
+This version of the microservice does not yet make use of those records.
 
 ## Tech Stack
-  ### Backend
-  - Java 17
-  - Spring Boot 3
-  - Spring Security
-  - Spring Data JPA
-  - MySQL 8 
-  - Redis 7
-  - JWT (JSON Web Tokens)
 
-  ### Testing
-  - JUnit 5
-  - Mockito
-  - MockMvc
-  - TestRestTemplate
-  
-  ### Frontend
-  - Angular 17
-  - Responsive UI with a clean and modern layout
+- **Java 17**
+- **Spring Boot 3**
+- **Spring Security**
+- **Spring Data JPA**
+- **MySQL 8**
+- **Redis 7**
+- **JWT** (JSON Web Tokens)
+- **JJWT** Library
 
-  ### Infrastructure
-  - Docker and Docker Compose
+### Testing
 
+- **JUnit 5**
+- **Mockito**
+- **MockMvc**
+- **TestRestTemplate**
 
-## Prerequisites
-- Docker and Docker Compose installed
-- Node.js (if running frontend separately)
-- Java 17+ (if running backend separately)
-  
+### Infrastructure
 
-## How to run the application
-This will build and start the backend, frontend, database, and Redis cache:
-```bash
-docker compose up --build user-service angular-frontend
-```
+- **Docker** – Containerization
+- **Docker Compose** – Multi-container orchestration
+- **MySQL** & **Redis** containers for local and production environments
+- **Environment variables** for sensitive configuration (see next point)
+- HTTPS *(planned, see [Design Decisions](#design-decisions))*
 
-Once running, you can access the application at the following URLs:
-- Frontend: [http://localhost:4200](http://localhost:4200)
-- Backend API: [http://localhost:8000](http://localhost:8000)
-- API Docs (Swagger UI): [http://localhost:8000/swagger-ui.html](http://localhost:8000/swagger-ui.html)
+### Prerequisites
 
-If you want to run the tests:
-```bash
-docker compose up --build user-tests
-```
-This will start a temporary MySQL container (mysql-test), wait until services are healthy, run all backend tests and shut down the test container afterward.
+- Docker & Docker Compose
+- Copy `.env.example` to `.env` and fill in your values (do not commit real secrets).
+
+**Required variables**
+- `JWT_SECRETKEY` — Base64 encoded secret key (512 bits recommended for HS512).
+- `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` — Required only outside demo mode.
+
+> ⚠️ Never publish real credentials in the repo or README.
 
 
-## Configuration
-The application requires the following environment variables:
-- `JWT_SECRETKEY`: Secret key for JWT token signing
-- `SPRING_MAIL_USERNAME`: Email address for sending notifications (registration, password recovery)
-- `SPRING_MAIL_PASSWORD`: Application password for the email service
-  
-These variables are configured in the respective `.env` files for each service.
 
-
-The `mysql` container comes preloaded with a fully functional database, including three users (one per role), so that you can test the app's features right away:
-
-| Username       | Role        | Email                  | Password       |
-|----------------|-------------|------------------------|----------------|
-| `user1`        | `USER`      | user1@example.com      | `Password123!` |
-| `admin1`       | `ADMIN`     | admin1@example.com     | `Password123!` |
-| `superadmin1`  | `SUPERADMIN`| superadmin1@example.com| `Password123!` |
-
-Please note the following functional restrictions:
-
-- Only users with the `SUPERADMIN` role are allowed to use the **"Upgrade user"** functionality.
-- Only users with the `ADMIN` or `SUPERADMIN` roles are allowed to use the **"Update account status"** functionality.
-- Accounts with the status `PERMANENTLY_SUSPENDED` **cannot be reactivated** under any circumstances.
-
-
-## Security Overview
-- JWT-based stateless authentication.
-- Role-based access control (SUPERADMIN, ADMIN, and USER).
-- Short-lived, purpose-based tokens.
-- Email verification for registration and password recovery workflows.  
-- Account lockout after 3 failed login attempts (tracked via Redis), with automatic unlock after 24 hours  *(Default values are configurable)*.  
-- Token revocation on logout.
-
-
-## API Documentation
-The user-service exposes a full OpenAPI (Swagger) specification, available at:  
-[http://localhost:8000/user/swagger-ui/index.html#/](http://localhost:8000/user/swagger-ui/index.html#/)
-
-
-## Design Decisions
-The following features were intentionally left out to prioritize core functionality. Both are planned for future implementation:
-- HTTPS is not configured; production deployments should include a reverse proxy for SSL termination.
-- The frontend does not implement token refresh logic. Access tokens are short-lived and require manual re-login upon expiration.
-
-  
-## Individual repositories
-This monorepo consolidates both backend and frontend for convenience. However, the services are modular, and you can also explore them separately:
-- [User Service (Spring Boot)](https://github.com/JCasasLopez/user-service-2.0)
-- [Frontend (Angular)](https://github.com/JCasasLopez/classrooms-frontend)
-
-
-## Author
-Designed and implemented by Jorge Casas López.
-Feel free to connect via [LinkedIn](https://www.linkedin.com/in/your-link) or contact me at j.casas.lopez.26@gmail.com.  
-You can find more of my projects at [https://github.com/JCasasLopez](https://github.com/JCasasLopez).
