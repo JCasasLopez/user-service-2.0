@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import dev.jcasaslopez.user.enums.AccountStatus;
@@ -135,4 +136,19 @@ public class User {
 			this.accountStatus = accountStatus;
 		}
 		
+		@Override
+		public boolean equals(Object o) {
+		    if (this == o)
+		    	return true;
+		    if (!(o instanceof User)) 
+		    	return false; 
+		    User other = (User) o;
+		    return Objects.equals(username, other.username);
+		}
+
+		@Override
+		public int hashCode() {
+		    return Objects.hash(username);
+		}
+
 }
