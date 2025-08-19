@@ -24,8 +24,8 @@ public class LoginAttempt {
 	private LoginFailureReason loginFailureReason;
 	
 	@ManyToOne
-	// Setting nullable = true allows login attempts to persist even if the associated user is deleted,
-	// since they still hold statistical value.
+	// Setting nullable = true allows login attempts to remain even if the associated user is deleted.
+	// This preserves their statistical/audit value independently of the user lifecycle.
 	@JoinColumn(name = "idUser", referencedColumnName = "idUser", nullable = true)
 	private User user;
 
