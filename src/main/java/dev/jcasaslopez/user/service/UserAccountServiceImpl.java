@@ -1,10 +1,12 @@
 package dev.jcasaslopez.user.service;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,7 @@ import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.exception.AccountStatusException;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
+import dev.jcasaslopez.user.security.CustomUserDetails;
 
 @Service
 public class UserAccountServiceImpl implements UserAccountService {
@@ -53,6 +56,48 @@ public class UserAccountServiceImpl implements UserAccountService {
 			throw new UsernameNotFoundException("User not found in the database");
 		}
 		return optionalUser.get();
+	}
+	
+	@Override
+	public boolean userExists(String username) {
+		return userRepository.existsByUsername(username);
+	}
+
+	@Override
+	public void createUser(UserDetails user) {
+		if (user instanceof CustomUserDetails) {
+			// The password has already been encoded in AccountOrchestrationServiceImpl.initiateRegistration(),
+			// when setting the 'user' object as the value in the Redis entry, so there's no need to do it again.
+			CustomUserDetails customUser = (CustomUserDetails) user;
+			User userJPA = customUser.getUser();
+
+			// Assigns default role ROLE_USER as per business rules.
+			Role userRole = roleRepository.findByRoleName(RoleName.ROLE_USER)
+					.orElseThrow(() -> new IllegalStateException("Role ROLE_USER not found in database"));
+			Set<Role> roles = new HashSet<>();
+			roles.add(userRole);
+			userJPA.setRoles(roles);
+
+			// Assigns account status ACTIVE as per business rules.
+			userJPA.setAccountStatus(AccountStatus.ACTIVE);
+			
+			userRepository.save(userJPA);
+			logger.info("New user created with username: {}", userJPA.getUsername());
+			
+		} else {
+			logger.warn("UserDetails implementation not supported: {}", user.getClass().getName());
+			throw new IllegalArgumentException("Unsupported UserDetails implementation");
+		}
+	}
+
+	@Override
+	public void deleteUser(String username) {
+		// Checks if the user is found in the database, but retrieving it from it is not necessary,
+		// that is why the result is not assigned to any variable.
+		findUser(username);
+		
+		// The log is recorded in AccountOrchestrationService, so we do not need to do it here again.
+		userRepository.deleteByUsername(username);
 	}
 
 	@Override
