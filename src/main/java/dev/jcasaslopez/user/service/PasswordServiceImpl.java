@@ -74,8 +74,8 @@ public class PasswordServiceImpl implements PasswordService {
 	}
 	
 	@Override
-	public boolean passwordIsValid(String newPassword) {
-		boolean isValid = pattern.matcher(newPassword).matches();
+	public boolean passwordIsValid(String password) {
+		boolean isValid = pattern.matcher(password).matches();
         if(!isValid) {
         	logger.warn("The provided password does not meet the requirements");
         	throw new IllegalArgumentException("The provided password does not meet the requirements");
