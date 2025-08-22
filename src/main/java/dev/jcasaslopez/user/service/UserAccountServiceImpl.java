@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -55,7 +57,9 @@ public class UserAccountServiceImpl implements UserAccountService {
 		if(optionalUser.isEmpty()) {
 			throw new UsernameNotFoundException("User not found in the database");
 		}
-		return optionalUser.get();
+		User user = optionalUser.get();
+		logger.info("User {} retrieved from database successfully", user.getUsername());
+		return user;
 	}
 	
 	@Override
@@ -136,4 +140,15 @@ public class UserAccountServiceImpl implements UserAccountService {
 		logger.info("Account status updated from {} to {} for user {} ", user.getAccountStatus(), 
 				newAccountStatus, username);
 	}
+
+	@Override
+	public User getAuthenticatedUser() {
+		Authentication authenticatedUser = SecurityContextHolder.getContext().getAuthentication();
+		if(authenticatedUser == null) {
+			throw new IllegalStateException("Security Context Holder not populated");
+		}
+		String username = authenticatedUser.getName();
+		return findUser(username);
+	}
+	
 }

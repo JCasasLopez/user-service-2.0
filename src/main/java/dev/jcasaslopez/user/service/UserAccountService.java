@@ -14,5 +14,8 @@ public interface UserAccountService {
 	void deleteUser(String username);
 	void upgradeUser(String email);
 	void updateAccountStatus(User user, AccountStatus accountStatus);
+	
+	// Searches for an authenticated user in the Security Context Holder
+	User getAuthenticatedUser();
 
 }
