@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.UserDetailsManager;
@@ -161,9 +160,10 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		logger.debug("Calling changePassword() in User Details Service...");
 		userDetailsManager.changePassword(oldPassword, newPassword);
 		
-		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
-		String username = currentUser.getName();
-		User user = userAccountService.findUser(username);
+		// userDetailsManager.changePassword() could in theory return the user,
+		// but since the UserDetailsManager contract enforces a void return type,
+		// we must retrieve the authenticated user again from the SecurityContextHolder.
+		User user = userAccountService.getAuthenticatedUser();
 		
 		NotifyingEvent changePasswordEvent = new NotifyingEvent(user, NotificationType.CHANGE_PASSWORD);
 		eventPublisher.publishEvent(changePasswordEvent);
@@ -183,8 +183,6 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	@PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SUPERADMIN')")
 	public void updateAccountStatus(String email, AccountStatus newAccountStatus) {
 		User user = userAccountService.findUserByEmail(email);
-		String username = user.getUsername();
-		logger.info("User {} found in the database", username);
 		
 		logger.debug("Calling updateAccountStatus() in User Account Service...");
 		userAccountService.updateAccountStatus(user, newAccountStatus);
@@ -192,7 +190,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		NotifyingEvent changeAccountStatusEvent = new NotifyingEvent(user, newAccountStatus, 
 				NotificationType.UPDATE_ACCOUNT_STATUS);
 		eventPublisher.publishEvent(changeAccountStatusEvent);
-		logger.debug("UpdateAccountStatusEvent published for user: {}", username);
+		logger.debug("UpdateAccountStatusEvent published for user: {}", user.getUsername());
 	}
 	
 	@Override
