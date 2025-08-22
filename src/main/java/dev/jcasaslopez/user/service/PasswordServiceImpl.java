@@ -4,8 +4,6 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -35,14 +33,12 @@ public class PasswordServiceImpl implements PasswordService {
 
 	@Override
 	public void changePassword(String oldPassword, String newPassword) {
+		// Checks first if the new password meets the requirements.
 		passwordIsValid(newPassword);
 		
 		// We retrieve the user object from the Security Context. We know it must be there because 
 		// this method is only accessible to authenticated users.
-		Authentication currentUser = SecurityContextHolder.getContext().getAuthentication();
-		String username = currentUser.getName();
-		User user = userAccountService.findUser(username);
-		logger.info("User {} found in the database", username);
+		User user = userAccountService.getAuthenticatedUser();
 	
 		boolean oldPasswordMatchProvidedOne = passwordEncoder.matches(oldPassword, user.getPassword());
 		if (!oldPasswordMatchProvidedOne) {
@@ -56,7 +52,8 @@ public class PasswordServiceImpl implements PasswordService {
 			throw new IllegalArgumentException("The new password has to be different from the old one");
 		}
 		
-		userRepository.updatePassword(username, passwordEncoder.encode(newPassword));
+		// If it passes all the validations, we update the password in the database.
+		userRepository.updatePassword(user.getUsername(), passwordEncoder.encode(newPassword));
 		logger.info("Password updated successfully");
 	}
 
