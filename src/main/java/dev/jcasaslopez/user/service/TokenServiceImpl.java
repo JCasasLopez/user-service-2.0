@@ -18,6 +18,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.utilities.Constants;
@@ -34,12 +35,15 @@ public class TokenServiceImpl implements TokenService {
     private final TokensLifetimes tokensLifetimes;
     private final StringRedisTemplate redisTemplate;
     private final SecretKey key;
+    private final UserAccountService accountService;
 
     public TokenServiceImpl(TokensLifetimes tokensLifetimes, 
                             StringRedisTemplate redisTemplate, 
-                            @Value("${jwt.secretKey}") String base64SecretKey) {
+                            @Value("${jwt.secretKey}") String base64SecretKey,
+                            UserAccountService accountService) {
         this.tokensLifetimes = tokensLifetimes;
         this.redisTemplate = redisTemplate;
+        this.accountService = accountService;
 
         byte[] keyBytes = Base64.getDecoder().decode(base64SecretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
@@ -51,21 +55,29 @@ public class TokenServiceImpl implements TokenService {
 	// Kept separate from verification token logic to avoid mixing different concerns.
 	@Override
 	public String createAuthToken(TokenType tokenType) {
+		if(tokenType != TokenType.ACCESS && tokenType != TokenType.REFRESH) {
+			throw new IllegalArgumentException("Token type has to be ACCESS or REFRESH");
+		}
+		
 		// tokensLifetimes.getTokensLifetimes() -> Map<TokenType, Integer>.
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
 		Authentication authenticated = SecurityContextHolder.getContext().getAuthentication();
+		String username = authenticated.getName();
+		User user = accountService.findUser(username);
 		
 		String jti = UUID.randomUUID().toString();
-		logger.debug("Authenticated user: {}, JTI: {}", authenticated.getName(), jti);
+		logger.debug("Authenticated user: {}, JTI: {}", username, jti);
 		
-		String token = Jwts.builder().header().type("JWT").and().subject(authenticated.getName())
+		String token = Jwts.builder().header().type("JWT").and().subject(username)
 				.id(jti)
 				.claim("roles",
 						authenticated.getAuthorities().stream().map(GrantedAuthority::getAuthority)
 								.collect(Collectors.toList()))
+				.claim("idUser", user.getIdUser())	
 				.claim("purpose", tokenType)
 				.issuedAt(new Date(System.currentTimeMillis()))
-				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds)).signWith(key, Jwts.SIG.HS256)
+				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds))
+				.signWith(key, Jwts.SIG.HS256)
 				.compact();
 		
 		logger.info("Token issued successfully for user: {}", authenticated.getName());
@@ -79,12 +91,15 @@ public class TokenServiceImpl implements TokenService {
 	public String createVerificationToken(String username) {
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60 * 1000;		
 		String jti = UUID.randomUUID().toString();	
+		User user = accountService.findUser(username);
 		
 		String token = Jwts.builder().header().type("JWT").and().subject(username)
 				.id(jti)
+				.claim("idUser", user.getIdUser())	
 				.claim("purpose", TokenType.VERIFICATION)
 				.issuedAt(new Date(System.currentTimeMillis()))
-				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds)).signWith(key, Jwts.SIG.HS256)
+				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds))
+				.signWith(key, Jwts.SIG.HS256)
 				.compact();
 		
 		logger.debug("Verification token issued successfully. jti: {}", jti);
@@ -193,4 +208,5 @@ public class TokenServiceImpl implements TokenService {
 		logger.debug("Blacklist check for jti {}: {}", tokenJti, result);
 		return result;
 	}
+
 }
