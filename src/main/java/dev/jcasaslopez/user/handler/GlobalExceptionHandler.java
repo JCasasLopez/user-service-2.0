@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AccountStatusException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -21,9 +22,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.exception.UserAccountStatusException;
 import dev.jcasaslopez.user.exception.MalformedMessageException;
 import dev.jcasaslopez.user.exception.MissingCredentialException;
+import dev.jcasaslopez.user.exception.UserAccountStatusException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -40,6 +41,14 @@ public class GlobalExceptionHandler {
         StandardResponse response = new StandardResponse (LocalDateTime.now(), 
 				ex.getMessage() , null, HttpStatus.CONFLICT);
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+	}
+	
+	@ExceptionHandler(AccountStatusException.class)
+	public ResponseEntity<StandardResponse> handleSpringAccountStatusException(AccountStatusException ex){
+	    log.error("Spring AccountStatusException: {}", ex.getMessage(), ex);
+	    StandardResponse response = new StandardResponse(LocalDateTime.now(),
+	            "Account access restricted", null, HttpStatus.FORBIDDEN);
+	    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 	}
 	
 	@ExceptionHandler(IllegalArgumentException.class)
