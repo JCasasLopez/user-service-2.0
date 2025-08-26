@@ -21,7 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.exception.AccountStatusException;
+import dev.jcasaslopez.user.exception.UserAccountStatusException;
 import dev.jcasaslopez.user.exception.MalformedMessageException;
 import dev.jcasaslopez.user.exception.MissingCredentialException;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -34,8 +34,8 @@ public class GlobalExceptionHandler {
 	
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 	
-	@ExceptionHandler(AccountStatusException.class)
-	public ResponseEntity<StandardResponse> handleAccountStatusException(AccountStatusException ex){
+	@ExceptionHandler(UserAccountStatusException.class)
+	public ResponseEntity<StandardResponse> handleAccountStatusException(UserAccountStatusException ex){
         log.error("AccountStatusException: {}", ex.getMessage(), ex);
         StandardResponse response = new StandardResponse (LocalDateTime.now(), 
 				ex.getMessage() , null, HttpStatus.CONFLICT);

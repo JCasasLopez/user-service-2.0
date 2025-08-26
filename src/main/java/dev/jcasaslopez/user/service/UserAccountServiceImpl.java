@@ -16,7 +16,7 @@ import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.exception.AccountStatusException;
+import dev.jcasaslopez.user.exception.UserAccountStatusException;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
@@ -127,13 +127,13 @@ public class UserAccountServiceImpl implements UserAccountService {
 		
 		if(user.getAccountStatus() == AccountStatus.PERMANENTLY_SUSPENDED) {
 	        logger.info("User '{}' has a permanently suspended account; status change ignored", username);
-			throw new AccountStatusException("Cannot change status: the account is permanently suspended");
+			throw new UserAccountStatusException("Cannot change status: the account is permanently suspended");
 		}
 		
 		if(user.getAccountStatus() == newAccountStatus) {
 			logger.debug("No status change needed for user '{}': status already '{}'", 
                     username, newAccountStatus);
-			throw new AccountStatusException("The account already has the specified status");
+			throw new UserAccountStatusException("The account already has the specified status");
 		}
 		
 		userRepository.updateAccountStatus(username, newAccountStatus);
