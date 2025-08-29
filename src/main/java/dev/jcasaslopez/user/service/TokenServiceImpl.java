@@ -91,11 +91,11 @@ public class TokenServiceImpl implements TokenService {
 	public String createVerificationToken(String username) {
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(TokenType.VERIFICATION) * 60 * 1000;		
 		String jti = UUID.randomUUID().toString();	
-		User user = accountService.findUser(username);
 		
+		// Verification tokens do not need the idUser, since they are only for verification, not for authentication
+		// purposes, just the username is enough information.
 		String token = Jwts.builder().header().type("JWT").and().subject(username)
 				.id(jti)
-				.claim("idUser", user.getIdUser())	
 				.claim("purpose", TokenType.VERIFICATION)
 				.issuedAt(new Date(System.currentTimeMillis()))
 				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds))
