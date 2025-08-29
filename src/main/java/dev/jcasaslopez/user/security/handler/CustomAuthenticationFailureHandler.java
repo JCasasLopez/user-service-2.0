@@ -70,8 +70,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
 	        AuthenticationException exception) throws IOException, ServletException {
 		
-		// Attribute set by custom UsernamePasswordAuthenticationFilter
-	    String username = (String) request.getAttribute("attemptedUsername");
+	    String username = request.getParameter("username");
 	    
 	    // We handle missing credentials here instead of in the AuthenticationEntryPoint, 
 	    // which would be their natural place (i.e., where Spring Security would route them by default),
@@ -98,20 +97,27 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	    // 1. We only reach this point if the username is valid and the user exists.
 	    // 2. If we called userAccountService.findUser() earlier and the user didn't exist, it would 
 	    // throw an exception outside this flow, preventing it from being properly handled here.
-	    User user;
-        user = userAccountService.findUser(username);
+	    
+        User user = userAccountService.findUser(username);
 	    
 	    if (exception instanceof LockedException) {
 	        loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
 	        		LoginFailureReason.ACCOUNT_LOCKED, user);
-	        standardResponseHandler.handleResponse(response, 403, "Account is locked", null);
+	        
+	        if(user.getAccountStatus() == AccountStatus.BLOCKED) {
+		        standardResponseHandler.handleResponse(response, 403, "Your account has been locked by an "
+		        		+ "administrator. Please contact support if you believe this is a mistake", null);
+	        } else if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
+		        standardResponseHandler.handleResponse(response, 403, "Your account is still locked due to too "
+		        		+ "many failed login attempts. It will be reactived automatically in a few hours", null);
+	        }
 	        return;
 	        
 	    } else if (exception instanceof BadCredentialsException) {
 	   
 	    	// "Bad credentials" instead of "Incorrect password" for the reason mentioned above.
 	    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
-		    int failedAttempts=0;
+		    int failedAttempts = 0;
 		    
 		    if (!redisTemplate.hasKey(redisKey)) {
 		        redisTemplate.opsForValue().set(redisKey, "1", accountLockedDuration, TimeUnit.SECONDS);

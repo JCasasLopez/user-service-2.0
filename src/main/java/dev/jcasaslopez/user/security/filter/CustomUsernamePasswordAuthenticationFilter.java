@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -58,12 +57,6 @@ public class CustomUsernamePasswordAuthenticationFilter extends UsernamePassword
 		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		User user = userAccountService.findUser(username);
 		
-		// The account was locked by an admin due to administrative or security reasons,
-		// and only an admin can unblock it.
-		if (user.getAccountStatus() == AccountStatus.BLOCKED) {
-			logger.warn("User {} account remains locked", username);
-			throw new LockedException("Account is locked");
-		}
 
 		// If there is no Redis entry for this user (and his account is blocked)
 		// it means the lock period has expired and the account can be automatically reactivated.
