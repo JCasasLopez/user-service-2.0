@@ -59,9 +59,14 @@ public class SecurityConfig {
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
      
-        // Prevents UsernameNotFoundException from being wrapped as InternalAuthenticationServiceException,
-        // so it can be handled directly in the AuthenticationFailureHandler and the 
-        // actual failure reason (user not found) can be logged.
+        // Do not mask UsernameNotFoundException as BadCredentialsException.
+        // With this flag disabled, UsernameNotFoundException propagates to the AuthenticationFailureHandler
+        // as the actual cause ("username not found"). This allows:
+        // 1) Persisting the failure with its precise reason.
+        // 2) Differentiating flows: "bad credentials" increments the Redis failure counter,
+        //         while "username not found" does not (no known user to attribute the failure to).
+        // Note: in the failure response, UsernameNotFoundException is still reported to the client
+        // as "Bad credentials" to avoid information disclosure.
         provider.setHideUserNotFoundExceptions(false);
         return provider;
     }
