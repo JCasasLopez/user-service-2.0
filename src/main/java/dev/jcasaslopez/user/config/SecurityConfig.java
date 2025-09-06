@@ -152,7 +152,8 @@ public class SecurityConfig {
             									"/updateAccountStatus",
             									"/sendNotification"
             													).authenticated()
-            							.anyRequest().authenticated()
+            							
+            							.anyRequest().permitAll()
             );
             return http.build();
     }
