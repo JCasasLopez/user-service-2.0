@@ -19,7 +19,7 @@ public interface TokenService {
 
 	// Token blacklisting & Logout 
 	void logOut(String token);
-	void blacklistToken(String redisKey, long expirationInSeconds);
+	void blacklistToken(String token);
 	boolean isTokenBlacklisted(String token);
 	
 }

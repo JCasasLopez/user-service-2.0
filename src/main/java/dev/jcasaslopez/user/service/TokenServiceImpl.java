@@ -159,7 +159,18 @@ public class TokenServiceImpl implements TokenService {
 	@Override
 	public void logOut(String token) {
 		logger.info("Processing logout...");
-		
+		blacklistToken(token);
+
+		// Instead of setting the authentication to null, we use clearContext()
+		// to completely remove the SecurityContext from the current thread. This is crucial
+		// to prevent residual authentication data from persisting in reused threads,
+		// which could lead to unexpected behaviors in concurrent environments or during testing.
+		SecurityContextHolder.clearContext();
+		logger.info("User has been logged out");
+	}
+	
+	@Override
+	public void blacklistToken(String token) {
 		Optional<Claims> optionalClaims = getValidClaims(token);
 		String tokenJti = getJtiFromToken(token);
 		
@@ -173,21 +184,9 @@ public class TokenServiceImpl implements TokenService {
 		long expirationInSeconds = Math.max(1, remainingMillis / 1000);
 		logger.debug("Blacklisting token with JTI {} for {} seconds", tokenJti, expirationInSeconds);
 		String tokenRedisKey = Constants.REFRESH_TOKEN_REDIS_KEY + tokenJti;
-		blacklistToken(tokenRedisKey, expirationInSeconds);
-
-		// Instead of setting the authentication to null, we use clearContext()
-		// to completely remove the SecurityContext from the current thread. This is crucial
-		// to prevent residual authentication data from persisting in reused threads,
-		// which could lead to unexpected behaviors in concurrent environments or during testing.
-		// Reference: https://master-spring-ter.medium.com/understanding-clearcontext-in-spring-security-enhancing-application-security-17407ea55b4d
-		SecurityContextHolder.clearContext();
-		logger.info("User has been logged out");
-	}
-	
-	@Override
-	public void blacklistToken(String redisKey, long expirationInSeconds) {
-        logger.info("Blacklisting token with key: {} for {} seconds", redisKey, expirationInSeconds);
-        redisTemplate.opsForValue().set(redisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
+		
+        logger.info("Blacklisting token with key: {} for {} seconds", tokenRedisKey, expirationInSeconds);
+        redisTemplate.opsForValue().set(tokenRedisKey, "blacklisted", expirationInSeconds, TimeUnit.SECONDS);
     }		
 	
 	@Override
