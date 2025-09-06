@@ -5,6 +5,8 @@ import dev.jcasaslopez.user.enums.TokenType;
 // DTO that encapsulates authentication request details.  
 // It replaces the direct extraction of data from HttpServletRequest in AuthenticationFilter by grouping username, 
 // token, purpose, path, and method into a single object. This makes authentication logic cleaner and easier to test.
+// Token, path and method are included in the HTTP request itself, whereas username and token purpose are found in
+// the token claims.
 
 public class AuthenticationRequest {
 	
