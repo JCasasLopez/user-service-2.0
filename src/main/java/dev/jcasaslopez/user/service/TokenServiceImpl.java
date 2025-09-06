@@ -135,6 +135,10 @@ public class TokenServiceImpl implements TokenService {
 			}
 			logger.error("Error verifying the token: {}", ex.getMessage());
 			throw new JwtException("Error verifying the token: " + ex.getMessage());
+			
+		} catch (IllegalArgumentException ex) {
+			logger.error("Empty or null token");
+		    throw new JwtException("Token is missing or empty");
 		}
 	} 
 	
