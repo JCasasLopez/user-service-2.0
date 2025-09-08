@@ -42,7 +42,7 @@ public class NotificationService {
 		String logText = event.getNotificationType().getLogText();
 				
 		// Example: "Starting email verification flow for user: Yorch123"
-	    logger.info(logText + ": {}", username);
+	    logger.info(logText, username);
 	    
 	    String htmlMessage = composeEmailBody(event.getNotificationType(), event, username);
 		
@@ -63,7 +63,7 @@ public class NotificationService {
 			AccountStatus newAccountStatus = event.getAccountStatus();
 			if (newAccountStatus == AccountStatus.TEMPORARILY_BLOCKED) {
 				messageCore = "Your account has been temporarily blocked due to too many login failed attempts. "
-						+ "It will become active again automatically within 24 hours.";
+						+ "It will become active again automatically within a few hours.";
 			
 			} else if (newAccountStatus == AccountStatus.BLOCKED) {
 				messageCore = "Your account has been blocked by the administration. Please contact us for further information";

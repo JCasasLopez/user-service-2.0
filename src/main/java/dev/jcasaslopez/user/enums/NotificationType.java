@@ -9,7 +9,7 @@ public enum NotificationType {
 	
 	VERIFY_EMAIL(
 	        "Email verification",
-	        "Starting email verification flow for user: %s",
+	        "Starting email verification flow for user {}",
 	        """
 	        <p>Thank you for registering. To complete your account setup, 
 	        please verify your email address by clicking on the following link:</p>
@@ -19,7 +19,7 @@ public enum NotificationType {
 	
 	CREATE_ACCOUNT(
 	        "Welcome to the platform!",
-	        "Starting account creation flow for user: %s",
+	        "Starting account creation flow for user {}",
 	        """
 	        <p>Your account has been created successfully.</p>
 	        """
@@ -27,7 +27,7 @@ public enum NotificationType {
 	
 	FORGOT_PASSWORD(
 	        "Password reset verification email",
-	        "Starting password reset flow for user: %s",
+	        "Starting password reset flow for user {}",
 	        """
 	        <p>Click on the following link to reset your password:</p>
 	        <p><a href="%s/resetPassword?token=%s">Reset my password</a></p>
@@ -36,7 +36,7 @@ public enum NotificationType {
 	
 	RESET_PASSWORD(
 			"Password reset successfully",
-	        "Starting reset password flow for user: %s",
+	        "Starting reset password flow for user {}",
 	        """
 	        <p>Your password has been reset successfully.</p>
 	        """
@@ -44,7 +44,7 @@ public enum NotificationType {
 	
 	CHANGE_PASSWORD(
 			"Password changed successfully",
-			"Starting change password flow for user: %s",
+			"Starting change password flow for user {}",
 			"""
 	        <p>Your password has been changed successfully.</p>
 	        """
@@ -52,7 +52,7 @@ public enum NotificationType {
 	
 	UPDATE_ACCOUNT_STATUS(
 			"Change in account status",
-			"Informing user %s of change in account status",
+			"Informing user {} of change in account status",
 			// The message core is defined in NotificationService and its content depends on 
 			// the status the user account has changed to
 			"""
