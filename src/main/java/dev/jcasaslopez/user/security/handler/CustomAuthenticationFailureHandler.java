@@ -1,13 +1,10 @@
 package dev.jcasaslopez.user.security.handler;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
@@ -18,14 +15,11 @@ import org.springframework.stereotype.Component;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
-import dev.jcasaslopez.user.enums.NotificationType;
-import dev.jcasaslopez.user.event.NotifyingEvent;
 import dev.jcasaslopez.user.exception.MissingCredentialException;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
-import dev.jcasaslopez.user.repository.UserRepository;
+import dev.jcasaslopez.user.service.AccountLockingService;
 import dev.jcasaslopez.user.service.LoginAttemptService;
 import dev.jcasaslopez.user.service.UserAccountService;
-import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,29 +40,24 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	int maxNumberFailedAttempts;
 	
 	@Value ("${security.auth.account-lock-duration-seconds}")
-	int accountLockedDuration;
+	int accountLockDuration;
 	
-	private StringRedisTemplate redisTemplate;
-	private UserAccountService userAccountService;
-	private UserRepository userRepository;
-	private StandardResponseHandler standardResponseHandler;
-	private LoginAttemptService loginAttemptService;
-	private ApplicationEventPublisher eventPublisher;
+	private final UserAccountService userAccountService;
+	private final StandardResponseHandler standardResponseHandler;
+	private final LoginAttemptService loginAttemptService;
+	private final AccountLockingService accountLockingService;
 
-	public CustomAuthenticationFailureHandler(StringRedisTemplate redisTemplate, UserAccountService userAccountService,
-			UserRepository userRepository, StandardResponseHandler standardResponseHandler,
-			LoginAttemptService loginAttemptService, ApplicationEventPublisher eventPublisher) {
-		this.redisTemplate = redisTemplate;
+	public CustomAuthenticationFailureHandler(UserAccountService userAccountService,
+			StandardResponseHandler standardResponseHandler, LoginAttemptService loginAttemptService,
+			AccountLockingService accountLockingService) {
 		this.userAccountService = userAccountService;
-		this.userRepository = userRepository;
 		this.standardResponseHandler = standardResponseHandler;
 		this.loginAttemptService = loginAttemptService;
-		this.eventPublisher = eventPublisher;
+		this.accountLockingService = accountLockingService;
 	}
 
 	@Override
-	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-	        AuthenticationException exception) throws IOException, ServletException {
+	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,AuthenticationException exception) throws IOException, ServletException {
 		
 	    String username = request.getParameter("username");
 	    
@@ -76,16 +65,14 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	    // which would be their natural place (i.e., where Spring Security would route them by default),
 	    // so that all login failure cases are grouped together in a single class.
 	    if (exception instanceof MissingCredentialException) {
-			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
-					LoginFailureReason.MISSING_FIELD, null);
-	        logger.warn("Username or password not found during auth failure");
+			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.MISSING_FIELD, null);
+	        logger.warn("Username or password missing during authentication");
 	        standardResponseHandler.handleResponse(response, 400, "Username and password are required", null);
 	        return;
 	        
 	    } else if (exception instanceof UsernameNotFoundException) {
-	    	loginAttemptService.recordAttempt(false, request.getRemoteAddr(),
-                    LoginFailureReason.USER_NOT_FOUND, null);
-            logger.info("Failed login attempt - User not found");
+	    	loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.USER_NOT_FOUND, null);
+            logger.warn("Failed login attempt - User not found");
             
             // 401 with a neutral message to avoid revealing whether the failure was due to  
             // username or password.
@@ -96,59 +83,41 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	    // We load the user here and not earlier, for two reasons:
 	    // 1. We only reach this point if the username is valid and the user exists.
 	    // 2. If we called userAccountService.findUser() earlier and the user didn't exist, it would 
-	    // throw an exception outside this flow, preventing it from being properly handled here.
-	    
+	    // throw an exception outside this flow, preventing it from being properly handled here.	    
         User user = userAccountService.findUser(username);
+        int accountLockDurationInHours = accountLockDuration/3600 >= 1 ? accountLockDuration/3600 : 1;
 	    
 	    if (exception instanceof LockedException) {
-	        loginAttemptService.recordAttempt(false, request.getRemoteAddr(), 
-	        		LoginFailureReason.ACCOUNT_LOCKED, user);
+	        loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.ACCOUNT_LOCKED, user);
 	        
 	        if(user.getAccountStatus() == AccountStatus.BLOCKED) {
-		        standardResponseHandler.handleResponse(response, 403, "Your account has been locked by an "
-		        		+ "administrator. Please contact support if you believe this is a mistake", null);
+		        standardResponseHandler.handleResponse(response, 403, "Your account has been locked by an administrator. Please contact support if you believe this is a mistake", null);
+		        
 	        } else if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
-		        standardResponseHandler.handleResponse(response, 403, "Your account is still locked due to too "
-		        		+ "many failed login attempts. It will be reactived automatically in a few hours", null);
+		        standardResponseHandler.handleResponse(response, 403, "Your account is locked due to too many failed login attempts. It will be reactivated automatically in a few hours", null);
 	        }
 	        return;
 	        
 	    } else if (exception instanceof BadCredentialsException) {
-	   
-	    	// "Bad credentials" instead of "Incorrect password" for the reason mentioned above.
-	    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
-		    int failedAttempts = 0;
-		    
-		    if (!redisTemplate.hasKey(redisKey)) {
-		        redisTemplate.opsForValue().set(redisKey, "1", accountLockedDuration, TimeUnit.SECONDS);
-		        logger.info("First failed login attempt for user {}", username);
-		        standardResponseHandler.handleResponse(response, 401, "Bad credentials", null);
-		        
-		    } else {
-		    	
-		        failedAttempts = Integer.parseInt(redisTemplate.opsForValue().get(redisKey)) + 1;
-		        redisTemplate.opsForValue().set(redisKey, String.valueOf(failedAttempts),
-	                    accountLockedDuration, TimeUnit.SECONDS);
-		        
-		        if (failedAttempts >= maxNumberFailedAttempts) {
-		        	
-		        	// If the maximum number of failed attempts is exceeded, the account is locked.
-		        	NotifyingEvent changeAccountStatusEvent = new NotifyingEvent(user, 
-		        			AccountStatus.TEMPORARILY_BLOCKED, NotificationType.UPDATE_ACCOUNT_STATUS);
-					eventPublisher.publishEvent(changeAccountStatusEvent);
-		        	user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
-		            userRepository.save(user);
-		            logger.warn("User {} account blocked due to too many failed attempts", username);
-		            standardResponseHandler.handleResponse(response, 401,
-							"Bad credentials. Your account has been locked due to too many attempts", null);
-		            
-		        } else {
-					logger.info("Failed login attempt {} for user {}", failedAttempts, username);
-					standardResponseHandler.handleResponse(response, 401, "Bad credentials", null);
-				}
-		    }
-			loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.INCORRECT_PASSWORD,
-					user);
-		}
+	    	
+	    	int failedLoginAttempts = accountLockingService.getLoginAttemptsRedisEntry(username);
+	    	failedLoginAttempts++;
+    		accountLockingService.setLoginAttemptsRedisEntry(username, failedLoginAttempts, accountLockDuration);
+    		logger.warn("Number of failed login attempts for user {}: {}", username, failedLoginAttempts);
+	    	
+	    	if (failedLoginAttempts < maxNumberFailedAttempts) {
+	    		// "Bad credentials" instead of "Incorrect password" for the reasons discussed above.
+	    		standardResponseHandler.handleResponse(response, 401, "Bad credentials", null);	
+	    		
+	    	// Redundant, but improves legibility.
+	    	} else if (failedLoginAttempts >= maxNumberFailedAttempts) {
+	    		accountLockingService.blockAccount(user);
+	    		logger.warn("Account blocked for user {} due to too many login failed attempts", username);
+	    		standardResponseHandler.handleResponse(response, 401, "Your account has been locked due to too many failed "
+	    				+ "login attempts. It will be reactivated automatically in " + accountLockDurationInHours + " hours", null);	
+	    	}
+
+	    	loginAttemptService.recordAttempt(false, request.getRemoteAddr(), LoginFailureReason.INCORRECT_PASSWORD,user);
+	    }
 	}
 }

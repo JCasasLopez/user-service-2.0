@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -16,10 +15,10 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.handler.StandardResponseHandler;
 import dev.jcasaslopez.user.mapper.UserMapper;
+import dev.jcasaslopez.user.service.AccountLockingService;
 import dev.jcasaslopez.user.service.LoginAttemptService;
 import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.service.UserAccountService;
-import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,44 +28,42 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 	
     private static final Logger logger = LoggerFactory.getLogger(CustomAuthenticationSuccessHandler.class);
 
-	private StringRedisTemplate redisTemplate;
-	private StandardResponseHandler standardResponseHandler;
-	private LoginAttemptService loginAttemptService;
-	private TokenService tokenService;
-	private UserAccountService userAccountService;
-	private UserMapper userMapper;
+	private final StandardResponseHandler standardResponseHandler;
+	private final LoginAttemptService loginAttemptService;
+	private final TokenService tokenService;
+	private final UserAccountService userAccountService;
+	private final UserMapper userMapper;
+	private final AccountLockingService accountLockingService;
 
-	public CustomAuthenticationSuccessHandler(StringRedisTemplate redisTemplate,
-			StandardResponseHandler standardResponseHandler, LoginAttemptService loginAttemptService,
-			TokenService tokenService, UserAccountService userAccountService, UserMapper userMapper) {
-		this.redisTemplate = redisTemplate;
+	public CustomAuthenticationSuccessHandler(StandardResponseHandler standardResponseHandler,
+			LoginAttemptService loginAttemptService, TokenService tokenService, UserAccountService userAccountService,
+			UserMapper userMapper, AccountLockingService accountLockingService) {
 		this.standardResponseHandler = standardResponseHandler;
 		this.loginAttemptService = loginAttemptService;
 		this.tokenService = tokenService;
 		this.userAccountService = userAccountService;
 		this.userMapper = userMapper;
+		this.accountLockingService = accountLockingService;
 	}
 
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication authentication) throws IOException, ServletException {
 		
-		// Reset the failed login attempts counter by deleting its Redis entry.
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		User user = userAccountService.findUser(username);
-		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
-		redisTemplate.delete(redisKey);
+		
+		// Reset the failed login attempts counter by deleting its Redis entry.
+		accountLockingService.deleteLoginAttemptsRedisEntry(username);
 		
 		loginAttemptService.recordAttempt(true, request.getRemoteAddr(), null, user);
 		
 		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
 		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
-		
 		logger.info("Login successful for user '{}'. Attempts reset and login attempt persisted.", username);
 		
 		UserDto userDto = userMapper.userToUserDtoMapper(user);
 		LoginResponse loginResponse = new LoginResponse (userDto, refreshToken, accessToken);
-		standardResponseHandler.handleResponse(response, 200, "Login attempt successful", 
-				loginResponse);
+		standardResponseHandler.handleResponse(response, 200, "Login attempt successful", loginResponse);
 	}
 }
