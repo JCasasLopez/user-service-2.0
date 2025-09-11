@@ -12,4 +12,9 @@ public class Constants {
 	public static final String REGISTRATION_PATH = "/userRegistration";
 	public static final String FORGOT_PASSWORD_PATH = "/forgotPassword";
 	public static final String RESET_PASSWORD_PATH = "/resetPassword";
+	public static final String DELETE_ACCOUNT = "/deleteAccount";
+	public static final String UPGRADE_USER = "/upgradeUser";
+	public static final String CHANGE_PASSWORD = "/changePassword";
+	public static final String UPDATE_ACCOUNT_STATUS = "/updateAccountStatus";
+	public static final String SEND_NOTIFICATION = "/sendNotification";
 }

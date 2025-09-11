@@ -143,16 +143,16 @@ public class SecurityConfig {
             									Constants.FORGOT_PASSWORD_PATH,
             									Constants.RESET_PASSWORD_PATH,
             									Constants.LOGOUT_PATH,
-            									Constants.LOGIN_PATH
+            									Constants.LOGIN_PATH,
+            									Constants.REFRESH_TOKEN_PATH
             													).permitAll() 
             							
             							.requestMatchers(
-            									Constants.REFRESH_TOKEN_PATH,
-            									"/deleteAccount",
-            									"/upgradeUser",
-            									"/changePassword",
-            									"/updateAccountStatus",
-            									"/sendNotification"
+            									Constants.DELETE_ACCOUNT,
+            									Constants.UPGRADE_USER,
+            									Constants.CHANGE_PASSWORD,
+            									Constants.UPDATE_ACCOUNT_STATUS,
+            									Constants.SEND_NOTIFICATION
             													).authenticated()
             							
             							.anyRequest().permitAll()
