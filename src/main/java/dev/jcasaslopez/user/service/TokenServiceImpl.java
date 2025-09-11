@@ -23,8 +23,10 @@ import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.model.TokensLifetimes;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 
 @Service
@@ -122,23 +124,26 @@ public class TokenServiceImpl implements TokenService {
 					.parseSignedClaims(token)
 					.getPayload();
 
-		} catch (JwtException ex) {
-			if (ex instanceof io.jsonwebtoken.ExpiredJwtException) {
-				logger.warn("Token has expired");
-				throw new JwtException("Expired token");
-			} else if (ex instanceof io.jsonwebtoken.MalformedJwtException) {
-				logger.error("Malformed token");
-				throw new JwtException("Malformed token");
-			} else if (ex instanceof io.jsonwebtoken.security.SecurityException) {
-				logger.error("Invalid token signature");
-				throw new JwtException("Invalid signature");
-			}
-			logger.error("Error verifying the token: {}", ex.getMessage());
-			throw new JwtException("Error verifying the token: " + ex.getMessage());
-			
-		} catch (IllegalArgumentException ex) {
-			logger.error("Empty or null token");
-		    throw new JwtException("Token is missing or empty");
+		} catch (ExpiredJwtException ex) {
+		    logger.warn("Token has expired");
+		    throw new JwtException("Expired token");
+		    
+		} catch (MalformedJwtException ex) {
+		    logger.error("Malformed token");
+		    throw new JwtException("Malformed token");
+		    
+		} catch (io.jsonwebtoken.security.SecurityException ex) {
+		    logger.error("Invalid token signature");
+		    throw new JwtException("Invalid signature");
+		    
+		} catch (Exception ex) {
+		    if (token == null || token.trim().isEmpty()) {
+		        logger.error("Empty or null token");
+		        throw new JwtException("Token is missing or empty");
+		    } else {
+		        logger.error("Invalid or malformed token: {}", ex.getMessage());
+		        throw new JwtException("Invalid token");
+		    }
 		}
 	} 
 	
