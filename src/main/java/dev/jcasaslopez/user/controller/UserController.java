@@ -1,7 +1,6 @@
 package dev.jcasaslopez.user.controller;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -130,7 +129,7 @@ public class UserController {
 		    )
 		})
 	@SecurityRequirement(name = "bearerAuth")
-	@DeleteMapping(value = "/deleteAccount")
+	@DeleteMapping(value = Constants.DELETE_ACCOUNT)
 	public ResponseEntity<StandardResponse> deleteAccount() {
 		accountOrchestrationService.deleteAccount();
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -253,7 +252,7 @@ public class UserController {
 		    )
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PutMapping(value = "/changePassword")
+	@PutMapping(value = Constants.CHANGE_PASSWORD)
 	public ResponseEntity<StandardResponse> changePassword(@RequestBody @NotNull Map<String, String> passwordsAsMap) {
 		String oldPassword = passwordsAsMap.get("oldPassword");
 	    String newPassword = passwordsAsMap.get("newPassword");
@@ -312,7 +311,7 @@ public class UserController {
 		    )
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PutMapping(value = "/upgradeUser")
+	@PutMapping(value = Constants.UPGRADE_USER)
 	public ResponseEntity<StandardResponse> upgradeUser(@RequestBody @NotBlank @Email String email) {
 		accountOrchestrationService.upgradeUser(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -386,7 +385,7 @@ public class UserController {
 		    required = true
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PutMapping(value = "/updateAccountStatus")
+	@PutMapping(value = Constants.UPDATE_ACCOUNT_STATUS)
 	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestBody @NotBlank String email, 
 			@RequestParam @NotNull AccountStatus newAccountStatus) {
 		accountOrchestrationService.updateAccountStatus(email, newAccountStatus);
@@ -444,7 +443,7 @@ public class UserController {
 		    ))
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PostMapping(value = "/sendNotification")
+	@PostMapping(value = Constants.SEND_NOTIFICATION)
 	public ResponseEntity<StandardResponse> sendNotification(@RequestBody @NotNull Map<String, String> messageAsMap) {
 		
 		// We validate the message has a a valid format.
@@ -462,7 +461,8 @@ public class UserController {
 	// IMPORTANT: In the list, the first token is the refresh token and the second one is the access token.
 	@Operation(
 		    summary = "Generates new refresh and access tokens",
-		    description = "Generates and returns a new pair of refresh and access tokens for an authenticated user. Requires a valid refresh token."
+		    description = "Handled at AuthenticationFilter. This controller method should not be executed. "
+	                + "The filter validates the refresh token, blacklists it and returns 201/401 with StandardResponse."
 		)
 		@ApiResponses({
 		    @ApiResponse(
@@ -474,14 +474,17 @@ public class UserController {
 		        responseCode = "401",
 		        description = "Unauthorized – refresh token is missing, expired, blacklisted, or invalid",
 		        content = @Content(schema = @Schema(implementation = StandardResponse.class))
-		    )
+		    ),
+		    @ApiResponse(
+		    		responseCode = "501", 
+		    		description = "Fallback — should not be executed",
+		    		content = @Content(schema = @Schema(implementation = StandardResponse.class)))
 		})
 	@SecurityRequirement(name = "bearerAuth")
 	@PostMapping(value  = Constants.REFRESH_TOKEN_PATH)
 	public ResponseEntity<StandardResponse> refreshToken() {
-		List<String> tokens = accountOrchestrationService.refreshToken();
-		StandardResponse response = new StandardResponse(LocalDateTime.now(),
-				"New refresh and access tokens sent successfully", tokens, HttpStatus.CREATED);
-		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+		StandardResponse body = new StandardResponse(LocalDateTime.now(), "This operation is handled at the filter. Controller should not be executed.", 
+				null, HttpStatus.NOT_IMPLEMENTED);
+		    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(body);
 	}
 }
