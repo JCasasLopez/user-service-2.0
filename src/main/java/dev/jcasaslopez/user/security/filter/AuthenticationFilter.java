@@ -136,16 +136,14 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 					return; 
 				}
 				filterChain.doFilter(request, response);
-				return;
+				break;
 			
 			case Constants.REFRESH_TOKEN_PATH:
 				authFlowHandler.handleRefreshFlow(request, response, token, purpose, username, path);
 				if (response.isCommitted()) {
 					return;  
 				}
-				// Just in case there is no answer.
-			    filterChain.doFilter(request, response);
-			    return;
+				break;
 				
 			default:
 				authFlowHandler.handleAccessFlow(response, token, purpose, username);
@@ -153,7 +151,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 					return;  
 				}
 				filterChain.doFilter(request, response);
-			    return;
+			    break;
 			}
 
 		} catch (IOException ex) {
