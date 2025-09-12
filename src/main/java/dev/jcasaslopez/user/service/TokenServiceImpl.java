@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 
@@ -13,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -56,33 +53,33 @@ public class TokenServiceImpl implements TokenService {
 	// Uses the security context to retrieve the current user and their roles.
 	// Kept separate from verification token logic to avoid mixing different concerns.
 	@Override
-	public String createAuthToken(TokenType tokenType) {
+	public String createAuthToken(TokenType tokenType, String username) {
 		if(tokenType != TokenType.ACCESS && tokenType != TokenType.REFRESH) {
 			throw new IllegalArgumentException("Token type has to be ACCESS or REFRESH");
 		}
 		
 		// tokensLifetimes.getTokensLifetimes() -> Map<TokenType, Integer>.
 		int expirationInMilliseconds = tokensLifetimes.getTokensLifetimes().get(tokenType) * 60 * 1000;		
-		Authentication authenticated = SecurityContextHolder.getContext().getAuthentication();
-		String username = authenticated.getName();
 		User user = accountService.findUser(username);
 		
 		String jti = UUID.randomUUID().toString();
 		logger.debug("Authenticated user: {}, JTI: {}", username, jti);
 		
+		var roleNames = user.getRoles().stream()
+			    .map(r -> r.getRoleName().name())   
+			    .toList();
+		
 		String token = Jwts.builder().header().type("JWT").and().subject(username)
 				.id(jti)
-				.claim("roles",
-						authenticated.getAuthorities().stream().map(GrantedAuthority::getAuthority)
-								.collect(Collectors.toList()))
-				.claim("idUser", user.getIdUser())	
+				.claim("roles", roleNames)
+			    .claim("idUser", user.getIdUser())	
 				.claim("purpose", tokenType)
 				.issuedAt(new Date(System.currentTimeMillis()))
 				.expiration(new Date(System.currentTimeMillis() + expirationInMilliseconds))
 				.signWith(key, Jwts.SIG.HS256)
 				.compact();
 		
-		logger.info("Token issued successfully for user: {}", authenticated.getName());
+		logger.info("Token issued successfully for user: {}", username);
 		return token;
 	}
 	

@@ -200,11 +200,11 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	}
 	
 	@Override
-	public List<String> refreshToken(){
+	public List<String> refreshToken(String username){
 		logger.debug("Creating refresh token...");
-		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
+		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH, username);
 		logger.debug("Creating access token...");
-		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
+		String accessToken = tokenService.createAuthToken(TokenType.ACCESS, username);
 		return List.of(refreshToken, accessToken);
 	}
 }

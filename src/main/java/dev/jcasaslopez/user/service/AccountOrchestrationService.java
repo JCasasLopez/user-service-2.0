@@ -21,6 +21,6 @@ public interface AccountOrchestrationService {
 	void upgradeUser(String email);
 	void updateAccountStatus(String email, AccountStatus newAccountStatus);
 	void sendNotification(Map<String, String> messageAsMap);
-	List<String> refreshToken();
+	List<String> refreshToken(String username);
 	
 }

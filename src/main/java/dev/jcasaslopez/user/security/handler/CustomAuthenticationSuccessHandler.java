@@ -58,8 +58,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 		
 		loginAttemptService.recordAttempt(true, request.getRemoteAddr(), null, user);
 		
-		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH);
-		String accessToken = tokenService.createAuthToken(TokenType.ACCESS);
+		String refreshToken = tokenService.createAuthToken(TokenType.REFRESH, username);
+		String accessToken = tokenService.createAuthToken(TokenType.ACCESS, username);
 		logger.info("Login successful for user '{}'. Attempts reset and login attempt persisted.", username);
 		
 		UserDto userDto = userMapper.userToUserDtoMapper(user);

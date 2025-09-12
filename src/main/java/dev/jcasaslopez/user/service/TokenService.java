@@ -9,7 +9,7 @@ public interface TokenService {
 	
 	
 	// Token creation.
-	String createAuthToken(TokenType tokenType);
+	String createAuthToken(TokenType tokenType, String username);
 	String createVerificationToken(String username);
 	
 	// Claims & token parsing.

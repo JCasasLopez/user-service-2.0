@@ -71,7 +71,7 @@ public class AuthenticationFlowHandler {
 		if(purpose == TokenType.REFRESH && !isTokenBlacklisted) {
 			logger.info("Processing token refresh for user: {}", username);
 			tokenService.blacklistToken(token);
-			List<String> tokens = accountOrchestrationService.refreshToken();
+			List<String> tokens = accountOrchestrationService.refreshToken(username);
 			standardResponseHandler.handleResponse(response, 201, "New refresh and access tokens sent successfully", 
 					tokens);
 			return;
