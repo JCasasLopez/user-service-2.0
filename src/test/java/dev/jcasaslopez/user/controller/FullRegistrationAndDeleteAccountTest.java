@@ -4,12 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
 
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
@@ -20,7 +16,6 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -33,7 +28,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,6 +53,7 @@ import io.jsonwebtoken.Claims;
 // 3) Failed deletion: unauthenticated users receive a 401 error when trying to delete.
 // 4) Successful deletion: an authenticated user can delete their account, and it's removed from the database.
 
+@SuppressWarnings("removal")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -105,13 +100,14 @@ public class FullRegistrationAndDeleteAccountTest {
 		// Assert
 		// The endpoint has called the method sendEmail() that we have mocked. One of the parameters is the email body, which 
 		// we intercept, extracting the verification token and validating it. 
-		token = extractTokenFromEmail();
+		token = testHelper.extractTokenFromEmail();
 		Optional<Claims> optionalClaims = tokenServiceImpl.getValidClaims(token);
 		boolean isTokenValid = optionalClaims.isPresent();
 		assertTrue(isTokenValid);
 
 		// If the user is correct, we are verifying indirectly that the Redis entry is correct also.
-		String storedInRedisUserAsJson = redisTemplate.opsForValue().get(buildRedisKey(token));
+		String redisKey = testHelper.buildRedisKey(token, Constants.CREATE_ACCOUNT_REDIS_KEY);
+		String storedInRedisUserAsJson = redisTemplate.opsForValue().get(redisKey);
 		assertNotNull(storedInRedisUserAsJson, "Redis entry not found for this user");
 		
 		UserDto storedInRedisUser = mapper.readValue(storedInRedisUserAsJson, UserDto.class);
@@ -161,7 +157,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	    HttpEntity<Void> request = new HttpEntity<>(headers);
 
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.DELETE_ACCOUNT, HttpMethod.DELETE, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.DELETE_ACCOUNT_PATH, HttpMethod.DELETE, request, StandardResponse.class);
 
 	    // Assert
 	    assertAll(
@@ -182,7 +178,7 @@ public class FullRegistrationAndDeleteAccountTest {
 		HttpEntity<Void> request = new HttpEntity<>(headers); 
 		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.DELETE_ACCOUNT, HttpMethod.DELETE, request, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.DELETE_ACCOUNT_PATH, HttpMethod.DELETE, request, StandardResponse.class);
 
 		// Assert
 		assertAll(
@@ -191,32 +187,5 @@ public class FullRegistrationAndDeleteAccountTest {
 			    () -> assertEquals("Account deleted successfully", response.getBody().getMessage(), "Unexpected response message"),
 			    () -> assertTrue(userRepository.findByUsername(user.getUsername()).isEmpty(), "User should no longer exist")
 			);
-	}
-	
-	private String buildRedisKey(String token) {
-		String tokenJti = tokenServiceImpl.getJtiFromToken(token);
-		return Constants.CREATE_ACCOUNT_REDIS_KEY + tokenJti;
-	}
-	
-	// Captures the email body sent by the EmailService mock and extracts the token using regex pattern matching.
-	private String extractTokenFromEmail() {
-		// Capture the email body that was sent to the mock EmailService
-		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
-
-		// Verify that sendEmail was called and capture the arguments. We only care about the body content
-		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
-
-		String emailBody = bodyCaptor.getValue();
-
-		// JWT token pattern: three base64url-encoded segments separated by dots. Pattern: "token=header.payload.signature"
-		Pattern pattern = Pattern.compile("token=([\\w-]+\\.[\\w-]+\\.[\\w-]+)");
-		Matcher matcher = pattern.matcher(emailBody);
-
-		// Verify the token was actually included in the email. This is a precondition for the test to continue validly.
-		assertTrue(matcher.find(), "Token not found in email body");
-
-		// Extract and return the JWT token (group 1 captures the token without "token=" prefix).
-		String token =  matcher.group(1);
-		return token;
 	}
 }

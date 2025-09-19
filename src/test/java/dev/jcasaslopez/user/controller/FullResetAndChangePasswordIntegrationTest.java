@@ -11,8 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -55,6 +53,7 @@ import io.jsonwebtoken.Claims;
 // 3) Failed password change: if the user is not authenticated, a 401 error is returned.
 // 4) Successful password change: an authenticated user can change their password, and it is updated in the database.
 
+@SuppressWarnings("removal")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -103,7 +102,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 		/// Assert
 		// The endpoint has called the method sendEmail() that we have mocked. One of the parameters is the email body, which 
 		// we intercept, extracting the verification token and validating it. 
-		token = extractTokenFromEmail();
+		token = testHelper.extractTokenFromEmail();
 		Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
 		boolean isTokenValid = optionalClaims.isPresent();
 		assertTrue(isTokenValid);
@@ -152,7 +151,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 	    HttpEntity<Void> request = new HttpEntity<>(headers);
 
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD, HttpMethod.PUT, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD_PATH, HttpMethod.PUT, request, StandardResponse.class);
 
 		// Assert
 	    assertAll(
@@ -179,7 +178,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 	    HttpEntity<Map<String, String>> request = new HttpEntity<>(passwords, headers);
 
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD, HttpMethod.PUT, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD_PATH, HttpMethod.PUT, request, StandardResponse.class);
 	    user = userRepository.findByUsername(username).get();
 
 		// Assert
@@ -192,27 +191,5 @@ public class FullResetAndChangePasswordIntegrationTest {
 		        () -> assertEquals("Password changed successfully", response.getBody().getMessage(), "Unexpected response message"),
 		        () -> assertTrue(passwordEncoder.matches(password3, user.getPassword()), "Passwords should match")
 		    );
-	}
-	
-	// Captures the email body sent by the EmailService mock and extracts the token using regex pattern matching.
-	private String extractTokenFromEmail() {
-		// Capture the email body that was sent to the mock EmailService
-		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
-
-		// Verify that sendEmail was called and capture the arguments. We only care about the body content
-		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
-
-		String emailBody = bodyCaptor.getValue();
-
-		// JWT token pattern: three base64url-encoded segments separated by dots. Pattern: "token=header.payload.signature"
-		Pattern pattern = Pattern.compile("token=([\\w-]+\\.[\\w-]+\\.[\\w-]+)");
-		Matcher matcher = pattern.matcher(emailBody);
-
-		// Verify the token was actually included in the email. This is a precondition for the test to continue validly.
-		assertTrue(matcher.find(), "Token not found in email body");
-
-		// Extract and return the JWT token (group 1 captures the token without "token=" prefix).
-		String token =  matcher.group(1);
-		return token;
 	}
 }
