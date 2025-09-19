@@ -33,6 +33,7 @@ import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -48,11 +49,13 @@ public class UpgradeUserIntegrationTest {
 	
 	private static User user;
 	private static String userEmail;
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 	
 	@BeforeAll
 	void setup() {
-		user = testHelper.createUser("Yorch22", "Jorge22!");
-		userEmail = user.getEmail();	
+		user = testHelper.createAndPersistUser(username, password);
+		userEmail = user.getEmail();
 	}
 	
 	@AfterAll
@@ -76,15 +79,11 @@ public class UpgradeUserIntegrationTest {
 		
 		// Assert
 		assertAll(
-				() -> assertEquals(403, mvcResult.getResponse().getStatus(), 
-						"HTTP status should be 403 Forbidden"),
-				() -> assertNotNull(response.getMessage(), 
-			    		"Response body should not be null"),
-			    () -> assertEquals("Access denied: the user does not have the required role "
-			    		+ "to access this resource", response.getMessage(), 
-			    		"Unexpected response message"),
-			    () -> assertFalse(user.getRoles()
-			    		.contains(roleRepository.findByRoleName(RoleName.ROLE_ADMIN).get()), 
+				() -> assertEquals(403, mvcResult.getResponse().getStatus(), "HTTP status should be 403 Forbidden"),
+				() -> assertNotNull(response.getMessage(), "Response body should not be null"),
+			    () -> assertEquals("Access denied: the user does not have the required role to access this resource", 
+			    		response.getMessage(), "Unexpected response message"),
+			    () -> assertFalse(user.getRoles().contains(roleRepository.findByRoleName(RoleName.ROLE_ADMIN).get()), 
 			    		user.getUsername() + " should not have the role admin")
 			);
 	}
@@ -105,14 +104,10 @@ public class UpgradeUserIntegrationTest {
 		
 		// Assert
 		assertAll(
-				() -> assertEquals(200, mvcResult.getResponse().getStatus(), 
-						"HTTP status should be 200 OK"), 
-			    () -> assertNotNull(response.getMessage(), 
-			    		"Response body should not be null"),
-			    () -> assertEquals("User upgraded successfully to admin", response.getMessage(), 
-			    		"Unexpected response message"),
-			    () -> assertTrue(user.getRoles()
-			    		.contains(roleRepository.findByRoleName(RoleName.ROLE_ADMIN).get()), 
+				() -> assertEquals(200, mvcResult.getResponse().getStatus(), "HTTP status should be 200 OK"), 
+			    () -> assertNotNull(response.getMessage(), "Response body should not be null"),
+			    () -> assertEquals("User upgraded successfully to admin", response.getMessage(), "Unexpected response message"),
+			    () -> assertTrue(user.getRoles().contains(roleRepository.findByRoleName(RoleName.ROLE_ADMIN).get()), 
 			    		user.getUsername() + " should have the role admin")
 			);
 	}
@@ -132,20 +127,22 @@ public class UpgradeUserIntegrationTest {
 
 	    // Assert
 	    assertAll(
-	        () -> assertEquals(400, mvcResult.getResponse().getStatus(), 
-	        		"HTTP status should be 400 Bad Request"),
+	        () -> assertEquals(400, mvcResult.getResponse().getStatus(), "HTTP status should be 400 Bad Request"),
 	        () -> assertNotNull(response.getMessage(), "Response should contain error message"),
-	        () -> assertEquals("User is already ADMIN", response.getMessage(), 
-	        		"Unexpected error message")
+	        () -> assertEquals("User is already ADMIN", response.getMessage(), "Unexpected error message")
 	    );
 	}
 	
 	
-	// Helper methods to reduce boilerplate code.
-	
+	// ************** HELPER METHODS **************
+	// These two helper methods are shared by UpdateAccountStatusIntegrationTest and UpgradeUserIntegrationTest,
+	// the second one is identical in both cases, the first one requires only slight modifications. However,
+	// attempts to take them to a helper class to avoid code repetition render the code way more complex and difficult
+	// to follow, so the decision to keep the code repeated is a conscious trade-off.
+		
 	private RequestBuilder buildMockMvcRequest() {
 		return MockMvcRequestBuilders
-				.put("/upgradeUser")
+				.put(Constants.UPGRADE_USER_PATH)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(userEmail)
 				.accept(MediaType.APPLICATION_JSON);

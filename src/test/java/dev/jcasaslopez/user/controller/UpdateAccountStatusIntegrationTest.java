@@ -33,6 +33,7 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.utilities.Constants;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,11 +48,13 @@ public class UpdateAccountStatusIntegrationTest {
 	
 	private static User user;
 	private static String userEmail;
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 	
 	@BeforeAll
 	void setup() {
-		user = testHelper.createUser("Yorch22", "Jorge22!");
-		userEmail = user.getEmail();	
+		user = testHelper.createAndPersistUser(username, password);
+		userEmail = user.getEmail();
 	}
 	
 	@AfterAll
@@ -143,18 +146,13 @@ public class UpdateAccountStatusIntegrationTest {
 	@WithMockUser(username = "admin", roles = {"ADMIN"})
 	public void updateAccountStatus_WhenAccountIsPermanentlySuspended_ShouldThrowException() throws Exception{
 		// Arrange
-		
-		// First of all, we set the account status to 'permanetly suspended'.
-		// Instad of using the 'setter', we use the endpoint following good practices to decouple 
-		// base code and tests.
+		// Set the account status to 'PERMANENTLY SUSPENDED' using the endpoint to decouple base code and tests.
 		AccountStatus newAccountStatus = AccountStatus.PERMANENTLY_SUSPENDED;
 		RequestBuilder requestBuilder = buildMockMvcRequest(newAccountStatus);
 		callEndpointAndUReloadUser(requestBuilder);
 
 		// Act
-		
-		// Secondly, we try to update the account to 'active'. The result of this call is the 
-		// test's real subject.
+		// Update the account to 'ACTIVE'. The result of this call is the test real subject.
 		AccountStatus accountStatusSecondCall = AccountStatus.ACTIVE;
 		RequestBuilder requestBuilderSecondCall = buildMockMvcRequest(accountStatusSecondCall);
 		MvcResult mvcResultSecondCall = callEndpointAndUReloadUser(requestBuilderSecondCall);
@@ -172,18 +170,22 @@ public class UpdateAccountStatusIntegrationTest {
 	}
 
 	
-	// Métodos auxiliares para reducir código repetido.
+	// ************** HELPER METHODS **************
+	// These two helper methods are shared by UpdateAccountStatusIntegrationTest and UpgradeUserIntegrationTest,
+	// the second one is identical in both cases, the first one requires only slight modifications. However,
+	// attempts to take them to a helper class to avoid code repetition render the code way more complex and difficult
+	// to follow, so the decision to keep the code repeated is a conscious trade-off.
+		
 	private RequestBuilder buildMockMvcRequest(AccountStatus newAccountStatus) throws JsonProcessingException {
 		return MockMvcRequestBuilders
-		        .put("/updateAccountStatus")
+		        .put(Constants.UPDATE_ACCOUNT_STATUS_PATH)
 		        .param("newAccountStatus", newAccountStatus.name())
 		        .contentType(MediaType.APPLICATION_JSON)
 		        .content(userEmail)
 		        .accept(MediaType.APPLICATION_JSON);
 	}
 
-	// Performs the request and refreshes the 'user' entity from the database,
-	// simulating a full controller-to-database roundtrip.
+	// Performs the request and refreshes user from the database, simulating a full controller-to-database roundtrip.
 	private MvcResult callEndpointAndUReloadUser(RequestBuilder requestBuilder) throws Exception {
 		MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();
 
