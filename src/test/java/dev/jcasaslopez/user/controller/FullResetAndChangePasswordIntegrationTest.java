@@ -45,11 +45,9 @@ import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
-// Scenarios related to token validity, expiration, or signature
-// are tested separately in AuthenticationFilterTest.
-// Those concerning the internal logic of the password change mechanism,
-// such as validating the new password's format and ensuring it differs from the old one,
-// are covered in PasswordServiceTest.
+// Scenarios related to token validity, expiration, or signature are tested separately in AuthenticationFilterTest.
+// Those concerning the internal logic of the password change mechanism, such as validating 
+// the new password format and ensuring it differs from the old one, are covered in PasswordServiceTest.
 //
 // This class contains a full integration test that covers the lifecycle of a password:
 // 1) The reset process is correctly initiated by sending an email with a verification token.
@@ -72,11 +70,14 @@ public class FullResetAndChangePasswordIntegrationTest {
 	private static String token;
 	private static User user;
 	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	private static final String originalPassword = "Jorge22!";
+	private static final String password2 = "Garcia22!";
+	private static final String password3 = "Lopez22!";
+
 	
 	@BeforeAll
 	void setup() {
-		user = testHelper.createUser(username, password);
+		user = testHelper.createAndPersistUser(username, originalPassword);
 	}
 	
 	@AfterAll
@@ -95,34 +96,22 @@ public class FullResetAndChangePasswordIntegrationTest {
 	    
 	    String body = user.getEmail();
 	    HttpEntity<String> request = new HttpEntity<>(body, headers);
-	    
-	    String url = Constants.FORGOT_PASSWORD_PATH;
-	    
-	    token = tokenService.createVerificationToken(username);
-
+	    	    
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate
-	    		.postForEntity(url, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.FORGOT_PASSWORD_PATH, request, StandardResponse.class);
 
-		// Assert
-		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
-		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
-		
-		String emailBody = bodyCaptor.getValue();
-		Pattern pattern = Pattern.compile("token=([\\w-]+\\.[\\w-]+\\.[\\w-]+)");
-		Matcher matcher = pattern.matcher(emailBody);
-		assertTrue(matcher.find(), "Token not found in email body");
-		
-		token = matcher.group(1);
+		/// Assert
+		// The endpoint has called the method sendEmail() that we have mocked. One of the parameters is the email body, which 
+		// we intercept, extracting the verification token and validating it. 
+		token = extractTokenFromEmail();
 		Optional<Claims> optionalClaims = tokenService.getValidClaims(token);
-		assertTrue(optionalClaims.isPresent());
+		boolean isTokenValid = optionalClaims.isPresent();
+		assertTrue(isTokenValid);
 		
 		assertAll(
-				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), 
-						"Expected HTTP status 200 OK"),
+				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Expected HTTP status 200 OK"),
 				() -> assertNotNull(response.getBody(), "Response body should not be null"),
-			    () -> assertEquals("Token created successfully and sent to the user to reset password",
-			    		response.getBody().getMessage(), "Unexpected response message")
+			    () -> assertEquals("Token created successfully and sent to the user to reset password", response.getBody().getMessage(), "Unexpected response message")
 				);
 	}
 	
@@ -131,32 +120,24 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Resets password correctly")
 	public void resetPassword_whenValid_ShouldReturn200AndResetPassword() {
 		// Arrange
-		String url = Constants.RESET_PASSWORD_PATH;
 		HttpHeaders headers = new HttpHeaders();
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 		headers.setBearerAuth(token);
 	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-	    
-	    String newPassword = "Garcia22!";
-	    HttpEntity<String> request = new HttpEntity<>(newPassword, headers);
+	    HttpEntity<String> request = new HttpEntity<>(password2, headers);
 	    
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.
-	    		exchange(url, HttpMethod.PUT, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.RESET_PASSWORD_PATH, HttpMethod.PUT, request, StandardResponse.class);
 	    
-	    // We refresh the 'user' variable with the persisted user from the database,
-	    // which now has the updated password.
+	    // Refresh the 'user' variable with the persisted user from the database, which now has the updated password.
 	    user = userRepository.findByUsername(username).get();
 	    
 	    // Assert
 		assertAll(
-				() -> assertEquals(HttpStatus.OK, response.getStatusCode(),
-						"Expected HTTP status to be 200 OK"),
+				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Expected HTTP status to be 200 OK"),
 				() -> assertNotNull(response.getBody(), "Response body should not be null"),
-				() -> assertEquals("Password reset successfully", response.getBody().getMessage(),
-						"Unexpected response message"),
-				() -> assertTrue(passwordEncoder.matches("Garcia22!", user.getPassword()), 
-						"Passwords should match")
+				() -> assertEquals("Password reset successfully", response.getBody().getMessage(), "Unexpected response message"),
+				() -> assertTrue(passwordEncoder.matches(password2, user.getPassword()), "Passwords should match")
 				);
 	}
 	
@@ -165,23 +146,19 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Fails to change password when user is not authenticated")
 	public void changePassword_whenNoUserAuthenticated_ShouldReturn401() {
 		// Arrange
-		String url = "/changePassword";
 		HttpHeaders headers = new HttpHeaders();
 		
 	    // No authentication token in the header = no authenticated user.
 	    HttpEntity<Void> request = new HttpEntity<>(headers);
 
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(
-	    		url, HttpMethod.PUT, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD, HttpMethod.PUT, request, StandardResponse.class);
 
 		// Assert
 	    assertAll(
-		        () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), 
-		                "Expected 401 Unauthorized when no token is provided"),
+		        () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), "Expected 401 Unauthorized when no token is provided"),
 		        () -> assertNotNull(response.getBody(), "Response body should not be null"),
-		        () -> assertEquals("Access denied: invalid or missing token", 
-		                response.getBody().getMessage(), "Unexpected response message")
+		        () -> assertEquals("Access denied: invalid or missing token", response.getBody().getMessage(), "Unexpected response message")
 		    );
 	}
 	
@@ -193,17 +170,16 @@ public class FullResetAndChangePasswordIntegrationTest {
 		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
 		
 		Map<String, String> passwords = new HashMap<>();
-		passwords.put("oldPassword", "Garcia22!");
-		passwords.put("newPassword", "Jorge22!");
-		String url = "/changePassword";
+		passwords.put("oldPassword", password2);
+		passwords.put("newPassword", password3);
+		
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
 	    headers.setContentType(MediaType.APPLICATION_JSON); 
 	    HttpEntity<Map<String, String>> request = new HttpEntity<>(passwords, headers);
 
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(
-	    		url, HttpMethod.PUT, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD, HttpMethod.PUT, request, StandardResponse.class);
 	    user = userRepository.findByUsername(username).get();
 
 		// Assert
@@ -211,13 +187,32 @@ public class FullResetAndChangePasswordIntegrationTest {
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		
 	    assertAll(
-		        () -> assertEquals(HttpStatus.OK, response.getStatusCode(), 
-			    		"Expected status 200 OK"),
+		        () -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Expected status 200 OK"),
 		        () -> assertNotNull(response.getBody(), "Response body should not be null"),
-		        () -> assertEquals("Password changed successfully", response.getBody().getMessage(), 
-			    		"Unexpected response message"),
-		        () -> assertTrue(passwordEncoder.matches("Jorge22!", user.getPassword()), 
-						"Passwords should match")
+		        () -> assertEquals("Password changed successfully", response.getBody().getMessage(), "Unexpected response message"),
+		        () -> assertTrue(passwordEncoder.matches(password3, user.getPassword()), "Passwords should match")
 		    );
+	}
+	
+	// Captures the email body sent by the EmailService mock and extracts the token using regex pattern matching.
+	private String extractTokenFromEmail() {
+		// Capture the email body that was sent to the mock EmailService
+		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+
+		// Verify that sendEmail was called and capture the arguments. We only care about the body content
+		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
+
+		String emailBody = bodyCaptor.getValue();
+
+		// JWT token pattern: three base64url-encoded segments separated by dots. Pattern: "token=header.payload.signature"
+		Pattern pattern = Pattern.compile("token=([\\w-]+\\.[\\w-]+\\.[\\w-]+)");
+		Matcher matcher = pattern.matcher(emailBody);
+
+		// Verify the token was actually included in the email. This is a precondition for the test to continue validly.
+		assertTrue(matcher.find(), "Token not found in email body");
+
+		// Extract and return the JWT token (group 1 captures the token without "token=" prefix).
+		String token =  matcher.group(1);
+		return token;
 	}
 }
