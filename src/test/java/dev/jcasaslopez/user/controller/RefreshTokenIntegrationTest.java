@@ -34,10 +34,12 @@ public class RefreshTokenIntegrationTest {
 	@Autowired private TestHelper testHelper;
 	
 	private static User user;
+	private static final String username = "Yorch22";
+	private static final String password = "Jorge22!";
 
 	@BeforeEach
 	void setUp() {
-	    user = testHelper.createUser("Yorch22", "Jorge22!");
+	    user = testHelper.createAndPersistUser(username, password);
 	}
 
 	@AfterEach
@@ -50,11 +52,12 @@ public class RefreshTokenIntegrationTest {
 	public void refreshToken_WhenAuthenticated_ShouldReturnAccessAndRefreshToken() {
 		// Arrange
 		String refreshToken = testHelper.loginUser(user, TokenType.REFRESH);
-		HttpEntity<Void> request = buildRequestWithToken(refreshToken);
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setBearerAuth(refreshToken);
+		HttpEntity<Void> request = new HttpEntity<>(headers);
 		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate
-		        .postForEntity(Constants.REFRESH_TOKEN_PATH, request, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.REFRESH_TOKEN_PATH, request, StandardResponse.class);
 		
 		// Assert
 		@SuppressWarnings("unchecked")
@@ -70,12 +73,6 @@ public class RefreshTokenIntegrationTest {
 		    );
 	}
 	
-	private HttpEntity<Void> buildRequestWithToken(String token) {
-	    HttpHeaders headers = new HttpHeaders();
-	    headers.setBearerAuth(token);
-	    return new HttpEntity<>(headers);
-	}
-
 	private void assertTokenPurpose(String token, TokenType expected) {
 	    Claims claims = tokenService.getValidClaims(token).orElseThrow();
 	    String purposeStr = claims.get("purpose", String.class);
