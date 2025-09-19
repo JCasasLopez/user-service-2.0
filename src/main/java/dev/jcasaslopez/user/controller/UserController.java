@@ -454,37 +454,4 @@ public class UserController {
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
-	// Endpoint for token refresh functionality.
-	// The system should receive a refresh token, which is intercepted in AuthenticationFilter:
-	// if the token is valid, it is revoked in the filter. 
-	// accountOrchestrationService.refreshToken() simply returns another pair of refresh/access tokens.
-	// IMPORTANT: In the list, the first token is the refresh token and the second one is the access token.
-	@Operation(
-		    summary = "Generates new refresh and access tokens",
-		    description = "Handled at AuthenticationFilter. This controller method should not be executed. "
-	                + "The filter validates the refresh token, blacklists it and returns 201/401 with StandardResponse."
-		)
-		@ApiResponses({
-		    @ApiResponse(
-		        responseCode = "201",
-		        description = "New refresh and access tokens sent successfully",
-		        content = @Content(schema = @Schema(implementation = StandardResponse.class))
-		    ),
-		    @ApiResponse(
-		        responseCode = "401",
-		        description = "Unauthorized – refresh token is missing, expired, blacklisted, or invalid",
-		        content = @Content(schema = @Schema(implementation = StandardResponse.class))
-		    ),
-		    @ApiResponse(
-		    		responseCode = "501", 
-		    		description = "Fallback — should not be executed",
-		    		content = @Content(schema = @Schema(implementation = StandardResponse.class)))
-		})
-	@SecurityRequirement(name = "bearerAuth")
-	@PostMapping(value  = Constants.REFRESH_TOKEN_PATH)
-	public ResponseEntity<StandardResponse> refreshToken() {
-		StandardResponse body = new StandardResponse(LocalDateTime.now(), "This operation is handled at the filter. Controller should not be executed.", 
-				null, HttpStatus.NOT_IMPLEMENTED);
-		    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(body);
-	}
 }
