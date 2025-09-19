@@ -148,11 +148,11 @@ public class SecurityConfig {
             													).permitAll() 
             							
             							.requestMatchers(
-            									Constants.DELETE_ACCOUNT,
-            									Constants.UPGRADE_USER,
-            									Constants.CHANGE_PASSWORD,
-            									Constants.UPDATE_ACCOUNT_STATUS,
-            									Constants.SEND_NOTIFICATION
+            									Constants.DELETE_ACCOUNT_PATH,
+            									Constants.UPGRADE_USER_PATH,
+            									Constants.CHANGE_PASSWORD_PATH,
+            									Constants.UPDATE_ACCOUNT_STATUS_PATH,
+            									Constants.SEND_NOTIFICATION_PATH
             													).authenticated()
             							
             							.anyRequest().permitAll()

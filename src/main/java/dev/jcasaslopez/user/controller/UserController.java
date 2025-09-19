@@ -129,7 +129,7 @@ public class UserController {
 		    )
 		})
 	@SecurityRequirement(name = "bearerAuth")
-	@DeleteMapping(value = Constants.DELETE_ACCOUNT)
+	@DeleteMapping(value = Constants.DELETE_ACCOUNT_PATH)
 	public ResponseEntity<StandardResponse> deleteAccount() {
 		accountOrchestrationService.deleteAccount();
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -252,7 +252,7 @@ public class UserController {
 		    )
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PutMapping(value = Constants.CHANGE_PASSWORD)
+	@PutMapping(value = Constants.CHANGE_PASSWORD_PATH)
 	public ResponseEntity<StandardResponse> changePassword(@RequestBody @NotNull Map<String, String> passwordsAsMap) {
 		String oldPassword = passwordsAsMap.get("oldPassword");
 	    String newPassword = passwordsAsMap.get("newPassword");
@@ -311,7 +311,7 @@ public class UserController {
 		    )
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PutMapping(value = Constants.UPGRADE_USER)
+	@PutMapping(value = Constants.UPGRADE_USER_PATH)
 	public ResponseEntity<StandardResponse> upgradeUser(@RequestBody @NotBlank @Email String email) {
 		accountOrchestrationService.upgradeUser(email);
 		StandardResponse response = new StandardResponse(LocalDateTime.now(),
@@ -385,7 +385,7 @@ public class UserController {
 		    required = true
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PutMapping(value = Constants.UPDATE_ACCOUNT_STATUS)
+	@PutMapping(value = Constants.UPDATE_ACCOUNT_STATUS_PATH)
 	public ResponseEntity<StandardResponse> updateAccountStatus(@RequestBody @NotBlank String email, 
 			@RequestParam @NotNull AccountStatus newAccountStatus) {
 		accountOrchestrationService.updateAccountStatus(email, newAccountStatus);
@@ -443,7 +443,7 @@ public class UserController {
 		    ))
 		)
 	@SecurityRequirement(name = "bearerAuth")
-	@PostMapping(value = Constants.SEND_NOTIFICATION)
+	@PostMapping(value = Constants.SEND_NOTIFICATION_PATH)
 	public ResponseEntity<StandardResponse> sendNotification(@RequestBody @NotNull Map<String, String> messageAsMap) {
 		
 		// We validate the message has a a valid format.
