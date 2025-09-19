@@ -90,7 +90,6 @@ public class FullRegistrationAndDeleteAccountTest {
 	
 	@Order(1)
 	@Test
-	@Transactional
 	@DisplayName("Registration process initiates correctly")
 	public void initiateRegistration_whenValidDetails_ShouldUploadRedisEntryAndReturn200() throws JSONException, JsonProcessingException {
 		
@@ -201,23 +200,23 @@ public class FullRegistrationAndDeleteAccountTest {
 	
 	// Captures the email body sent by the EmailService mock and extracts the token using regex pattern matching.
 	private String extractTokenFromEmail() {
-	    // Capture the email body that was sent to the mock EmailService
-	    ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
-	    
-	    // Verify that sendEmail was called and capture the arguments. We only care about the body content
-	    verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
-	    
-	    String emailBody = bodyCaptor.getValue();
-	    
-	    // JWT token pattern: three base64url-encoded segments separated by dots. Pattern: "token=header.payload.signature"
+		// Capture the email body that was sent to the mock EmailService
+		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+
+		// Verify that sendEmail was called and capture the arguments. We only care about the body content
+		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
+
+		String emailBody = bodyCaptor.getValue();
+
+		// JWT token pattern: three base64url-encoded segments separated by dots. Pattern: "token=header.payload.signature"
 		Pattern pattern = Pattern.compile("token=([\\w-]+\\.[\\w-]+\\.[\\w-]+)");
 		Matcher matcher = pattern.matcher(emailBody);
-		
+
 		// Verify the token was actually included in the email. This is a precondition for the test to continue validly.
-	    assertTrue(matcher.find(), "Token not found in email body");
-	    
-	    // Extract and return the JWT token (group 1 captures the token without "token=" prefix).
-	    String token =  matcher.group(1);
-	    return token;
+		assertTrue(matcher.find(), "Token not found in email body");
+
+		// Extract and return the JWT token (group 1 captures the token without "token=" prefix).
+		String token =  matcher.group(1);
+		return token;
 	}
 }
