@@ -38,8 +38,8 @@ public class TestHelper {
 	@Autowired private RoleRepository roleRepository;
 	@Autowired private LoginAttemptRepository loginAttemptRepository;
 	@Autowired private RedisTemplate<String, String> redisTemplate;
-	@Autowired private PasswordEncoder passwordEncoder;
 	@Autowired private ObjectMapper mapper;
+	@Autowired private PasswordEncoder passwordEncoder;
 	
     @Transactional
 	public String returnUserAsJson(User user) throws JsonProcessingException {		
@@ -59,6 +59,22 @@ public class TestHelper {
 
     	user.setRoles(roles);
     	user.setAccountStatus(AccountStatus.ACTIVE);
+    	return user;
+    }
+    
+    public User createAndPersistUser(String username, String password) {
+    	String encodedPassword = passwordEncoder.encode(password);
+    	User user = new User (username, encodedPassword, "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
+
+    	Role userRole = roleRepository.findByRoleName(RoleName.ROLE_USER).get();
+    	Set<Role> roles = new HashSet<>();
+    	roles.add(userRole);
+
+    	user.setRoles(roles);
+    	user.setAccountStatus(AccountStatus.ACTIVE);
+    	
+    	userRepository.save(user);
+    	userRepository.flush();
     	return user;
     }
 	
