@@ -137,22 +137,12 @@ public class SecurityConfig {
 				            		        "/v3/api-docs/**"
 				            		    ).permitAll()
 				            			
-            							.requestMatchers(
-            									Constants.INITIATE_REGISTRATION_PATH,
-            									Constants.REGISTRATION_PATH,
-            									Constants.FORGOT_PASSWORD_PATH,
-            									Constants.RESET_PASSWORD_PATH,
-            									Constants.LOGOUT_PATH,
-            									Constants.LOGIN_PATH,
-            									Constants.REFRESH_TOKEN_PATH
+				            			.requestMatchers(
+            									Constants.getNonAuthenticatedEndpoints()
             													).permitAll() 
             							
             							.requestMatchers(
-            									Constants.DELETE_ACCOUNT_PATH,
-            									Constants.UPGRADE_USER_PATH,
-            									Constants.CHANGE_PASSWORD_PATH,
-            									Constants.UPDATE_ACCOUNT_STATUS_PATH,
-            									Constants.SEND_NOTIFICATION_PATH
+            									Constants.getProtectedEndpoints()
             													).authenticated()
             							
             							.anyRequest().permitAll()
