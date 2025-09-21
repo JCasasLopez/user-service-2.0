@@ -2,7 +2,6 @@ package dev.jcasaslopez.user.security.filter;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
 //
 // Flow:
 // - Public endpoints → always pass through.
-// - Action-token / Protected endpoints → validate step by step:
+// - Non-public endpoints → validate step by step:
 //   1) Header format (AuthenticationService).
 //   2) Token validity (parsed in AuthenticationService).
 //   3) Token type matches the endpoint (AuthenticationFlowHandler).
@@ -35,10 +34,13 @@ import jakarta.servlet.http.HttpServletResponse;
 // Behavior:
 // - Action-token endpoints: 
 //   • On success → continue in the Security Filter Chain.  
-//   • On failure → return HTTP response here.
+//   • On failure → return HTTP 401 in AuthenticationFlowHandler.
 // - Protected endpoints: 
-//   • On success → authenticate user (populate SecurityContext) and continue.  
-//   • On failure → continue without authentication (SecurityContext remains empty), letting Spring Security's AuthenticationEntryPoint reject the request.
+//   • On success → authenticate user (populate SecurityContext) and continue in the Security Filter Chain.   
+//   • On failure → allow the request to continue through the filter chain without populating the SecurityContext. 
+//     Spring Security (through AuthenticationEntryPoint) will automatically return a 401 Unauthorized response.
+//     This approach prevents duplicate 401 responses that would occur if both this filter and Spring Security
+//     failure handler attempted to write error responses.
 
 @Component
 public class AuthenticationFilter extends OncePerRequestFilter {
@@ -48,20 +50,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 	private final StandardResponseHandler standardResponseHandler;
 	private final AuthenticationService authService;
 	private final AuthenticationFlowHandler authFlowHandler;
-	
-	private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
-			Constants.LOGIN_PATH,
-			Constants.INITIATE_REGISTRATION_PATH,
-			Constants.FORGOT_PASSWORD_PATH
-		  );
-	
-	// Endpoints that require token, but the user does not need to be authenticated (as in SecurityContext populated).
-	private static final Set<String> ACTION_TOKEN_ENDPOINTS = Set.of(
-		      Constants.LOGOUT_PATH,        // TokenType.REFRESH
-		      Constants.REFRESH_TOKEN_PATH, // TokenType.REFRESH
-		      Constants.REGISTRATION_PATH,  // TokenType.VERIFICATION
-		      Constants.RESET_PASSWORD_PATH // TokenType.VERIFICATION
-		  );
 	
 	public AuthenticationFilter(StandardResponseHandler standardResponseHandler, AuthenticationService authService,
 			AuthenticationFlowHandler authFlowHandler) {
@@ -75,42 +63,35 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 				
 		// Public → passthrough
-		boolean isPublicEndpoint = PUBLIC_ENDPOINTS.contains(request.getServletPath());
+		boolean isPublicEndpoint = Constants.PUBLIC_ENDPOINTS.contains(request.getServletPath());
 		
 		if(isPublicEndpoint) {
 			logger.debug("The endpoint is public. Continues with Security Filter Chain...");
 			filterChain.doFilter(request, response);
-			return;	
+		    return;
 		}
 		
-		// Non-public + missing/invalid header
+		// Invalid header → 401
 		boolean isAuthHeaderInvalid = !authService.verifyHeaderIsValid(request);
-		boolean isActionTokenEndpoint = ACTION_TOKEN_ENDPOINTS.contains(request.getServletPath());
 		
-		if(isAuthHeaderInvalid) {
-			if(isActionTokenEndpoint) {
-				standardResponseHandler.handleResponse(response, 401, "Access denied: invalid or missing token", null);
-				return;
-			}
-			logger.debug("Invalid or empty header. Protected endpoint. Continues with Security Filter Chain...");
-			filterChain.doFilter(request, response);
-			return;		
+		if (isAuthHeaderInvalid) {
+			logger.debug("Invalid or empty header");
+		    standardResponseHandler.handleResponse(response, 401, "Access denied: invalid or missing token", null);
+		    return;
 		}
 		
+		// Invalid token → 401.
+		// We cannot group header validation and token parsing together because calling parseAuthenticationRequest() 
+		// without header validation would throw an exception.
 		Optional<AuthenticationRequest> optionalAuthRequest = authService.parseAuthenticationRequest(request, response);
-		
-		// Non-public + parse token
 		boolean isTokenInvalid = optionalAuthRequest.isEmpty();
+
 		if (isTokenInvalid) {
-			if(isActionTokenEndpoint) {
-				standardResponseHandler.handleResponse(response, 401, "Access denied: invalid or missing token", null);
-				return;
-			}
-			logger.warn("Token is expired, malformed or the signature is invalid. Continues with Security Filter Chain...");
-			filterChain.doFilter(request, response);
-			return;
+		    logger.warn("Token is expired, malformed or the signature is invalid. Continues with Security Filter Chain...");
+		    standardResponseHandler.handleResponse(response, 401, "Access denied: invalid or missing token", null);
+		    return;
 		}
-		
+				
 		// Route by requestPath (valid token)
 		AuthenticationRequest authRequest = optionalAuthRequest.get();
 		String method = authRequest.getMethod();
@@ -118,7 +99,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 		String path = authRequest.getPath();
 		String username = authRequest.getUsername();
 		TokenType purpose = authRequest.getPurpose();
-
+		
 		try {
 			switch(path) {
 			
