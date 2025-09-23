@@ -53,7 +53,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			HttpServletResponse response) throws IOException {
 		String authHeader = request.getHeader("Authorization");
 		String method = request.getMethod();
-		String path = request.getServletPath();
+		// Use the request URI to get a consistent path, avoiding MockMvc-specific issues.
+	    String path = request.getRequestURI().substring(request.getContextPath().length());
 		String token = authHeader.substring(7);
 		logger.debug("Token extracted");
 
