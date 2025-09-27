@@ -36,46 +36,46 @@ public class ValidationsInitiateRegistrationTest {
 	public static Stream<Arguments> invalidUserData(){
 		return Stream.of(
 				// Username blank
-				Arguments.of(new UserDto("", "Jorge22!", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("", "Jorge22!", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Username too short
-				Arguments.of(new UserDto("Yorch", "Jorge22!", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch", "Jorge22!", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Username too long
 				Arguments.of(new UserDto("YorchAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaa", "Jorge22!", 
-						"Jorge García", "jorgecasas78@hotmail.com", LocalDate.of(1978, 11, 26))),
+						"Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26))),
 				// Password blank
-				Arguments.of(new UserDto("Yorch22", "", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Password does not have 8 characters
-				Arguments.of(new UserDto("Yorch22", "Jorge2!", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "Jorge2!", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Password does not have a capital letter
-				Arguments.of(new UserDto("Yorch22", "jorge22!", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "jorge22!", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Password does not have a lowercase letter
-				Arguments.of(new UserDto("Yorch22", "JORGE22!", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "JORGE22!", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Password does not have a number
-				Arguments.of(new UserDto("Yorch22", "JorgeGarcia!", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "JorgeGarcia!", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Password does not have a symbol
-				Arguments.of(new UserDto("Yorch22", "JorgeGarcia22", "Jorge García", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "JorgeGarcia22", "Jorge García", "jorgecasas22@hotmail.com",
 						LocalDate.of(1978, 11, 26))),
 				// Full blank
-				Arguments.of(new UserDto("Yorch22", "Jorge22!", "", "jorgecasas78@hotmail.com",
+				Arguments.of(new UserDto("Yorch22", "Jorge22!", "", "jorgecasas22@jorgecasas22.com",
 						LocalDate.of(1978, 11, 26))),
 				// Full name too long
 				Arguments.of(new UserDto("Yorch22", "Jorge22!", "Jorge García AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 
-						"jorgecasas78@hotmail.com", LocalDate.of(1978, 11, 26))),
+						"jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26))),
 				// Email blank
 				Arguments.of(new UserDto("Yorch22", "Jorge22!", "Jorge García", "", 
 						LocalDate.of(1978, 11, 26))),
 				// Email has wrong format
-				Arguments.of(new UserDto("Yorch22", "Jorge22!", "Jorge García", "jorgecasas78hotmailcom", 
+				Arguments.of(new UserDto("Yorch22", "Jorge22!", "Jorge García", "jorgecasas22hotmailcom", 
 						LocalDate.of(1978, 11, 26))),
 				// DOB null 
-				Arguments.of(new UserDto("Yorch22", "Jorge22!", "Jorge García", "jorgecasas78hotmailcom", 
+				Arguments.of(new UserDto("Yorch22", "Jorge22!", "Jorge García", "jorgecasas22@hotmailcom", 
 						null))
 				);	
 	}
@@ -86,9 +86,7 @@ public class ValidationsInitiateRegistrationTest {
 	public void initiateRegistration_whenDetailsNotValid_ShouldResponse400BadRequest
 											(UserDto invalidUser) throws JsonProcessingException {
 		// Arrange
-	
 		// Jackson cannot serialize or deserialize java.time.LocalDate by default.
-		// You need to register the JavaTimeModule with the ObjectMapper.
 		mapper.registerModule(new JavaTimeModule());
 		String userJson = mapper.writeValueAsString(invalidUser);
 
