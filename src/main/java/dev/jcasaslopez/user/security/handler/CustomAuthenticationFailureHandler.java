@@ -113,7 +113,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 	    	} else if (failedLoginAttempts >= maxNumberFailedAttempts) {
 	    		accountLockingService.blockAccount(user);
 	    		logger.warn("Account blocked for user {} due to too many login failed attempts", username);
-	    		standardResponseHandler.handleResponse(response, 401, "Your account has been locked due to too many failed "
+	    		standardResponseHandler.handleResponse(response, 403, "Your account has been locked due to too many failed "
 	    				+ "login attempts. It will be reactivated automatically in " + accountLockDurationInHours + " hours", null);	
 	    	}
 

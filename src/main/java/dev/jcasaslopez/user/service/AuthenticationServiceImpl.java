@@ -76,8 +76,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Override
 	public void authenticateUser(String token, String username) {
-		User userJpa = userRepository.findByUsername(username)
-				.orElseThrow(() -> new UsernameNotFoundException(username));
+		User userJpa = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException(username));
 		CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
 		Authentication authentication = new UsernamePasswordAuthenticationToken(user, token, user.getAuthorities());
 		SecurityContextHolder.getContext().setAuthentication(authentication);
