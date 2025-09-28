@@ -1,4 +1,4 @@
-package dev.jcasaslopez.user.filter;
+package dev.jcasaslopez.user.service;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,14 +24,13 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
-import dev.jcasaslopez.user.security.filter.AuthenticationFilter;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthenticateUserUnitTest {
 	
 	@Mock UserRepository userRepository;
 	@Mock UserMapper userMapper;
-	@InjectMocks AuthenticationFilter authenticationFilter;
+	@InjectMocks AuthenticationServiceImpl authenticationService;
 	
 	private static final String USERNAME = "Yorch";
 	private static final String TOKEN = "valid_token";
@@ -52,7 +51,7 @@ public class AuthenticateUserUnitTest {
         when(userMapper.userToCustomUserDetailsMapper(user)).thenReturn(userDetails);
 		
 		// Act
-        authenticationFilter.authenticateUser(TOKEN, USERNAME);
+        authenticationService.authenticateUser(TOKEN, USERNAME);
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
 		// Assert
@@ -71,8 +70,7 @@ public class AuthenticateUserUnitTest {
 		when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
 
 		// Act & Assert
-		assertThrows(UsernameNotFoundException.class, 
-				() -> authenticationFilter.authenticateUser(TOKEN, USERNAME));
+		assertThrows(UsernameNotFoundException.class, () -> authenticationService.authenticateUser(TOKEN, USERNAME));
 		       
 	}
 }
