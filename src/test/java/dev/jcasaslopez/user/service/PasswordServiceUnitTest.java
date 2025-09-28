@@ -2,7 +2,6 @@ package dev.jcasaslopez.user.service;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,9 +12,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import dev.jcasaslopez.user.entity.User;
@@ -58,8 +54,7 @@ public class PasswordServiceUnitTest {
 				"JORGE22!", 		// no lower case letter
 				"JorgeGarcia!!", 	// no number
 				"JorgeGecias22" 	// no symbol
-		})
-	
+		})	
 	public void passwordIsValid_WhenPasswordIsNotValid_ShouldThrowException(String password) {
 		// Arrange
 		
@@ -86,18 +81,11 @@ public class PasswordServiceUnitTest {
 	@Test
     void changePassword_WhenProvidedPasswordDoesNotMatchOldOne_ThrowsException() {
 		// Arrange
-        Authentication authentication = mock(Authentication.class);
-		when(authentication.getName()).thenReturn("testuser");
-		
-		SecurityContext context = mock(SecurityContext.class);
-	    when(context.getAuthentication()).thenReturn(authentication);
-	    SecurityContextHolder.setContext(context);
-		
-	    String providedPassword = "newPass1!";
+		String providedPassword = "newPass1!";
 	    String passwordInDatabase = "Jorge22!";	   
 	    String newPassword = "Qwerty22!";
 	    
-        when(userAccountService.findUser("testuser")).thenReturn(mockUser(passwordInDatabase));
+        when(userAccountService.getAuthenticatedUser()).thenReturn(mockUser(passwordInDatabase));
         when(passwordEncoder.matches(providedPassword, passwordInDatabase)).thenReturn(false);
         
         // Act & Assert
@@ -109,21 +97,12 @@ public class PasswordServiceUnitTest {
 	@Test
     void changePassword_WhenNewPasswordMatchesOldOne_ThrowsException() {
 		// Arrange
-        Authentication authentication = mock(Authentication.class);
-		when(authentication.getName()).thenReturn("testuser");
-		
-		SecurityContext context = mock(SecurityContext.class);
-	    when(context.getAuthentication()).thenReturn(authentication);
-	    SecurityContextHolder.setContext(context);
-		
-	    String providedPassword = "Jorge22!";
+		String providedPassword = "Jorge22!";
 	    String passwordInDatabase = "Jorge22!";	   
 	    String newPassword = "Jorge22!";
-	      
-        when(userAccountService.findUser("testuser")).thenReturn(mockUser(passwordInDatabase));
-       
-        when(passwordEncoder.matches(providedPassword, passwordInDatabase)).thenReturn(true);        
-        when(passwordEncoder.matches(newPassword, passwordInDatabase)).thenReturn(true);
+	    
+	    when(userAccountService.getAuthenticatedUser()).thenReturn(mockUser(passwordInDatabase));
+        when(passwordEncoder.matches(providedPassword, passwordInDatabase)).thenReturn(false);
         
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> {
