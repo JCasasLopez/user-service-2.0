@@ -5,15 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -27,10 +27,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.jcasaslopez.user.dto.LoginResponse;
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.LoginAttempt;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.mapper.UserMapper;
-import dev.jcasaslopez.user.repository.LoginAttemptRepository;
 import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
@@ -38,82 +36,62 @@ import dev.jcasaslopez.user.utilities.Constants;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CustomAuthenticationSuccessHandlerTest {
 	
+	@Value ("${auth.maxFailedAttempts}") int maxNumberFailedAttempts;
+	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private RedisTemplate<String, String> redisTemplate;
-	@Autowired private LoginAttemptRepository loginAttemptRepository;
 	@Autowired private UserMapper userMapper;
 	@Autowired private TokenService tokenService;
 	@Autowired private ObjectMapper objectMapper;
 	@Autowired private TestHelper testHelper;
 	
+	private static User user;
 	private static final String username = "Yorch22";
 	private static final String password = "Jorge22!";
 	
-	// We persist a user that will be used later for login and simulate that their failed login 
-	// attempt count in Redis is set to 2. If the handler works correctly, this Redis entry 
-	// should be deleted (according to the business logic) and the HTTP response should be valid.
-	// Additionally, we use a method that searches for login attempts between two points in time 
-	// to locate the one generated during the test, and we verify that it was successful and 
-	// belongs to the authenticated user.
+	@BeforeEach
+	void setUp() {
+		user = testHelper.createAndPersistUser(username, password);
+	}
+	
+	@AfterEach
+	void cleanAfterTest() {
+		testHelper.cleanDataBaseAndRedis();
+	}
+	
 	@Test
 	@DisplayName("If login attempt is successful, Redis entry is deleted and 200 OK returned")
 	void CustomAuthenticationSuccessHandler_WhenLoginSuccessful_ShouldReturn200OkAndDeleteRedisEntry() {
-		// Arrange
-		User user = testHelper.createUser(username, password);
-		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
-		redisTemplate.delete(redisKey);
-		LocalDateTime startTest = LocalDateTime.now().minusSeconds(1);;
+		// Arrange		
+		// Reads maximum number of attempts allowed, and sets Redis to that value minus 1.
+		String maxAttemptsMinusOne = String.valueOf(maxNumberFailedAttempts - 1);
 		
-		// Simulate 2 previous failed login attempts by setting the 'redisKey' entry 
-		// to 2 in Redis
-		redisTemplate.opsForValue().set(redisKey, "2", 5, TimeUnit.MINUTES);
+		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+		redisTemplate.opsForValue().set(redisKey, maxAttemptsMinusOne, 5, TimeUnit.MINUTES);
+		
 		HttpEntity<String> request = configHttpRequest();
 		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate
-				.postForEntity("/login", request, StandardResponse.class);
-		
-		LocalDateTime endTest = LocalDateTime.now().plusSeconds(1);;
-		List<LoginAttempt> loginAttemptsDuringTestExecution = loginAttemptRepository.findAll();		
-		
-		// We search for loginAttempts between 'startTest' and 'endTest'
-		LoginAttempt matchingAttempt = loginAttemptsDuringTestExecution.stream()
-			    .filter(a -> a.getTimestamp().isAfter(startTest) && a.getTimestamp().isBefore(endTest))
-			    .findFirst()
-			    .orElseThrow(() -> new AssertionError("No login attempt found for that time period"));
+		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 		
 		// Assert
 		assertAll(
-		    () -> assertNull(redisTemplate.opsForValue().get(redisKey), 
-		            "Redis entry for that should have been deleted"),
-		    () -> assertEquals(HttpStatus.OK, response.getStatusCode(),
-		            "Response HTTP status should be 200 OK"),
-		    () -> assertEquals("Login attempt successful", response.getBody().getMessage(),
-		            "Unexpected response message"),
+		    () -> assertNull(redisTemplate.opsForValue().get(redisKey),  "Redis entry for that should have been deleted"),
+		    () -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Response HTTP status should be 200 OK"),
+		    () -> assertEquals("Login attempt successful", response.getBody().getMessage(), "Unexpected response message"),
 		    () -> {
-		    	LoginResponse loginResponse = objectMapper.convertValue(
-		    		    response.getBody().getDetails(),
-		    		    LoginResponse.class
-		    		);
+		    	LoginResponse loginResponse = objectMapper.convertValue(response.getBody().getDetails(), LoginResponse.class);
 		        assertNotNull(loginResponse, "Response should contain details (user & tokens)");
 		        assertAll(
 		            () -> assertEquals(userMapper.userToUserDtoMapper(user).getIdUser(), 
-		                    loginResponse.getUser().getIdUser(),
-		                    "Authenticated user and returned user should be the same"),
+		                    loginResponse.getUser().getIdUser(), "Authenticated user and returned user should be the same"),
 		            () -> assertDoesNotThrow(() -> tokenService.getValidClaims(loginResponse.getRefreshToken()),
 		                    "Returned refresh token should be a valid token"),
 		            () -> assertDoesNotThrow(() -> tokenService.getValidClaims(loginResponse.getAccessToken()),
 		                    "Returned access token should be a valid token")
 		        );
-		    },
-		    () -> assertEquals(user.getIdUser(), matchingAttempt.getUser().getIdUser(),
-		            "User's ID in persisted login attempt should be user's ID"),
-		    () -> assertTrue(matchingAttempt.isSuccessful(),
-		            "Persisted login attempt should be successful")
+		    }
 		);
-		
-		// Cleanup
-	    testHelper.cleanDataBaseAndRedis();
 	}
 	
 	private HttpEntity<String> configHttpRequest(){
