@@ -9,17 +9,15 @@ import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -29,7 +27,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
@@ -40,10 +37,29 @@ import dev.jcasaslopez.user.service.UserAccountService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
 import dev.jcasaslopez.user.utilities.Constants;
 
+// Account lockout mechanism REMINDER
+
+// Scenario 1: Redis lock ACTIVE
+// - Account status: TEMPORARILY_BLOCKED  
+// - Redis entry: PRESENT with TTL
+// - Expected: 403 Forbidden
+
+// Scenario 2: Redis lock EXPIRED + Account blocked  
+// - Account status: TEMPORARILY_BLOCKED
+// - Redis entry: ABSENT (TTL expired)
+// - Expected: Auto-reactivate to ACTIVE + login success
+
+// Scenario 3: No lock ever existed
+// - Account status: ACTIVE
+// - Redis entry: ABSENT
+// - Expected: Normal login
+
+@SuppressWarnings("removal")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestInstance(Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CustomUsernamePasswordAuthenticationFilterTest {
+	
+	@Value ("${auth.maxFailedAttempts}") int maxNumberFailedAttempts;
 	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private RedisTemplate<String, String> redisTemplate;
@@ -56,104 +72,114 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	private static final String username = "Yorch22";
 	private static final String password = "Jorge22!";
 
-	@BeforeAll
+	@BeforeEach
 	void setUp() {
-		user = testHelper.createUser(username, password);
+		user = testHelper.createAndPersistUser(username, password);
 		
-		// By default, account is set as ACTIVE, so we have to block the account.
+		// By default, account is set as ACTIVE, so we have to block the account manually.
 		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 		userRepository.save(user);
 		userRepository.flush();
 	}
 	
-	@AfterAll
+	@AfterEach
 	void cleanAfterTest() {
 		testHelper.cleanDataBaseAndRedis();
 	}
 
+	// The user's account has been set to "TEMPORARILY BLOCKED" straight in the database, by-passing the account lockout 
+	// mechanism, so there is no Redis entry. We are in scenario 2 (see comment at the beginning of the class).
 	@Test
 	@DisplayName("Switches account to active when lock timeout is over")
-	@Order(1)
 	void WhenLockTimeoutOver_ShouldSwitchAccountToActive() {
 		// Arrange	
-		HttpEntity<String> request = setHttpRequest();
+		HttpEntity<String> request = setHttpRequest(username, password);
 		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate
-				.postForEntity("/login", request, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 								
 		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		String emailBody = bodyCaptor.getValue();
+		
+		AccountStatus finalAccountStatus = userAccountService.findUser(username).getAccountStatus();
 	
 		// Assert
 		assertAll(
-				() -> assertEquals(AccountStatus.ACTIVE, userAccountService.findUser(username).getAccountStatus(),
-						"User account status should be ACTIVE"),
-				() -> assertTrue(emailBody.contains("Your account is active again."),
-						"Email body does not contain expected content"),
-				() -> assertEquals(HttpStatus.OK, response.getStatusCode(),
-						"HTTP response status should be 200 OK"),
-				() -> assertEquals("Login attempt successful", response.getBody().getMessage(),
-						"Unexpected HTTP response message"),
-				() -> assertNotNull(response.getBody().getDetails(),
-						"Response body should not be null")
+				() -> assertEquals(AccountStatus.ACTIVE, finalAccountStatus, "User account status should be ACTIVE"),
+				() -> assertTrue(emailBody.contains("Your account is active again."), "Email body does not contain expected content"),
+				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), "HTTP response status should be 200 OK"),
+				() -> assertEquals("Login attempt successful", response.getBody().getMessage(), "Unexpected HTTP response message"),
+				() -> assertNotNull(response.getBody().getDetails(), "Response body should not be null")
 		);
 	}
 	
+	// The user's account has been set to "TEMPORARILY BLOCKED", but there is a Redis entry: we are in scenario 1 
+	// (see comment at the beginning of the class).
 	@Test
-	@DisplayName("If the Redis entry is still present should return 403 FORBIDDEN")
-	@Order(2)
+	@DisplayName("If the Redis entry is present should return 403 FORBIDDEN")
 	void WhenLockTimeoutIsNotOver_ShoulddReturn403Forbidden() {
 		// Arrange
-		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
-		userRepository.save(user);
-		userRepository.flush();
-		
     	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
 		redisTemplate.opsForValue().set(redisKey, "3", 5, TimeUnit.MINUTES);
 		
-		HttpEntity<String> request = setHttpRequest();
+		HttpEntity<String> request = setHttpRequest(username, password);
 		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate
-				.postForEntity("/login", request, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 				
 		// Assert
 		assertAll(
-				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(username).getAccountStatus(),
-						"User account status shoud be TEMPORARILY_BLOCKED"),
-				() -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(),
-						"HTTP response status should be 403 FORBIDDEN"),
-				() -> assertEquals("Account is locked", response.getBody().getMessage(),
-						"Unexpected HTTP response message")
+				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(username).getAccountStatus(), "User account status shoud be TEMPORARILY_BLOCKED"),
+				() -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "HTTP response status should be 403 FORBIDDEN"),
+				() -> assertEquals("Your account is locked due to too many failed login attempts. It will be reactivated automatically in a few hours", 
+						response.getBody().getMessage(), "Unexpected HTTP response message")
 		);
 	}
 	
 	@Test
-	@DisplayName("If request has no username/password, it returns 400 BAD CREDENTIALS")
+	@DisplayName("After maximum number of failed logins, account gets locked")
+	void afterThreeFailedLogins_AccountGetsLocked() {
+	    // Arrange - Perform 2 failed login attempts (just below the threshold)
+		String wrongPassword = "Jorge66!";
+		HttpEntity<String> requestWithWrongPassword = setHttpRequest(username, wrongPassword);
+		
+	    for (int i = 0; i <= maxNumberFailedAttempts - 1; i++) {
+	        // These failed attempts should increment the Redis counter but not trigger lockout yet
+	        testRestTemplate.postForEntity(Constants.LOGIN_PATH, requestWithWrongPassword, StandardResponse.class);
+	    }
+	    
+	    // Act - last failed attempt (should trigger account lockout)
+	    ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, requestWithWrongPassword, StandardResponse.class);
+		AccountStatus finalAccountStatus = userAccountService.findUser(username).getAccountStatus();
+
+	    // Assert
+	    assertAll(
+	        () -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "3rd failed attempt should return 403 FORBIDDEN"),
+	        () -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, finalAccountStatus, "Account status should be TEMPORARILY_BLOCKED after max failed attempts")
+	    );
+	}
+	
+	@Test
+	@DisplayName("If request has no username/password, returns 400 BAD CREDENTIALS")
 	void WhenNoUsernameOrPassword_ShouldThrowException() {
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 		
-		String body = "username=Yorch22"; 
-		HttpEntity<String> request = new HttpEntity<>(body, headers);
+		HttpEntity<String> request = setHttpRequest(" ", password);
 		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate
-				.postForEntity("/login", request, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 		
 		// Assert
 		assertAll(
-				() -> assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode(),
-						"HTTP response status should be 400 BAD_REQUEST"),
-				() -> assertEquals("Username and password are required", response.getBody().getMessage(),
-						"Unexpected HTTP response message")
+				() -> assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode(), "HTTP response status should be 400 BAD_REQUEST"),
+				() -> assertEquals("Username and password are required", response.getBody().getMessage(), "Unexpected HTTP response message")
 		);
 	}
 	
-	private HttpEntity<String> setHttpRequest() {
+	private HttpEntity<String> setHttpRequest(String username, String password) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);		
 		String body = "username=" + username + "&password=" + password;
