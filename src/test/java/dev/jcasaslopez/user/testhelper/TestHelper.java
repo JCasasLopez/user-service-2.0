@@ -4,18 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,21 +23,15 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.enums.RoleName;
-import dev.jcasaslopez.user.enums.TokenType;
-import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.repository.LoginAttemptRepository;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
-import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
 
 @Component
 public class TestHelper {
 	
-	@Autowired private UserMapper userMapper;
 	@Autowired private TokenServiceImpl tokenService;
 	@Autowired private UserRepository userRepository;
 	@Autowired private RoleRepository roleRepository;
@@ -50,6 +41,32 @@ public class TestHelper {
 	@Autowired private PasswordEncoder passwordEncoder;
 	@Autowired private EmailService emailService;
 	
+	public User createUser(UserTestBuilder builder) {
+		Set<Role> roles = new HashSet<>();
+		roles = builder.getRoleNames()
+				.stream()
+				.map(roleName -> new Role(roleName))
+				.collect(Collectors.toSet());
+        User user = builder.build();
+        user.setRoles(roles);
+        return user;
+    }
+	
+	public User createAndPersistUser(UserTestBuilder builder) {
+		Set<Role> roles = new HashSet<>();
+		roles = builder.getRoleNames()
+				.stream()
+				.map(roleName -> roleRepository.findByRoleName(roleName).get())
+				.collect(Collectors.toSet());
+        User user = builder.build();
+        user.setPassword(passwordEncoder.encode(user.getPassword())); 
+        user.setRoles(roles);
+        
+        userRepository.save(user);
+    	userRepository.flush();
+        return user;
+    }
+	
     @Transactional
 	public String returnUserAsJson(User user) throws JsonProcessingException {		
 		// Jackson cannot serialize or deserialize java.time.LocalDate by default
@@ -57,51 +74,6 @@ public class TestHelper {
 
 		return mapper.writeValueAsString(user);
 	}
-	
-    // It would be more convenient to use UserDetailsManagerImpl.createUser(), but this method does not return the user
-    public User createUser(String username, String password) {
-    	User user = new User (username, password, "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
-
-    	Set<Role> roles = new HashSet<>();
-    	Role userRole = new Role (RoleName.ROLE_USER);
-    	roles.add(userRole);
-
-    	user.setRoles(roles);
-    	user.setAccountStatus(AccountStatus.ACTIVE);
-    	return user;
-    }
-    
-    public User createAndPersistUser(String username, String password) {
-    	String encodedPassword = passwordEncoder.encode(password);
-    	User user = new User (username, encodedPassword, "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
-
-    	Role userRole = roleRepository.findByRoleName(RoleName.ROLE_USER).get();
-    	Set<Role> roles = new HashSet<>();
-    	roles.add(userRole);
-
-    	user.setRoles(roles);
-    	user.setAccountStatus(AccountStatus.ACTIVE);
-    	
-    	userRepository.save(user);
-    	userRepository.flush();
-    	return user;
-    }
-    
-    public User createAndPersistUser(String username, String password, RoleName roleName) {
-    	String encodedPassword = passwordEncoder.encode(password);
-    	User user = new User (username, encodedPassword, "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
-
-    	Role userRole = roleRepository.findByRoleName(roleName).get();
-    	Set<Role> roles = new HashSet<>();
-    	roles.add(userRole);
-
-    	user.setRoles(roles);
-    	user.setAccountStatus(AccountStatus.ACTIVE);
-    	
-    	userRepository.save(user);
-    	userRepository.flush();
-    	return user;
-    }
 	
 	public void cleanDataBaseAndRedis() {
 		loginAttemptRepository.deleteAll();
