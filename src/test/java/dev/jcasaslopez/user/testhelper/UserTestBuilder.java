@@ -22,7 +22,7 @@ public class UserTestBuilder {
 		this.username = username;
 		this.password = password;
 		this.fullName = "test-user";
-		this.email = fullName + "@test.com";
+		this.email = username + "@test.com";
 		this.dateOfBirth = LocalDate.of(1979, 12, 27);
 		this.roleNames = buildRolesSet(RoleName.ROLE_USER);
 		this.accountStatus = AccountStatus.ACTIVE;
