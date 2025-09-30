@@ -86,20 +86,27 @@ public class TestHelper {
     	userRepository.flush();
     	return user;
     }
+    
+    public User createAndPersistUser(String username, String password, RoleName roleName) {
+    	String encodedPassword = passwordEncoder.encode(password);
+    	User user = new User (username, encodedPassword, "Jorge García", "jorgecasas22@hotmail.com", LocalDate.of(1978, 11, 26));
+
+    	Role userRole = roleRepository.findByRoleName(roleName).get();
+    	Set<Role> roles = new HashSet<>();
+    	roles.add(userRole);
+
+    	user.setRoles(roles);
+    	user.setAccountStatus(AccountStatus.ACTIVE);
+    	
+    	userRepository.save(user);
+    	userRepository.flush();
+    	return user;
+    }
 	
-	@SuppressWarnings("deprecation")
 	public void cleanDataBaseAndRedis() {
 		loginAttemptRepository.deleteAll();
         userRepository.deleteAll();
         redisTemplate.getConnectionFactory().getConnection().flushAll();
-	}
-	
-	public String loginUser(User userJpa, TokenType tokenType) {
-		CustomUserDetails user = userMapper.userToCustomUserDetailsMapper(userJpa);
-		String username = user.getUsername();
-		Authentication authentication = new UsernamePasswordAuthenticationToken (user, user.getPassword(), user.getAuthorities());
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		return tokenService.createAuthToken(tokenType, username);
 	}
 	
 	public String buildRedisKey(String token, String RedisConstant) {
