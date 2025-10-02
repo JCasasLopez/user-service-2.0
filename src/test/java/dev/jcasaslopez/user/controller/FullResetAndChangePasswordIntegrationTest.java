@@ -22,6 +22,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -39,7 +40,9 @@ import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenService;
+import dev.jcasaslopez.user.testhelper.AuthenticationTestHelper;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
@@ -53,7 +56,10 @@ import io.jsonwebtoken.Claims;
 // 3) Failed password change: if the user is not authenticated, a 401 error is returned.
 // 4) Successful password change: an authenticated user can change their password, and it is updated in the database.
 
-@SuppressWarnings("removal")
+// @AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
+// which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
+
+@AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -62,21 +68,26 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TokenService tokenService;
 	@Autowired private TestHelper testHelper;
+	@Autowired private AuthenticationTestHelper authTestHelper;
 	@Autowired private UserRepository userRepository;
 	@Autowired private PasswordEncoder passwordEncoder;
 	@MockBean private EmailService emailService;
 	
+	// Static variables to share state (token, created user) between the ordered test methods.
 	private static String token;
 	private static User user;
-	private static final String username = "Yorch22";
-	private static final String originalPassword = "Jorge22!";
-	private static final String password2 = "Garcia22!";
-	private static final String password3 = "Lopez22!";
+	
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22";
+	private static final String ORIGINAL_PASSWORD = "Password123!";
+	private static final String PASSWORD_AFTER_RESET = "Password456!";
+	private static final String PASSWORD_AFTER_CHANGE = "Password789!";
 
 	
 	@BeforeAll
 	void setup() {
-		user = testHelper.createAndPersistUser(username, originalPassword);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, ORIGINAL_PASSWORD);
+		user = testHelper.createAndPersistUser(builder);
 	}
 	
 	@AfterAll
@@ -123,20 +134,20 @@ public class FullResetAndChangePasswordIntegrationTest {
 	    headers.setContentType(MediaType.APPLICATION_JSON);
 		headers.setBearerAuth(token);
 	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-	    HttpEntity<String> request = new HttpEntity<>(password2, headers);
+	    HttpEntity<String> request = new HttpEntity<>(PASSWORD_AFTER_RESET, headers);
 	    
 	    // Act
 	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.RESET_PASSWORD_PATH, HttpMethod.PUT, request, StandardResponse.class);
 	    
 	    // Refresh the 'user' variable with the persisted user from the database, which now has the updated password.
-	    user = userRepository.findByUsername(username).get();
+	    user = userRepository.findByUsername(USERNAME).get();
 	    
 	    // Assert
 		assertAll(
 				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Expected HTTP status to be 200 OK"),
 				() -> assertNotNull(response.getBody(), "Response body should not be null"),
 				() -> assertEquals("Password reset successfully", response.getBody().getMessage(), "Unexpected response message"),
-				() -> assertTrue(passwordEncoder.matches(password2, user.getPassword()), "Passwords should match")
+				() -> assertTrue(passwordEncoder.matches(PASSWORD_AFTER_RESET, user.getPassword()), "Passwords should match")
 				);
 	}
 	
@@ -166,11 +177,11 @@ public class FullResetAndChangePasswordIntegrationTest {
 	@DisplayName("Changes password successfully")
 	public void changePassword_whenUserLoggedIn_ShouldSendEmailChangePasswordReturn200() {
 		// Arrange
-		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
+		String accessToken = authTestHelper.logInWithTestRestTemplate(USERNAME, PASSWORD_AFTER_RESET).getAccessToken();
 		
 		Map<String, String> passwords = new HashMap<>();
-		passwords.put("oldPassword", password2);
-		passwords.put("newPassword", password3);
+		passwords.put("oldPassword", PASSWORD_AFTER_RESET);
+		passwords.put("newPassword", PASSWORD_AFTER_CHANGE);
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
@@ -179,7 +190,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 
 	    // Act
 	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.CHANGE_PASSWORD_PATH, HttpMethod.PUT, request, StandardResponse.class);
-	    user = userRepository.findByUsername(username).get();
+	    user = userRepository.findByUsername(USERNAME).get();
 
 		// Assert
 	    ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
@@ -189,7 +200,7 @@ public class FullResetAndChangePasswordIntegrationTest {
 		        () -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Expected status 200 OK"),
 		        () -> assertNotNull(response.getBody(), "Response body should not be null"),
 		        () -> assertEquals("Password changed successfully", response.getBody().getMessage(), "Unexpected response message"),
-		        () -> assertTrue(passwordEncoder.matches(password3, user.getPassword()), "Passwords should match")
+		        () -> assertTrue(passwordEncoder.matches(PASSWORD_AFTER_CHANGE, user.getPassword()), "Passwords should match")
 		    );
 	}
 }

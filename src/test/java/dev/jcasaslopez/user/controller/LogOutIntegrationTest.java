@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,28 +22,34 @@ import org.springframework.http.ResponseEntity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.TokenType;
+import dev.jcasaslopez.user.testhelper.AuthenticationTestHelper;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 
 // We verify the 'logout' endpoint because its logic is custom and does not follow Spring Security standard flow. 
 // In contrast, endpoints like 'login' are handled directly by Spring and do not require dedicated integration tests.
 
+// @AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
+// which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
+
+@AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class LogOutIntegrationTest {
 	
 	@Autowired private TestHelper testHelper;
+	@Autowired private AuthenticationTestHelper authTestHelper;
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private RedisTemplate<String, String> redisTemplate;
 	
-	private static User user;
-	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22";
+	private static final String PASSWORD = "Password123!";
 	
 	@BeforeEach
 	void setup() throws JsonProcessingException {
-	    user = testHelper.createAndPersistUser(username, password);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
+		testHelper.createAndPersistUser(builder);
 	}
 	
 	@AfterEach
@@ -54,7 +61,7 @@ public class LogOutIntegrationTest {
 	@DisplayName("User logs out correctly when valid refresh token is provided")
 	void logOut_WhenRefreshTokenProvided_ShouldLogOutUserAndRevokeToken() {
 		// Arrange
-		String refreshToken = testHelper.loginUser(user, TokenType.REFRESH);
+		String refreshToken = authTestHelper.logInWithTestRestTemplate(USERNAME, PASSWORD).getRefreshToken();
 		String redisKey = testHelper.buildRedisKey(refreshToken, Constants.REFRESH_TOKEN_REDIS_KEY);
 		
 		HttpHeaders headers = new HttpHeaders();
@@ -79,10 +86,10 @@ public class LogOutIntegrationTest {
 			}
 	
 	@Test
-	@DisplayName("User cannot log out when access or invalid is provided")
+	@DisplayName("User cannot log out when access or invalid token is provided")
 	void logOut_WhenAccessOrInvalidTokenProvided_ShouldNotLogOutUser() {
 		// Arrange
-		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
+		String accessToken = authTestHelper.logInWithTestRestTemplate(USERNAME, PASSWORD).getAccessToken();
 		
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);

@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 
-import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -35,11 +35,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.dto.UserDto;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.TokenServiceImpl;
+import dev.jcasaslopez.user.testhelper.AuthenticationTestHelper;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
@@ -53,7 +54,10 @@ import io.jsonwebtoken.Claims;
 // 3) Failed deletion: unauthenticated users receive a 401 error when trying to delete.
 // 4) Successful deletion: an authenticated user can delete their account, and it's removed from the database.
 
-@SuppressWarnings("removal")
+// @AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
+// which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
+
+@AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -66,16 +70,21 @@ public class FullRegistrationAndDeleteAccountTest {
 	@Autowired private PasswordEncoder passwordEncoder;
 	@Autowired private ObjectMapper mapper;
 	@Autowired private TestHelper testHelper;
+	@Autowired private AuthenticationTestHelper authTestHelper;
 	@MockBean private EmailService emailService;
 
+	// Static variables to share state (token, created user) between the ordered test methods.
 	private static String token;
 	private static User user;
-	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22"; 
+	private static final String PASSWORD = "Password123!"; 
 	
 	@BeforeAll
 	void setup() throws JsonProcessingException {
-	    user = testHelper.createUser(username, password);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
+		user = testHelper.createUser(builder);
 	}
 	
 	@AfterAll
@@ -86,7 +95,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	@Order(1)
 	@Test
 	@DisplayName("Registration process initiates correctly")
-	public void initiateRegistration_whenValidDetails_ShouldUploadRedisEntryAndReturn200() throws JSONException, JsonProcessingException {
+	public void initiateRegistration_whenValidDetails_ShouldUploadRedisEntryAndReturn200() throws JsonProcessingException {
 		
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
@@ -115,14 +124,14 @@ public class FullRegistrationAndDeleteAccountTest {
 				() -> assertEquals(HttpStatus.OK, response.getStatusCode(), "Expected HTTP status 200 OK"),
 				() -> assertNotNull(response.getBody(), "Response body should not be null"),
 			    () -> assertEquals("Token created successfully and sent to the user to verify email", response.getBody().getMessage(), "Unexpected response message"),
-				() -> assertEquals(username, storedInRedisUser.getUsername(), "Username does not match")
+				() -> assertEquals(USERNAME, storedInRedisUser.getUsername(), "Username does not match")
 				);
 	}
 	
 	@Order(2)
 	@Test
 	@DisplayName("Creates account correctly")
-	public void createAccount_whenValidDetails_ShouldWorkCorrectly() throws JsonProcessingException {
+	public void createAccount_whenValidDetails_ShouldWorkCorrectly() {
 		
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
@@ -131,7 +140,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	
 		// Act
 		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.REGISTRATION_PATH, request, StandardResponse.class);
-		Optional<User> optionalUserJPA = userRepository.findByUsername(username);
+		Optional<User> optionalUserJPA = userRepository.findByUsername(USERNAME);
 		
 		// Assert
 		assertAll(
@@ -139,11 +148,11 @@ public class FullRegistrationAndDeleteAccountTest {
 			    () -> assertNotNull(response.getBody(), "Response body should not be null"),
 			    () -> assertEquals("Account created successfully", response.getBody().getMessage(), "Unexpected response message"),
 			    () -> assertTrue(optionalUserJPA.isPresent(), "Expected user to be present in the database"),
-			    () -> assertEquals(username, optionalUserJPA.get().getUsername(), "Username does not match"),
+			    () -> assertEquals(USERNAME, optionalUserJPA.get().getUsername(), "Username does not match"),
 			    () -> assertEquals(user.getFullName(), optionalUserJPA.get().getFullName(), "Full name does not match"),
 			    () -> assertEquals(user.getEmail(), optionalUserJPA.get().getEmail(), "Email does not match"),
 			    () -> assertEquals(user.getDateOfBirth(), optionalUserJPA.get().getDateOfBirth(), "Birth date does not match"),
-			    () -> assertTrue(passwordEncoder.matches("Jorge22!", optionalUserJPA.get().getPassword()), "Password was not encoded or does not match")
+			    () -> assertTrue(passwordEncoder.matches(PASSWORD, optionalUserJPA.get().getPassword()), "Password was not encoded or does not match")
 			);
 	}
 	
@@ -172,7 +181,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	@DisplayName("Deletes account successfully")
 	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
 		// Arrange
-		String accessToken = testHelper.loginUser(user, TokenType.ACCESS);
+		String accessToken = authTestHelper.logInWithTestRestTemplate(USERNAME, PASSWORD).getAccessToken();
 		HttpHeaders headers = new HttpHeaders();
 		headers.setBearerAuth(accessToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 

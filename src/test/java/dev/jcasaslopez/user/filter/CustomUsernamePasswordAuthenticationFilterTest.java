@@ -18,6 +18,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -31,10 +32,10 @@ import org.springframework.http.ResponseEntity;
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.AccountStatus;
-import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.service.EmailService;
 import dev.jcasaslopez.user.service.UserAccountService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 
 // Account lockout mechanism REMINDER
@@ -54,7 +55,10 @@ import dev.jcasaslopez.user.utilities.Constants;
 // - Redis entry: ABSENT
 // - Expected: Normal login
 
-@SuppressWarnings("removal")
+// @AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
+// which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
+
+@AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CustomUsernamePasswordAuthenticationFilterTest {
@@ -64,22 +68,21 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private RedisTemplate<String, String> redisTemplate;
 	@Autowired private UserAccountService userAccountService;
-	@Autowired private UserRepository userRepository;
-	@MockBean private EmailService emailService;
 	@Autowired private TestHelper testHelper;
 	
-	private static User user;
-	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	// Allows verification that the 'sendEmail' method was invoked, without actually sending it.
+	@MockBean private EmailService emailService;
+	
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22";
+	private static final String PASSWORD = "Jorge22!";
 
 	@BeforeEach
 	void setUp() {
-		user = testHelper.createAndPersistUser(username, password);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD)
+											.withAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
+		testHelper.createAndPersistUser(builder);
 		
-		// By default, account is set as ACTIVE, so we have to block the account manually.
-		user.setAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
-		userRepository.save(user);
-		userRepository.flush();
 	}
 	
 	@AfterEach
@@ -93,7 +96,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	@DisplayName("Switches account to active when lock timeout is over")
 	void WhenLockTimeoutOver_ShouldSwitchAccountToActive() {
 		// Arrange	
-		HttpEntity<String> request = setHttpRequest(username, password);
+		HttpEntity<String> request = setHttpRequest(USERNAME, PASSWORD);
 		
 		// Act
 		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
@@ -102,7 +105,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		String emailBody = bodyCaptor.getValue();
 		
-		AccountStatus finalAccountStatus = userAccountService.findUser(username).getAccountStatus();
+		AccountStatus finalAccountStatus = userAccountService.findUser(USERNAME).getAccountStatus();
 	
 		// Assert
 		assertAll(
@@ -120,17 +123,17 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	@DisplayName("If the Redis entry is present should return 403 FORBIDDEN")
 	void WhenLockTimeoutIsNotOver_ShoulddReturn403Forbidden() {
 		// Arrange
-    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + USERNAME;
 		redisTemplate.opsForValue().set(redisKey, "3", 5, TimeUnit.MINUTES);
 		
-		HttpEntity<String> request = setHttpRequest(username, password);
+		HttpEntity<String> request = setHttpRequest(USERNAME, PASSWORD);
 		
 		// Act
 		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 				
 		// Assert
 		assertAll(
-				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(username).getAccountStatus(), "User account status shoud be TEMPORARILY_BLOCKED"),
+				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(USERNAME).getAccountStatus(), "User account status shoud be TEMPORARILY_BLOCKED"),
 				() -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "HTTP response status should be 403 FORBIDDEN"),
 				() -> assertEquals("Your account is locked due to too many failed login attempts. It will be reactivated automatically in a few hours", 
 						response.getBody().getMessage(), "Unexpected HTTP response message")
@@ -142,7 +145,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	void afterThreeFailedLogins_AccountGetsLocked() {
 	    // Arrange - Perform 2 failed login attempts (just below the threshold)
 		String wrongPassword = "Jorge66!";
-		HttpEntity<String> requestWithWrongPassword = setHttpRequest(username, wrongPassword);
+		HttpEntity<String> requestWithWrongPassword = setHttpRequest(USERNAME, wrongPassword);
 		
 	    for (int i = 0; i <= maxNumberFailedAttempts - 1; i++) {
 	        // These failed attempts should increment the Redis counter but not trigger lockout yet
@@ -151,7 +154,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	    
 	    // Act - last failed attempt (should trigger account lockout)
 	    ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, requestWithWrongPassword, StandardResponse.class);
-		AccountStatus finalAccountStatus = userAccountService.findUser(username).getAccountStatus();
+		AccountStatus finalAccountStatus = userAccountService.findUser(USERNAME).getAccountStatus();
 
 	    // Assert
 	    assertAll(
@@ -167,7 +170,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 		
-		HttpEntity<String> request = setHttpRequest(" ", password);
+		HttpEntity<String> request = setHttpRequest(" ", PASSWORD);
 		
 		// Act
 		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -31,8 +32,13 @@ import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.service.TokenService;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 
+//@AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
+//which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
+
+@AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CustomAuthenticationSuccessHandlerTest {
 	
@@ -45,13 +51,17 @@ public class CustomAuthenticationSuccessHandlerTest {
 	@Autowired private ObjectMapper objectMapper;
 	@Autowired private TestHelper testHelper;
 	
+	// Static variable to share state between tests.
 	private static User user;
-	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22";
+	private static final String PASSWORD = "Jorge22!";
 	
 	@BeforeEach
 	void setUp() {
-		user = testHelper.createAndPersistUser(username, password);
+			UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
+			user = testHelper.createAndPersistUser(builder);
 	}
 	
 	@AfterEach
@@ -66,7 +76,7 @@ public class CustomAuthenticationSuccessHandlerTest {
 		// Reads maximum number of attempts allowed, and sets Redis to that value minus 1.
 		String maxAttemptsMinusOne = String.valueOf(maxNumberFailedAttempts - 1);
 		
-		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + username;
+		String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + USERNAME;
 		redisTemplate.opsForValue().set(redisKey, maxAttemptsMinusOne, 5, TimeUnit.MINUTES);
 		
 		HttpEntity<String> request = configHttpRequest();
@@ -97,7 +107,7 @@ public class CustomAuthenticationSuccessHandlerTest {
 	private HttpEntity<String> configHttpRequest(){
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);		
-		String body = "username=" + username + "&password=" + password;
+		String body = "username=" + USERNAME + "&password=" + PASSWORD;
 		return new HttpEntity<>(body, headers);
 	}
 }

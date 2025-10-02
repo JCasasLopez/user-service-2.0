@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
@@ -19,27 +20,34 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
-import dev.jcasaslopez.user.entity.User;
 import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.service.TokenService;
+import dev.jcasaslopez.user.testhelper.AuthenticationTestHelper;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
+// @AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
+// which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
+
+@AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class RefreshTokenIntegrationTest {
 	
 	@Autowired private TokenService tokenService;
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TestHelper testHelper;
+	@Autowired private AuthenticationTestHelper authTestHelper;
 	
-	private static User user;
-	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22";
+	private static final String PASSWORD = "Password123!";
 
 	@BeforeEach
 	void setUp() {
-	    user = testHelper.createAndPersistUser(username, password);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
+		testHelper.createAndPersistUser(builder);
 	}
 
 	@AfterEach
@@ -51,7 +59,7 @@ public class RefreshTokenIntegrationTest {
 	@DisplayName("Refresh token endpoint returns an access and a refresh token")
 	public void refreshToken_WhenAuthenticated_ShouldReturnAccessAndRefreshToken() {
 		// Arrange
-		String refreshToken = testHelper.loginUser(user, TokenType.REFRESH);
+		String refreshToken = authTestHelper.logInWithTestRestTemplate(USERNAME, PASSWORD).getRefreshToken();
 		HttpHeaders headers = new HttpHeaders();
 	    headers.setBearerAuth(refreshToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers);
@@ -60,6 +68,7 @@ public class RefreshTokenIntegrationTest {
 		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.REFRESH_TOKEN_PATH, request, StandardResponse.class);
 		
 		// Assert
+		// The endpoint is guaranteed to return a List<String>, making this cast safe.
 		@SuppressWarnings("unchecked")
 		List<String> tokens = (List<String>) response.getBody().getDetails();
 		

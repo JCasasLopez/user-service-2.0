@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,32 +32,48 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
-import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.service.EmailService;
+import dev.jcasaslopez.user.testhelper.AuthenticationTestHelper;
 import dev.jcasaslopez.user.testhelper.TestHelper;
+import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 
-@SuppressWarnings("removal")
-@SpringBootTest
+// The endpoint needs a payload in the HTTP request body formatted as a Map with the following key/value pairs:
+// - "Recipient" : String (user ID)
+// - "Subject"   : String
+// - "Message"   : String
+
+// These integration tests only verify the endpoint (happy path/fail on invalid message format).
+// There is also a method to validate the message format (MessageNotificationValidation), that is unit
+// tested independently. 
+
 @AutoConfigureMockMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(Lifecycle.PER_CLASS)
 public class SendNotificationIntegrationTest {
 	
 	@Autowired private ObjectMapper objectMapper;
 	@Autowired private MockMvc mockMvc;
 	@Autowired private TestHelper testHelper;
+	@Autowired private AuthenticationTestHelper authTestHelper;
+	
+	// Allows verification that the 'sendEmail' method was invoked, without actually sending it.
 	@SpyBean private EmailService emailService;
 	
-	private User user;
-	private static final String username = "Yorch22";
-	private static final String password = "Jorge22!";
+	// Static variables to share state (token, created user) between tests.
+	private static User user;
+	private static String authToken; 
 	
-	private static final String subject = "Test";
-	private static final String message = "This is a test email";
+	// Immutable test constants defining the input data.
+	private static final String USERNAME = "Yorch22";
+	private static final String PASSWORD = "Password123!";
+	private static final String SUBJECT = "Test";
+	private static final String MESSAGE = "This is a test email";
 	
 	@BeforeAll
 	void setup() {
-	    user = testHelper.createAndPersistUser(username, password);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
+		user = testHelper.createAndPersistUser(builder);
 	}
 	
 	@AfterAll
@@ -68,10 +85,10 @@ public class SendNotificationIntegrationTest {
 	@DisplayName("When message is correcly formatted, an email is sent")
 	void sendNotification_WhenMessageCorrectlyFormatted_ShouldSendEmail() throws Exception {
 		// Arrange	    
-	    testHelper.loginUser(user, TokenType.ACCESS);
-	    
+		authToken = authTestHelper.logInWithMockMvc(USERNAME, PASSWORD).getAccessToken();
+		
 	    String recipient = String.valueOf(user.getIdUser());
-	    Map<String, String> payload = createNotificationPayload(recipient, subject, message);
+	    Map<String, String> payload = createNotificationPayload(recipient, SUBJECT, MESSAGE);
 	    RequestBuilder requestBuilder = buildRequest(payload);
 
 	    // Act
@@ -80,8 +97,8 @@ public class SendNotificationIntegrationTest {
 
 	    // Assert
 	    assertAll(
-	        () -> assertEquals(subject, emailArgs.subject(), "Email subject does not match"),
-	        () -> assertEquals(message, emailArgs.message(), "Email body does not match"),
+	        () -> assertEquals(SUBJECT, emailArgs.subject(), "Email subject does not match"),
+	        () -> assertEquals(MESSAGE, emailArgs.message(), "Email body does not match"),
 	        () -> assertEquals(HttpStatus.OK, response.getStatus(), "Expected HTTP status 200"),
 	        () -> assertNotNull(response.getMessage(), "Response message should not be null"),
 	        () -> assertEquals("Notification sent successfully", response.getMessage(), "Unexpected response message"),
@@ -93,10 +110,10 @@ public class SendNotificationIntegrationTest {
 	@DisplayName("When message is NOT correcly formatted returns 400 BAD REQUEST")
 	void sendNotification_WhenMessageNotCorrectlyFormatted_ShouldReturn400BadRequest() throws Exception {
 		// Arrange
-	    testHelper.loginUser(user, TokenType.ACCESS);
-	    
+		// The test assumes and reuses the 'authToken' established in the previous test (@Lifecycle.PER_CLASS).
+		// This ensures that the 400 error is due to payload validation and NOT an authentication failure.
 	    String recipient = String.valueOf(user.getIdUser());
-	    Map<String, String> payload = createInvalidNotificationPayload(recipient, subject, message);
+	    Map<String, String> payload = createInvalidNotificationPayload(recipient, SUBJECT, MESSAGE);
 	    RequestBuilder requestBuilder = buildRequest(payload);
 
 	    // Act 
@@ -123,7 +140,8 @@ public class SendNotificationIntegrationTest {
 
 	private Map<String, String> createInvalidNotificationPayload(String recipient, String subject, String message) {
 		Map<String, String> payload = createNotificationPayload(recipient, subject, message);
-		// Change the right key for one with an intentional typo, rendering the payload invalid.
+		// Intentionally removes the mandatory "Recipient" key and adds a typo ("Recip").
+	    // This violates the DTO validation rules defined at the Controller level.
 		payload.remove("Recipient");
 		payload.put("Recip", String.valueOf(user.getIdUser())); 
 	    return payload;
@@ -132,6 +150,7 @@ public class SendNotificationIntegrationTest {
 	private RequestBuilder buildRequest(Map<String, String> payload) throws Exception {
 	    return MockMvcRequestBuilders
 	        .post(Constants.SEND_NOTIFICATION_PATH)
+	        .header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
 	        .contentType(MediaType.APPLICATION_JSON)
 	        .content(objectMapper.writeValueAsString(payload))
 	        .accept(MediaType.APPLICATION_JSON);

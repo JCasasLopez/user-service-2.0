@@ -32,6 +32,7 @@ public class AuthenticateUserUnitTest {
 	@Mock UserMapper userMapper;
 	@InjectMocks AuthenticationServiceImpl authenticationService;
 	
+	// Immutable test constants defining the input data.
 	private static final String USERNAME = "Yorch";
 	private static final String TOKEN = "valid_token";
 

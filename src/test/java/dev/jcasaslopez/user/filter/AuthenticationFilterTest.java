@@ -26,8 +26,9 @@ import dev.jcasaslopez.user.utilities.Constants;
 // test suite that confirms happy path scenarios (see dev.jcasaslopez.user.controller package integration tests).
 
 // Uses @SpringBootTest with MockMvc because mocking the dependencies was extremely brittle and error-prone for filter testing.
-@SpringBootTest
+
 @AutoConfigureMockMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class AuthenticationFilterTest {
     
     @Autowired private MockMvc mockMvc;
