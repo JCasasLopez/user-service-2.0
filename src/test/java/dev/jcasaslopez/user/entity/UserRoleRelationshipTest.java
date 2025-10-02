@@ -2,14 +2,11 @@ package dev.jcasaslopez.user.entity;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +15,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+
+// These tests do not make use of TestHelper user creation methods to avoid complex 
+// dependency mocking which is unnecessary for a @DataJpaTest.
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -37,37 +38,22 @@ public class UserRoleRelationshipTest {
 	private User persistedUser2;
 	
 	@BeforeEach
-	private void setUp() {
-		Role roleUser = new Role(RoleName.ROLE_USER);
-		Role roleAdmin = new Role(RoleName.ROLE_ADMIN);
+	private void setUp() {	
+		User user1 = new User("Yorch22", "Password123!", "Jorge Garcia", "jc90@gmail.com", LocalDate.of(1990, 5, 15));
+		Role roleUser = roleRepository.findByRoleName(RoleName.ROLE_USER)
+							.orElseThrow(() -> new IllegalStateException("ROLE_USER should exist in database"));
+		Role roleAdmin = roleRepository.findByRoleName(RoleName.ROLE_ADMIN)
+							.orElseThrow(() -> new IllegalStateException("ADMIN_USER should exist in database"));
 		
-		roleRepository.save(roleUser);
-		roleRepository.save(roleAdmin);
-		
-		User user1 = new User(
-				"Yorch22",
-			    "Password123!",
-			    "Jorge Garcia",
-			    "jc90@gmail.com",
-			    LocalDate.of(1990, 5, 15)
-			    );
-		
-		// Set.of() should not be used because it creates an immutable collection, and 
-		// Hibernate needs to modify it internally.
-		Set<Role> user1Roles = new HashSet<>(Arrays.asList(roleUser, roleAdmin));
-		user1.setRoles(user1Roles);
+		// Set.of() should not be used because it creates an immutable collection, and Hibernate needs to modify it internally.
+		Set<Role> user2Roles = new HashSet<>(Arrays.asList(roleUser, roleAdmin));
+		user1.setRoles(user2Roles);
 		user1.setAccountStatus(AccountStatus.ACTIVE);
 			    		
-		User user2 = new User(
-			    "Laura",
-			    "Password456!",
-			    "Laura Smith",
-			    "laura92@example.com",
-			    LocalDate.of(1992, 6, 11)
-			);
+		User user2 = new User("Laura", "Password456!", "Laura Smith", "laura92@example.com", LocalDate.of(1992, 6, 11));
 		
-		Set<Role> user2Roles = new HashSet<>(Arrays.asList(roleUser));
-		user2.setRoles(user2Roles);
+		Set<Role> user1Role = new HashSet<>(Arrays.asList(roleUser));
+		user2.setRoles(user1Role);
 		user2.setAccountStatus(AccountStatus.ACTIVE);
 		
 		persistedUser1 = userRepository.save(user1);
@@ -86,11 +72,11 @@ public class UserRoleRelationshipTest {
 		// Arrange
 		
 		// Act
+		User userReloaded1 = userRepository.findById(persistedUser1.getIdUser())
+							.orElseThrow(() -> new UsernameNotFoundException("User not found in the database"));
+		User userReloaded2 = userRepository.findById(persistedUser2.getIdUser())
+							.orElseThrow(() -> new UsernameNotFoundException("User not found in the database"));
 		
-		// We need to reload the user from the database.
-		User userReloaded1 = userRepository.findById(persistedUser1.getIdUser()).get();
-		User userReloaded2 = userRepository.findById(persistedUser2.getIdUser()).get();
-
 		// Assert
 		assertAll(
 				() -> assertEquals(2, userReloaded1.getRoles().size(), "User 1 has " + 
@@ -106,22 +92,23 @@ public class UserRoleRelationshipTest {
 		// Arrange
 		
 		// Act
-		List<Role> roles = roleRepository.findAll();
+		Role roleUser = roleRepository.findByRoleName(RoleName.ROLE_USER)
+								.orElseThrow(() -> new AssertionError("ROLE_USER should exist in database"));
+
+		Role roleAdmin = roleRepository.findByRoleName(RoleName.ROLE_ADMIN)
+								.orElseThrow(() -> new AssertionError("ROLE_ADMIN should exist in database"));
 
 		// Assert
-	    assertEquals(2, roles.size(), "Should retrieve 2 roles from the database");
-
-	    for (Role role : roles) {
-	        Set<User> users = role.getUsers();
-	        assertNotNull(users, "Role should have a set of users");
-	        assertFalse(users.isEmpty(), "Role should be assigned to at least one user");
-
-	        for (User user : users) {
-	            assertTrue(
-	                user.getIdUser() == persistedUser1.getIdUser() || user.getIdUser() == persistedUser2.getIdUser(),
-	                "User linked to role should be one of the expected persisted users"
-	            );
-	        }
-	    }
+		Set<User> usersWithRoleUser = roleUser.getUsers();
+	    assertEquals(2, usersWithRoleUser.size(), "ROLE_USER should be assigned to 2 users");
+	    assertTrue(usersWithRoleUser.stream()
+	        .anyMatch(u -> u.getIdUser() == persistedUser1.getIdUser()), "User 1 should have ROLE_USER");
+	    assertTrue(usersWithRoleUser.stream()
+	        .anyMatch(u -> u.getIdUser() == persistedUser2.getIdUser()), "User 2 should have ROLE_USER");
+	    
+	    Set<User> usersWithRoleAdmin = roleAdmin.getUsers();
+	    assertEquals(1, usersWithRoleAdmin.size(), "ROLE_ADMIN should be assigned to 1 user");
+	    assertTrue(usersWithRoleAdmin.stream()
+	        .anyMatch(u -> u.getIdUser() == persistedUser1.getIdUser()), "User 1 should have ROLE_ADMIN");
 	}
 }

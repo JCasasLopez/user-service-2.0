@@ -21,9 +21,6 @@ public class UniquenessNameRoleTest {
 	@Test
 	@DisplayName("Role entity throws exception when 2 roles have the same name")
 	void roleEntity_WhenNameUnicityViolated_ShouldThrowException() {
-		Role role1 = new Role(RoleName.ROLE_USER);
-	    roleRepository.save(role1);
-
 	    Role role2 = new Role(RoleName.ROLE_USER); 
 
 	    assertThrows(DataIntegrityViolationException.class, () -> {

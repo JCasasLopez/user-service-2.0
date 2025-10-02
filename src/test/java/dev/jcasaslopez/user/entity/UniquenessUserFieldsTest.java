@@ -18,6 +18,9 @@ import dev.jcasaslopez.user.enums.RoleName;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 
+// These tests do not make use of TestHelper user creation methods to avoid complex 
+// dependency mocking which is unnecessary for a @DataJpaTest.
+
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class UniquenessUserFieldsTest {
@@ -25,19 +28,14 @@ class UniquenessUserFieldsTest {
 	@Autowired private UserRepository userRepository;
 	@Autowired private RoleRepository roleRepository;
 	
+	private static final String REPEATED_USERNAME = "Yorch22";
+	private static final String REPEATED_EMAIL = "jc90@gmail.com";
+
 	@BeforeEach
 	private void setUp() {
-		Role roleUser = new Role(RoleName.ROLE_USER);
-	    roleRepository.save(roleUser);
-	    
-		User user1 = new User(
-			    "Yorch22",
-			    "Password123!",
-			    "Jorge Garcia",
-			    "jc90@gmail.com",
-			    LocalDate.of(1990, 5, 15)
-			);
-		
+		Role roleUser =  roleRepository.findByRoleName(RoleName.ROLE_USER)
+					.orElseThrow(() -> new IllegalStateException("ROLE_USER should exist in database"));
+		User user1 = new User("Yorch22", "Password123!", "Jorge Garcia", "jc90@gmail.com", LocalDate.of(1990, 5, 15));
 		user1.setAccountStatus(AccountStatus.ACTIVE);
 		user1.setRoles(Set.of(roleUser));
 		userRepository.save(user1);
@@ -47,13 +45,7 @@ class UniquenessUserFieldsTest {
 	@DisplayName("User entity throws exception when 2 users have the same username")
 	void userEntity_WhenUsernameUnicityViolated_ShouldThrowException() {
 		// Arrange
-		User user2 = new User(
-			    "Yorch22",
-			    "Password456!",
-			    "Jorge Lopez",
-			    "jl92@example.com",
-			    LocalDate.of(1992, 8, 22)
-			);
+		User user2 = new User(REPEATED_USERNAME, "Password456!", "Jorge Lopez", "jl92@example.com", LocalDate.of(1992, 8, 22));
 		
 		// Act & Assert
 		assertThrows(DataIntegrityViolationException.class, () -> userRepository.save(user2),
@@ -64,13 +56,7 @@ class UniquenessUserFieldsTest {
 	@DisplayName("User entity throws exception when 2 users have the same email")
 	void userEntity_WhenEmailUnicityViolated_ShouldThrowException() {
 		// Arrange
-		User user2 = new User(
-				"Jorge92",
-			    "Password456!",
-			    "Jorge Lopez",
-			    "jc90@gmail.com",
-			    LocalDate.of(1992, 8, 22)
-			    );
+		User user2 = new User("Jorge92", "Password456!", "Jorge Lopez", REPEATED_EMAIL, LocalDate.of(1992, 8, 22));
 
 		// Act & Assert
 		assertThrows(DataIntegrityViolationException.class, () -> userRepository.save(user2),

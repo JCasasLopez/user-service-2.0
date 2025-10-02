@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import dev.jcasaslopez.user.enums.AccountStatus;
 import dev.jcasaslopez.user.enums.LoginFailureReason;
@@ -22,6 +23,9 @@ import dev.jcasaslopez.user.repository.LoginAttemptRepository;
 import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+
+// These tests do not make use of TestHelper user creation methods to avoid complex 
+// dependency mocking which is unnecessary for a @DataJpaTest.
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -36,34 +40,17 @@ public class UserLoginAttemptRelationshipTest {
 	
 	@BeforeEach
 	private void setUp() {
-		Role roleUser = new Role(RoleName.ROLE_USER);
-	    roleRepository.save(roleUser);
+		Role roleUser =  roleRepository.findByRoleName(RoleName.ROLE_USER)
+						.orElseThrow(() -> new IllegalStateException("ROLE_USER should exist in database"));
 	    
-		User user1 = new User(
-			    "Yorch22",
-			    "Password123!",
-			    "Jorge Garcia",
-			    "jc90@gmail.com",
-			    LocalDate.of(1990, 5, 15)
-			);
+		User user1 = new User("Yorch22", "Password123!", "Jorge Garcia", "jc90@gmail.com", LocalDate.of(1990, 5, 15));
 		
 		user1.setAccountStatus(AccountStatus.ACTIVE);
 		user1.setRoles(Set.of(roleUser));
 		persistedUser1 = userRepository.save(user1);
 		
-		LoginAttempt attempt1 = new LoginAttempt(
-				LocalDateTime.of(2025, 3, 23, 9, 15), 
-				false, 
-				"192.168.1.10",
-				LoginFailureReason.INCORRECT_PASSWORD,
-				user1);
-
-		LoginAttempt attempt2 = new LoginAttempt(
-				LocalDateTime.of(2025, 3, 23, 10, 42), 
-				false, 
-				"192.168.1.23",
-				LoginFailureReason.ACCOUNT_LOCKED,
-				user1);
+		LoginAttempt attempt1 = new LoginAttempt(LocalDateTime.of(2025, 3, 23, 9, 15), false, "192.168.1.10", LoginFailureReason.INCORRECT_PASSWORD, user1);
+		LoginAttempt attempt2 = new LoginAttempt(LocalDateTime.of(2025, 3, 23, 10, 42), false, "192.168.1.23", LoginFailureReason.ACCOUNT_LOCKED,user1);
 		
 		attempt1.setUser(user1);
 		attempt2.setUser(user1);
@@ -77,13 +64,12 @@ public class UserLoginAttemptRelationshipTest {
 	
 	@Test
 	@DisplayName("Relationship User to LoginAttempt correctly configured")
-	void givenUserWithLoginAttempts_whenSaved_thenAttemptsLinkedToUser() {
+	void givenUser_WhenLoginAttemptsAdded_ThenListSizeIsCorrect() {
 		// Arrange
 		
 		// Act
-		
-		// We need to reload the user from the database.
-		User userReloaded = userRepository.findById(persistedUser1.getIdUser()).get();
+		User userReloaded = userRepository.findById(persistedUser1.getIdUser())
+							.orElseThrow(() -> new UsernameNotFoundException("User not found in the database"));
 		
 		// Assert
 		assertEquals(2, userReloaded.getLoginAttempts().size(), "The list of attempts should have 2 elements, "
@@ -92,7 +78,7 @@ public class UserLoginAttemptRelationshipTest {
 	
 	@Test
 	@DisplayName("Relationship LoginAttempt to User correctly configured")
-	void givenLoginAttempts_whenRetrieved_thenUserIsLinkedCorrectly() {
+	void GivenLoginAttempts_WhenRetrieved_ThenEachIsLinkedToTheCorrectUser() {
 	    // Arrange
 
 	    // Act
