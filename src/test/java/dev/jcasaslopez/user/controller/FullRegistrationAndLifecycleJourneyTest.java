@@ -47,12 +47,20 @@ import io.jsonwebtoken.Claims;
 // These tests verify exclusively the happy path of the account creation flow. 
 // Scenarios related to token validity, expiration, or signature are tested separately in AuthenticationFilterTest.
 // Validation of unique fields is covered in the entity tests, specifically in UniquenessUserFieldsTest.
-//
+
 // This class contains a full integration test covering the user account lifecycle:
 // 1) Registration: initiates successfully and stores the entry in Redis.
 // 2) Account creation: the account is persisted in the database with correct data.
-// 3) Failed deletion: unauthenticated users receive a 401 error when trying to delete.
-// 4) Successful deletion: an authenticated user can delete their account, and it's removed from the database.
+// 3) Successful deletion: an authenticated user can delete their account, and it's removed from the database.
+
+// IMPORTANT: Initiate registration and create account are inextricably linked because the token and Redis entry
+// generated in the first are used in the second. The best way to test them is to preserve the state of the fields 
+// 'user' and 'verificationToken' between tests. To this end, @TestInstance(TestInstance.Lifecycle.PER_CLASS) 
+// creates a single instance of the test class shared by all tests, which are executed in a specific order 
+// (@TestMethodOrder(MethodOrderer.OrderAnnotation.class)).
+// The third test (delete account) could be tested independently, but it is included in this stateful approach 
+// because it reflects the natural user journey where actions build upon previous steps, and significantly 
+// reduces setup complexity and execution time.
 
 // @AutoConfigureMockMvc is needed because AuthenticationTestHelper requires MockMvc bean,
 // which is not available by default in @SpringBootTest with RANDOM_PORT configuration.
@@ -61,7 +69,7 @@ import io.jsonwebtoken.Claims;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class FullRegistrationAndDeleteAccountTest {
+public class FullRegistrationAndLifecycleJourneyTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TokenServiceImpl tokenServiceImpl;
@@ -74,7 +82,7 @@ public class FullRegistrationAndDeleteAccountTest {
 	@MockBean private EmailService emailService;
 
 	// Static variables to share state (token, created user) between the ordered test methods.
-	private static String token;
+	private static String verificationToken;
 	private static User user;
 	
 	// Immutable test constants defining the input data.
@@ -92,6 +100,9 @@ public class FullRegistrationAndDeleteAccountTest {
 		testHelper.cleanDataBaseAndRedis();
 	}
 	
+	// This test and the next one are inherently coupled because of the token needen for verification and the Redis entry
+	// that contains the user details. Since this high degree of coupling is inevitable, we might as well verify explicitly 
+	// the token and the Redis entry are correct, so that we have as much information as possible if the tests fail. 
 	@Order(1)
 	@Test
 	@DisplayName("Registration process initiates correctly")
@@ -107,15 +118,21 @@ public class FullRegistrationAndDeleteAccountTest {
 		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.INITIATE_REGISTRATION_PATH, request, StandardResponse.class);
 
 		// Assert
-		// The endpoint has called the method sendEmail() that we have mocked. One of the parameters is the email body, which 
-		// we intercept, extracting the verification token and validating it. 
-		token = testHelper.extractTokenFromEmail();
-		Optional<Claims> optionalClaims = tokenServiceImpl.getValidClaims(token);
+		// We mock EmailService to extract the token from the email body. This is necessary because we need
+		// the exact same token that was issued (due to its unique jti claim) to build the Redis key in subsequent operations.
+		verificationToken = testHelper.extractTokenFromEmail();
+		
+		// Verify the extracted token is valid. If test #2 fails, we need to know if the cause was an invalid
+		// token generated here, rather than a problem in the account creation logic itself.
+		Optional<Claims> optionalClaims = tokenServiceImpl.getValidClaims(verificationToken);
 		boolean isTokenValid = optionalClaims.isPresent();
 		assertTrue(isTokenValid);
 
-		// If the user is correct, we are verifying indirectly that the Redis entry is correct also.
-		String redisKey = testHelper.buildRedisKey(token, Constants.CREATE_ACCOUNT_REDIS_KEY);
+		// Verify Redis entry exists and contains correct data. While test #2 implicitly validates this
+		// (if Redis data were wrong, the persisted user would be incorrect), making this verification explicit
+		// provides immediate visibility when something fails. If test #2 fails, we'll know whether the issue
+		// originated here (bad Redis data) or in the account creation step itself.
+		String redisKey = testHelper.buildRedisKey(verificationToken, Constants.CREATE_ACCOUNT_REDIS_KEY);
 		String storedInRedisUserAsJson = redisTemplate.opsForValue().get(redisKey);
 		assertNotNull(storedInRedisUserAsJson, "Redis entry not found for this user");
 		
@@ -135,7 +152,7 @@ public class FullRegistrationAndDeleteAccountTest {
 		
 		// Arrange
 		HttpHeaders headers = new HttpHeaders();
-		headers.setBearerAuth(token);
+		headers.setBearerAuth(verificationToken);
 		HttpEntity<Void> request = new HttpEntity<>(headers); 
 	
 		// Act
@@ -157,26 +174,6 @@ public class FullRegistrationAndDeleteAccountTest {
 	}
 	
 	@Order(3)
-	@Test
-	@DisplayName("Fails to delete account when user is not authenticated")
-	public void deleteAccount_whenNoUserAuthenticated_ShouldReturn401() {
-	    // Arrange
-	    HttpHeaders headers = new HttpHeaders();	   	    
-	    // No authentication token in the header = no authenticated user.
-	    HttpEntity<Void> request = new HttpEntity<>(headers);
-
-	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.exchange(Constants.DELETE_ACCOUNT_PATH, HttpMethod.DELETE, request, StandardResponse.class);
-
-	    // Assert
-	    assertAll(
-	        () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), "Expected 401 Unauthorized when no token is provided"),
-	        () -> assertNotNull(response.getBody(), "Response body should not be null"),
-	        () -> assertEquals("Access denied: invalid or missing token", response.getBody().getMessage(), "Unexpected response message")
-	    );
-	}
-
-	@Order(4)
 	@Test
 	@DisplayName("Deletes account successfully")
 	public void deleteAccount_whenUserLoggedIn_ShouldDeleteAccount() {
