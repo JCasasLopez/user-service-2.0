@@ -45,7 +45,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
 // These tests verify exclusively the happy path of the account creation and deletion flow. 
-// Scenarios related to security are tested separately in AuthenticationFilterTest and EndpointsAuthenticationAndAuthorizationTest.
+// Scenarios related to security are tested separately in AuthenticationFilterTest and EndpointsSecurityTest.
 // Validation of unique fields is covered in the entity tests, specifically in UniquenessUserFieldsTest.
 
 // This class contains a full integration test covering the user account lifecycle:

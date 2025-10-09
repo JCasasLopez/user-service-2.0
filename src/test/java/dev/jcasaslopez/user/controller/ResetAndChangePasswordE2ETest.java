@@ -40,7 +40,7 @@ import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 
 // These tests verify exclusively the happy path of the reset and change password flow. 
-// Scenarios related to security are tested separately in AuthenticationFilterTest and EndpointsAuthenticationAndAuthorizationTest.
+// Scenarios related to security are tested separately in AuthenticationFilterTest and EndpointsSecurityTest.
 // Those concerning the internal logic of the password change mechanism, such as validating 
 // the new password format and ensuring it differs from the old one, are covered in PasswordServiceTest.
 
