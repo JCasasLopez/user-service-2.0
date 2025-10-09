@@ -44,8 +44,8 @@ import dev.jcasaslopez.user.testhelper.UserTestBuilder;
 import dev.jcasaslopez.user.utilities.Constants;
 import io.jsonwebtoken.Claims;
 
-// These tests verify exclusively the happy path of the account creation flow. 
-// Scenarios related to token validity, expiration, or signature are tested separately in AuthenticationFilterTest.
+// These tests verify exclusively the happy path of the account creation and deletion flow. 
+// Scenarios related to security are tested separately in AuthenticationFilterTest and EndpointsAuthenticationAndAuthorizationTest.
 // Validation of unique fields is covered in the entity tests, specifically in UniquenessUserFieldsTest.
 
 // This class contains a full integration test covering the user account lifecycle:
@@ -69,7 +69,7 @@ import io.jsonwebtoken.Claims;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class FullRegistrationAndLifecycleJourneyTest {
+public class CreateAndDeleteAccountStatefulE2ETest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TokenServiceImpl tokenServiceImpl;
