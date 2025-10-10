@@ -2,6 +2,7 @@ package dev.jcasaslopez.user.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ import dev.jcasaslopez.user.enums.TokenType;
 import dev.jcasaslopez.user.event.NotifyingEvent;
 import dev.jcasaslopez.user.mapper.UserMapper;
 import dev.jcasaslopez.user.model.TokensLifetimes;
+import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
 import dev.jcasaslopez.user.utilities.Constants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,12 +50,13 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	private UserAccountService userAccountService;
 	private PasswordService passwordService;
 	private EmailService emailService;
+	private UserRepository userRepository;
 	
 	public AccountOrchestrationServiceImpl(UserDetailsManager userDetailsManager, TokenService tokenService,
 			ApplicationEventPublisher eventPublisher, StringRedisTemplate redisTemplate,
 			TokensLifetimes tokensLifetimes, ObjectMapper objectMapper, PasswordEncoder passwordEncoder,
 			UserMapper userMapper, UserAccountService userAccountService, PasswordService passwordService,
-			EmailService emailService) {
+			EmailService emailService, UserRepository userRepository) {
 		this.userDetailsManager = userDetailsManager;
 		this.tokenService = tokenService;
 		this.eventPublisher = eventPublisher;
@@ -64,6 +68,7 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 		this.userAccountService = userAccountService;
 		this.passwordService = passwordService;
 		this.emailService = emailService;
+		this.userRepository = userRepository;
 	}
 
 	// A Redis entry is added to temporarily store the user's data needed in the next step—after email verification—
@@ -195,8 +200,17 @@ public class AccountOrchestrationServiceImpl implements AccountOrchestrationServ
 	
 	@Override
 	public void sendNotification(Map<String, String> messageAsMap) {
-		logger.debug("Calling processMessageDetails() in Email Service...");
-		emailService.processMessageDetails(messageAsMap);
+		int idUser = Integer.valueOf(messageAsMap.get("Recipient"));
+        Optional<User> optionalUser = userRepository.findById(idUser);
+        if (optionalUser.isEmpty()) {
+            logger.warn("User with ID {} not found in the database", idUser);
+            throw new UsernameNotFoundException("User not found in the database");
+        }
+
+        String email = optionalUser.get().getEmail();
+        String subject = messageAsMap.get("Subject");
+        String messageBody = messageAsMap.get("Message");
+        emailService.sendEmail(email, subject, messageBody);
 	}
 	
 	@Override

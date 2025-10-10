@@ -4,22 +4,23 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -49,7 +50,6 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestInstance(Lifecycle.PER_CLASS)
 public class SendNotificationIntegrationTest {
 	
 	@Autowired private ObjectMapper objectMapper;
@@ -58,11 +58,10 @@ public class SendNotificationIntegrationTest {
 	@Autowired private AuthenticationTestHelper authTestHelper;
 	
 	// Allows verification that the 'sendEmail' method was invoked, without actually sending it.
-	@SpyBean private EmailService emailService;
+	@MockBean  private EmailService emailService;
 	
-	// Static variables to share state (token, created user) between tests.
-	private static User user;
-	private static String authToken; 
+	private User user;
+	private String authToken; 
 	
 	// Immutable test constants defining the input data.
 	private static final String USERNAME = "Yorch22";
@@ -70,13 +69,13 @@ public class SendNotificationIntegrationTest {
 	private static final String SUBJECT = "Test";
 	private static final String MESSAGE = "This is a test email";
 	
-	@BeforeAll
+	@BeforeEach
 	void setup() {
 		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
 		user = testHelper.createAndPersistUser(builder);
 	}
 	
-	@AfterAll
+	@AfterEach
 	void cleanUp() {
 		testHelper.cleanDataBaseAndRedis();
 	}
@@ -89,20 +88,21 @@ public class SendNotificationIntegrationTest {
 		
 	    String recipient = String.valueOf(user.getIdUser());
 	    Map<String, String> payload = createNotificationPayload(recipient, SUBJECT, MESSAGE);
-	    RequestBuilder requestBuilder = buildRequest(payload);
+	    RequestBuilder requestBuilder = buildRequest(payload, authToken);
 
 	    // Act
 	    StandardResponse response = executeRequestAndGetResponse(requestBuilder);
 	    EmailArguments emailArgs = captureEmailArguments();
 
 	    // Assert
+	    verify(emailService, times(1)).sendEmail(anyString(), anyString(), anyString());	    
 	    assertAll(
 	        () -> assertEquals(SUBJECT, emailArgs.subject(), "Email subject does not match"),
 	        () -> assertEquals(MESSAGE, emailArgs.message(), "Email body does not match"),
+	        () -> assertEquals(user.getEmail(), emailArgs.emailAddress(), "Recipient email does not match"),
 	        () -> assertEquals(HttpStatus.OK, response.getStatus(), "Expected HTTP status 200"),
 	        () -> assertNotNull(response.getMessage(), "Response message should not be null"),
-	        () -> assertEquals("Notification sent successfully", response.getMessage(), "Unexpected response message"),
-	        () -> assertEquals(user.getEmail(), emailArgs.emailAddress(), "Recipient email does not match")
+	        () -> assertEquals("Notification sent successfully", response.getMessage(), "Unexpected response message")
 	    );
 	}
 	
@@ -110,16 +110,17 @@ public class SendNotificationIntegrationTest {
 	@DisplayName("When message is NOT correcly formatted returns 400 BAD REQUEST")
 	void sendNotification_WhenMessageNotCorrectlyFormatted_ShouldReturn400BadRequest() throws Exception {
 		// Arrange
-		// The test assumes and reuses the 'authToken' established in the previous test (@Lifecycle.PER_CLASS).
-		// This ensures that the 400 error is due to payload validation and NOT an authentication failure.
+		authToken = authTestHelper.logInWithMockMvc(USERNAME, PASSWORD).getAccessToken();
+
 	    String recipient = String.valueOf(user.getIdUser());
 	    Map<String, String> payload = createInvalidNotificationPayload(recipient, SUBJECT, MESSAGE);
-	    RequestBuilder requestBuilder = buildRequest(payload);
+	    RequestBuilder requestBuilder = buildRequest(payload, authToken);
 
 	    // Act 
 	    StandardResponse response = executeRequestAndGetResponse(requestBuilder);
 	    
 	    // Assert
+	    verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());	    
 	    assertAll(
 	        () -> assertEquals(HttpStatus.BAD_REQUEST, response.getStatus(), "Expected HTTP status 400"),
 	        () -> assertNotNull(response.getMessage(), "Response body should not be null"),
@@ -147,7 +148,7 @@ public class SendNotificationIntegrationTest {
 	    return payload;
 	}
 
-	private RequestBuilder buildRequest(Map<String, String> payload) throws Exception {
+	private RequestBuilder buildRequest(Map<String, String> payload, String authToken) throws Exception {
 	    return MockMvcRequestBuilders
 	        .post(Constants.SEND_NOTIFICATION_PATH)
 	        .header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
