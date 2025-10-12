@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,16 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.RequestBuilder;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import dev.jcasaslopez.user.dto.StandardResponse;
 import dev.jcasaslopez.user.entity.User;
@@ -41,13 +42,12 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class UpdateAccountStatusE2ETest {
+public class UpdateAccountStatusSystemIntegrationTest {
 	
 	@Autowired private UserRepository userRepository;
 	@Autowired private TestHelper testHelper; 
 	@Autowired private AuthenticationTestHelper authTestHelper;
-	@Autowired private MockMvc mockMvc;
-	@Autowired private ObjectMapper objectMapper;
+	@Autowired private TestRestTemplate testRestTemplate;
 	
 	private User user;
 	private String authToken;
@@ -56,7 +56,7 @@ public class UpdateAccountStatusE2ETest {
 	private static final String ADMIN_USER_PASSWORD = "Password456!";
 	
 	@BeforeEach
-	void setUp() throws Exception {
+	void persistAndLogInUser() throws Exception {
 		// This test defines 2 different users:
 		// 1) Target user: The account subject to modification. 
 		UserTestBuilder builderUser = new UserTestBuilder("Yorch22", "Password123!");
@@ -66,7 +66,7 @@ public class UpdateAccountStatusE2ETest {
 		UserTestBuilder builderAdminUser = new UserTestBuilder(ADMIN_USER_USERNAME, ADMIN_USER_PASSWORD).withRole(RoleName.ROLE_ADMIN);
 		testHelper.createAndPersistUser(builderAdminUser);	
 		
-		authToken = authTestHelper.logInWithMockMvc(ADMIN_USER_USERNAME, ADMIN_USER_PASSWORD).getAccessToken();
+		authToken = authTestHelper.logInWithTestRestTemplate(ADMIN_USER_USERNAME, ADMIN_USER_PASSWORD).getAccessToken();
 	}
 	
 	@AfterEach
@@ -79,20 +79,16 @@ public class UpdateAccountStatusE2ETest {
 	public void updateAccountStatus_WhenUserAdmin_ShouldReturn200Ok() throws Exception{
 		// Arrange		
 		AccountStatus newAccountStatus = AccountStatus.TEMPORARILY_BLOCKED;
-		RequestBuilder requestBuilder = buildMockMvcRequest(newAccountStatus, authToken);
 
 		// Act
-		MvcResult mvcResult = callEndpoint(requestBuilder);
+		ResponseEntity<StandardResponse> response = updateAccountStatus(authToken, user, newAccountStatus);
 	    user = reloadUser();
-
-		String responseAsString = mvcResult.getResponse().getContentAsString();
-		StandardResponse response = objectMapper.readValue(responseAsString, StandardResponse.class);
 
 		// Assert
 		assertAll(
-				() -> assertEquals(200, mvcResult.getResponse().getStatus(), "HTTP status should be 200 OK"),
-				() -> assertNotNull(response.getMessage(), "Response body should not be null"),
-				() -> assertTrue(response.getMessage().contains("status successfully updated"), "Unexpected response message"),
+				() -> assertEquals(HttpStatus.OK, response.getBody().getStatus(), "HTTP status should be 200 OK"),
+				() -> assertNotNull(response.getBody(), "Response body should not be null"),
+				() -> assertTrue(response.getBody().getMessage().contains("status successfully updated"), "Unexpected response message"),
 				() -> assertTrue(user.getAccountStatus() == newAccountStatus, "Account has unexpected status after the test")
 			);
 	}
@@ -103,20 +99,16 @@ public class UpdateAccountStatusE2ETest {
 		// Arrange		
 		// The default account status is ACTIVE, so trying to update it to the same status, should throw an exception.
 		AccountStatus newAccountStatus = AccountStatus.ACTIVE;
-		RequestBuilder requestBuilder = buildMockMvcRequest(newAccountStatus, authToken);
 
 		// Act
-		MvcResult mvcResult = callEndpoint(requestBuilder);
+		ResponseEntity<StandardResponse> response = updateAccountStatus(authToken, user, newAccountStatus);
 	    user = reloadUser();
-
-		String responseAsString = mvcResult.getResponse().getContentAsString();
-		StandardResponse response = objectMapper.readValue(responseAsString, StandardResponse.class);
 
 		// Assert
 		assertAll(
-				() -> assertEquals(409, mvcResult.getResponse().getStatus(), "HTTP status should be 409 CONFLICT"),
-				() -> assertNotNull(response.getMessage(), "Response body should not be null"),
-				() -> assertEquals("The account already has the specified status", response.getMessage(), "Unexpected response message")
+				() -> assertEquals(HttpStatus.CONFLICT, response.getBody().getStatus(), "HTTP status should be 409 CONFLICT"),
+				() -> assertNotNull(response.getBody(), "Response body should not be null"),
+				() -> assertEquals("The account already has the specified status", response.getBody().getMessage(), "Unexpected response message")
 				);
 	}
 	
@@ -125,43 +117,37 @@ public class UpdateAccountStatusE2ETest {
 	public void updateAccountStatus_WhenAccountIsPermanentlySuspended_ShouldThrowException() throws Exception{
 		// Arrange
 		AccountStatus newAccountStatus = AccountStatus.PERMANENTLY_SUSPENDED;
-		RequestBuilder requestBuilder = buildMockMvcRequest(newAccountStatus, authToken);
-		callEndpoint(requestBuilder);
+		updateAccountStatus(authToken, user, newAccountStatus);
 
 		// Act
 		// Update the account to 'ACTIVE'. The result of this call is the test real subject.
 		AccountStatus accountStatusSecondCall = AccountStatus.ACTIVE;
-		RequestBuilder requestBuilderSecondCall = buildMockMvcRequest(accountStatusSecondCall, authToken);
-		MvcResult mvcResultSecondCall = callEndpoint(requestBuilderSecondCall);
-
-		String responseAsString = mvcResultSecondCall.getResponse().getContentAsString();
-		StandardResponse response = objectMapper.readValue(responseAsString, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = updateAccountStatus(authToken, user, accountStatusSecondCall);
+	    user = reloadUser();
 
 		// Assert
 		assertAll(
-				() -> assertEquals(409, mvcResultSecondCall.getResponse().getStatus(), "HTTP status should be 409 CONFLICT"),
-				() -> assertNotNull(response.getMessage(), "Response body should not be null"),
-				() -> assertEquals("Cannot change status: the account is permanently suspended", response.getMessage(), "Unexpected response message")
+				() -> assertEquals(HttpStatus.CONFLICT, response.getBody().getStatus(), "HTTP status should be 409 CONFLICT"),
+				() -> assertNotNull(response.getBody(), "Response body should not be null"),
+				() -> assertEquals("Cannot change status: the account is permanently suspended", response.getBody().getMessage(), "Unexpected response message")
 				);
 	}
 	
 	// ************** HELPER METHODS **************
-	// These helper methods are shared by UpdateAccountStatusIntegrationTest and UpgradeUserIntegrationTest, however,
-	// attempts to take them to a helper class to avoid code repetition render the code way more complex and difficult
-	// to follow, so the decision to keep the code repeated is a conscious trade-off.
-		
-	private RequestBuilder buildMockMvcRequest(AccountStatus newAccountStatus, String authToken) throws JsonProcessingException {
-		return MockMvcRequestBuilders
-		        .put(Constants.UPDATE_ACCOUNT_STATUS_PATH)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
-		        .param("newAccountStatus", newAccountStatus.name())
-		        .contentType(MediaType.APPLICATION_JSON)
-		        .content(user.getEmail())
-		        .accept(MediaType.APPLICATION_JSON);
-	}
-
-	private MvcResult callEndpoint(RequestBuilder requestBuilder) throws Exception {
-	    return mockMvc.perform(requestBuilder).andReturn();
+	
+	private ResponseEntity<StandardResponse> updateAccountStatus(String authToken, User targetUser, AccountStatus newAccountStatus) throws Exception {
+		HttpHeaders headers = new HttpHeaders();
+	    headers.setContentType(MediaType.APPLICATION_JSON);
+	    headers.setBearerAuth(authToken);
+	    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+	    
+	    String url = UriComponentsBuilder.fromPath(Constants.UPDATE_ACCOUNT_STATUS_PATH)
+	        .queryParam("newAccountStatus", newAccountStatus.name())
+	        .toUriString();
+	    
+	    String userEmailInBody = targetUser.getEmail(); 
+	    HttpEntity<String> request = new HttpEntity<>(userEmailInBody, headers);
+	    return testRestTemplate.exchange(url, HttpMethod.PUT, request, StandardResponse.class);
 	}
 
 	private User reloadUser() {
