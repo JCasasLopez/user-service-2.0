@@ -49,7 +49,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class ResetAndChangePasswordE2ETest {
+public class ResetAndChangePasswordSystemIntegrationTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TokenService tokenService;

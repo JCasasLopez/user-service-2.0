@@ -69,7 +69,7 @@ import io.jsonwebtoken.Claims;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CreateAndDeleteAccountStatefulE2ETest {
+public class CreateAndDeleteAccountStatefulSystemIntegrationTest {
 	
 	@Autowired private TestRestTemplate testRestTemplate;
 	@Autowired private TokenServiceImpl tokenServiceImpl;

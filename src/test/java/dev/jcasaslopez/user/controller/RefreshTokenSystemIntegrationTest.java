@@ -33,7 +33,7 @@ import io.jsonwebtoken.Claims;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class RefreshTokenE2ETest {
+public class RefreshTokenSystemIntegrationTest {
 	
 	@Autowired private TokenService tokenService;
 	@Autowired private TestRestTemplate testRestTemplate;

@@ -37,7 +37,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class LogOutE2ETest {
+public class LogOutSystemIntegrationTest {
 	
 	@Autowired private TestHelper testHelper;
 	@Autowired private AuthenticationTestHelper authTestHelper;
