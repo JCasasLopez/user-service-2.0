@@ -23,7 +23,7 @@ public class UserDto {
 	
 	@Schema(description = "Username between 6 and 20 characters", example = "john_doe")
 	@NotBlank(message = "Username field is required")
-	@Size(min=6, max=20)
+	@Size(min=6, max=20, message="Username must be between 6 and 20 characters")
 	private String username;
 	
 	@Schema(description = "Secure password (min 8 chars, upper/lowercase, number and symbol)", 
@@ -37,12 +37,12 @@ public class UserDto {
 	
 	@Schema(description = "Full name of the user", example = "John Doe")
 	@NotBlank(message = "Full name field is required")
-	@Size(max=30)
+	@Size(max=30, message="Fullname must be shorter than 30 characters")
 	private String fullName;
 	
 	@Schema(description = "User email address", example = "john@example.com")
 	@NotBlank(message = "Email field is required")
-	@Email
+	@Email(message = "Email must have a correct email format")
 	private String email;
 	
 	@Schema(description = "Date of birth in ISO format (yyyy-MM-dd)", example = "1990-05-20")
