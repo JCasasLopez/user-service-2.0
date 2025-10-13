@@ -62,7 +62,7 @@ public class UpdateAccountStatusSystemIntegrationTest {
 		UserTestBuilder builderUser = new UserTestBuilder("Yorch22", "Password123!");
 		user = testHelper.createAndPersistUser(builderUser);
 		
-		// 2) Admin user: Performs successful modification (expected to succeed - 200 OK).
+		// 2) Admin user: Performs or tries to perform modification.
 		UserTestBuilder builderAdminUser = new UserTestBuilder(ADMIN_USER_USERNAME, ADMIN_USER_PASSWORD).withRole(RoleName.ROLE_ADMIN);
 		testHelper.createAndPersistUser(builderAdminUser);	
 		
