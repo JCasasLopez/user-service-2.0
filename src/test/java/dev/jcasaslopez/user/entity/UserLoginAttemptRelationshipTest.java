@@ -24,8 +24,10 @@ import dev.jcasaslopez.user.repository.RoleRepository;
 import dev.jcasaslopez.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
-// These tests do not make use of TestHelper user creation methods to avoid complex 
-// dependency mocking which is unnecessary for a @DataJpaTest.
+// These tests do not use the TestHelper user creation methods. The reason is that TestHelper has multiple
+// dependencies, so using it here would require either mocking all of them (which is complex and error-prone),
+// or loading the entire application context, which goes against the purpose of these tests. 
+// These tests focus solely on the repository layer and therefore only require beans related to it (@DataJpaTest).
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
