@@ -150,10 +150,13 @@ public class AuthFailureHandlerSystemIntegrationTest {
 	    ArgumentCaptor<Boolean> attemptSuccessfulCaptor = ArgumentCaptor.forClass(Boolean.class);
 	    ArgumentCaptor<LoginFailureReason> loginFailureReasonCaptor = ArgumentCaptor.forClass(LoginFailureReason.class);
 	    
+	    // Delete the user persisted in the set-up method, and persist a new one with the desired account status.
 	    testHelper.cleanDataBaseAndRedis();
 	    UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD).withAccountStatus(accountStatus);
 	    testHelper.createAndPersistUser(builder);
 	    
+	    // When the account is 'temporarily blocked', the custom UsernamePasswordAuthFilter switches the 
+	    // account back to 'active' if there is no Redis entry for the username, so we have to upload one.
 	    if (needsRedisEntry) {
 	    	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + USERNAME;
 	    	String maxNumberFailedAttemptsAsString = String.valueOf(maxNumberFailedAttempts);
@@ -163,8 +166,7 @@ public class AuthFailureHandlerSystemIntegrationTest {
 	    HttpEntity<String> request = configHttpRequest(USERNAME, PASSWORD);
 
 	    // Act
-	    ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(
-	        Constants.LOGIN_PATH, request, StandardResponse.class);
+	    ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 
 	    // Assert
 	    verify(loginAttemptService).recordAttempt(attemptSuccessfulCaptor.capture(), anyString(), loginFailureReasonCaptor.capture(), any());
