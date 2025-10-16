@@ -29,7 +29,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class AuthenticationFilterTest {
+public class AuthenticationFilterIntegrationTest {
     
     @Autowired private MockMvc mockMvc;
     
