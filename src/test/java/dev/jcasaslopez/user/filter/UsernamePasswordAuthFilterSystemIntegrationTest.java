@@ -12,9 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,8 +58,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CustomUsernamePasswordAuthenticationFilterTest {
+public class UsernamePasswordAuthFilterSystemIntegrationTest {
 	
 	@Value ("${auth.maxFailedAttempts}") int maxNumberFailedAttempts;
 	
@@ -79,8 +76,7 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 
 	@BeforeEach
 	void setUp() {
-		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD)
-											.withAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD).withAccountStatus(AccountStatus.TEMPORARILY_BLOCKED);
 		testHelper.createAndPersistUser(builder);
 		
 	}
@@ -95,12 +91,10 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	@Test
 	@DisplayName("Switches account to active when lock timeout is over")
 	void WhenLockTimeoutOver_ShouldSwitchAccountToActive() {
-		// Arrange	
-		HttpEntity<String> request = setHttpRequest(USERNAME, PASSWORD);
-		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
-								
+		ResponseEntity<StandardResponse> response = attemptLogin(USERNAME, PASSWORD);
+						
+		// Email is sent when account status changes
 		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
 		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
 		String emailBody = bodyCaptor.getValue();
@@ -124,56 +118,61 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 	void WhenLockTimeoutIsNotOver_ShoulddReturn403Forbidden() {
 		// Arrange
     	String redisKey = Constants.LOGIN_ATTEMPTS_REDIS_KEY + USERNAME;
-		redisTemplate.opsForValue().set(redisKey, "3", 5, TimeUnit.MINUTES);
-		
-		HttpEntity<String> request = setHttpRequest(USERNAME, PASSWORD);
-		
+    	String maxNumberFailedAttemptsAsString = String.valueOf(maxNumberFailedAttempts);
+		redisTemplate.opsForValue().set(redisKey, maxNumberFailedAttemptsAsString, 5, TimeUnit.MINUTES);
+			
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
-				
+		ResponseEntity<StandardResponse> response = attemptLogin(USERNAME, PASSWORD);
+		
 		// Assert
 		assertAll(
-				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(USERNAME).getAccountStatus(), "User account status shoud be TEMPORARILY_BLOCKED"),
+				() -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, userAccountService.findUser(USERNAME).getAccountStatus(), 
+						"User account status shoud be TEMPORARILY_BLOCKED"),
 				() -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "HTTP response status should be 403 FORBIDDEN"),
-				() -> assertEquals("Your account is locked due to too many failed login attempts. It will be reactivated automatically in a few hours", 
+				() -> assertEquals("Your account is locked due to too many failed login attempts. It will be reactivated automatically in a few hours",
 						response.getBody().getMessage(), "Unexpected HTTP response message")
-		);
+				);
 	}
 	
 	@Test
 	@DisplayName("After maximum number of failed logins, account gets locked")
 	void afterThreeFailedLogins_AccountGetsLocked() {
-	    // Arrange - Perform 2 failed login attempts (just below the threshold)
-		String wrongPassword = "Jorge66!";
-		HttpEntity<String> requestWithWrongPassword = setHttpRequest(USERNAME, wrongPassword);
+	    // Arrange 
+		// Delete the user created in the set-up, and persist a new one with an ACTIVE account
+		testHelper.cleanDataBaseAndRedis();
+		UserTestBuilder builder = new UserTestBuilder(USERNAME, PASSWORD);
+		testHelper.createAndPersistUser(builder);
 		
+		String wrongPassword = "Jorge66!";
+		
+		// Perform (maxNumberFailedAttempts - 1) failed login attempts (just below the threshold)
 	    for (int i = 0; i <= maxNumberFailedAttempts - 1; i++) {
 	        // These failed attempts should increment the Redis counter but not trigger lockout yet
-	        testRestTemplate.postForEntity(Constants.LOGIN_PATH, requestWithWrongPassword, StandardResponse.class);
+	    	attemptLogin(USERNAME, wrongPassword);
 	    }
 	    
 	    // Act - last failed attempt (should trigger account lockout)
-	    ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, requestWithWrongPassword, StandardResponse.class);
+		ResponseEntity<StandardResponse> responseToLastLoginWithWrongPassword = attemptLogin(USERNAME, wrongPassword);
 		AccountStatus finalAccountStatus = userAccountService.findUser(USERNAME).getAccountStatus();
+		
+		// Email is sent when account status changes
+		ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+		verify(emailService).sendEmail(anyString(), anyString(), bodyCaptor.capture());
+		String emailBody = bodyCaptor.getValue();
 
 	    // Assert
 	    assertAll(
-	        () -> assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "3rd failed attempt should return 403 FORBIDDEN"),
-	        () -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, finalAccountStatus, "Account status should be TEMPORARILY_BLOCKED after max failed attempts")
+	        () -> assertEquals(HttpStatus.FORBIDDEN, responseToLastLoginWithWrongPassword.getStatusCode(), "Last failed attempt should return 403 FORBIDDEN"),
+	        () -> assertEquals(AccountStatus.TEMPORARILY_BLOCKED, finalAccountStatus, "Account status should be TEMPORARILY_BLOCKED after max failed attempts"),
+	        () -> assertTrue(emailBody.contains("Your account has been temporarily blocked due to too many login failed attempts"), "Email body does not contain expected content")
 	    );
 	}
 	
 	@Test
 	@DisplayName("If request has no username/password, returns 400 BAD CREDENTIALS")
 	void WhenNoUsernameOrPassword_ShouldThrowException() {
-		// Arrange
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-		
-		HttpEntity<String> request = setHttpRequest(" ", PASSWORD);
-		
 		// Act
-		ResponseEntity<StandardResponse> response = testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
+		ResponseEntity<StandardResponse> response = attemptLogin(" ", PASSWORD);
 		
 		// Assert
 		assertAll(
@@ -182,10 +181,14 @@ public class CustomUsernamePasswordAuthenticationFilterTest {
 		);
 	}
 	
-	private HttpEntity<String> setHttpRequest(String username, String password) {
+	// This method is different from the one in AuthenticationTestHelper, as that one is designed to be successful
+	// and returns a LoginResponse object, containing the tokens, whereas this one is designed to fail, and returns
+	// a ResponseEntity object.
+	private ResponseEntity<StandardResponse> attemptLogin(String username, String password) {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);		
 		String body = "username=" + username + "&password=" + password;
-		return new HttpEntity<>(body, headers);
+		HttpEntity<String> request = new HttpEntity<>(body, headers);
+		return testRestTemplate.postForEntity(Constants.LOGIN_PATH, request, StandardResponse.class);
 	}
 }
