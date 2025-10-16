@@ -28,21 +28,14 @@ import dev.jcasaslopez.user.enums.RoleName;
 @Import({UserMapper.class, RoleMapper.class})
 public class UserMapperTest {
 	
-	@Autowired
-	private UserMapper userMapper;
+	@Autowired private UserMapper userMapper;
 	
 	@Test
 	@DisplayName("userToUserDtoMapper() should map correctly from User to UserDto")
 	void userToUserDtoMapper_ShoudMapCorrectlyToUserDto() {
 		// Arrange
 		Role role = new Role(RoleName.ROLE_USER);
-		User user = new User(
-			    "Johnny",
-			    "John Doe",
-			    "Qwerty123!",
-			    "123@example.com",
-			    LocalDate.of(1990, 5, 15)
-			);
+		User user = new User("Johnny", "John Doe", "Qwerty123!", "123@example.com",LocalDate.of(1990, 5, 15));
 		
 		Set<Role> userRoles = new HashSet<>(Arrays.asList(role));
 		user.setRoles(userRoles);
@@ -53,14 +46,10 @@ public class UserMapperTest {
 		
 		// Assert
 		assertAll(
-		        () -> assertEquals(user.getUsername(), mappedUserDto.getUsername(), 
-		        		"Usernames should match"),
-		        () -> assertEquals(user.getFullName(), mappedUserDto.getFullName(), 
-		        		"Full names should match"),
-		        () -> assertEquals(user.getEmail(), mappedUserDto.getEmail(), 
-		        		"Emails should match"),
-		        () -> assertEquals(user.getDateOfBirth(), mappedUserDto.getDateOfBirth(), 
-		        		"Dates of birth times should match"),
+		        () -> assertEquals(user.getUsername(), mappedUserDto.getUsername(), "Usernames should match"),
+		        () -> assertEquals(user.getFullName(), mappedUserDto.getFullName(), "Full names should match"),
+		        () -> assertEquals(user.getEmail(), mappedUserDto.getEmail(), "Emails should match"),
+		        () -> assertEquals(user.getDateOfBirth(), mappedUserDto.getDateOfBirth(), "Dates of birth times should match"),
 		        () -> {
 		            Set<RoleName> expectedRoleNames = user.getRoles().stream()
 		                .map(r -> r.getRoleName())
@@ -82,29 +71,18 @@ public class UserMapperTest {
 	@DisplayName("userDtoToUserMapper() should map correctly from UserDto to User")
 	void userDtoToUserMapper_ShoudMapCorrectlyToUser() {
 		// Arrange
-		UserDto userDto = new UserDto(
-			    "Johnny",
-			    "Qwerty123!",
-			    "John Doe",
-			    "123@example.com",
-			    LocalDate.of(1990, 5, 15)
-			);
+		UserDto userDto = new UserDto("Johnny", "Qwerty123!", "John Doe", "123@example.com", LocalDate.of(1990, 5, 15));
 		
 		// Act
 		User mappedUser = userMapper.userDtoToUserMapper(userDto);
 		
 		// Assert
 		assertAll(
-		        () -> assertEquals(userDto.getUsername(), mappedUser.getUsername(), 
-		        		"Usernames should match"),
-		        () -> assertEquals(userDto.getPassword(), mappedUser.getPassword(), 
-		        		"Passwords should match"),
-		        () -> assertEquals(userDto.getFullName(), mappedUser.getFullName(), 
-		        		"Full names should match"),
-		        () -> assertEquals(userDto.getEmail(), mappedUser.getEmail(), 
-		        		"Emails should match"),
-		        () -> assertEquals(userDto.getDateOfBirth(), mappedUser.getDateOfBirth(), 
-		        		"Dates of birth times should match")
+		        () -> assertEquals(userDto.getUsername(), mappedUser.getUsername(), "Usernames should match"),
+		        () -> assertEquals(userDto.getPassword(), mappedUser.getPassword(), "Passwords should match"),
+		        () -> assertEquals(userDto.getFullName(), mappedUser.getFullName(), "Full names should match"),
+		        () -> assertEquals(userDto.getEmail(), mappedUser.getEmail(), "Emails should match"),
+		        () -> assertEquals(userDto.getDateOfBirth(), mappedUser.getDateOfBirth(), "Dates of birth times should match")
 		    );
 	}
 }
