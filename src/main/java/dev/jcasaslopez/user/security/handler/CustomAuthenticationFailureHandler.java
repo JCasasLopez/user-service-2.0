@@ -29,8 +29,7 @@ import jakarta.servlet.http.HttpServletResponse;
 // Responses are neutral to avoid exposing sensitive information to the client.
 // All attempts are logged with their cause via LoginAttemptService.
 // Integrates account locking after multiple failed attempts using Redis and events.
-// Avoids using AuthenticationEntryPoint for invalid usernames and missing fields
-// by leveraging custom exceptions.
+// Avoids using AuthenticationEntryPoint for invalid usernames and missing fields by leveraging custom exceptions.
 @Component
 public class CustomAuthenticationFailureHandler implements AuthenticationFailureHandler {
 	
@@ -95,7 +94,11 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 		        
 	        } else if (user.getAccountStatus() == AccountStatus.TEMPORARILY_BLOCKED) {
 		        standardResponseHandler.handleResponse(response, 403, "Your account is locked due to too many failed login attempts. It will be reactivated automatically in a few hours", null);
+	        
+	        } else {
+	        	standardResponseHandler.handleResponse(response, 403, "Your account is permanently suspended", null);
 	        }
+	        
 	        return;
 	        
 	    } else if (exception instanceof BadCredentialsException) {
