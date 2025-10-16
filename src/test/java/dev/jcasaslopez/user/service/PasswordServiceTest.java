@@ -19,7 +19,7 @@ import dev.jcasaslopez.user.repository.UserRepository;
 
 // The happy path is verified in "FullRestAndChangePasswordIntegrationTest".
 @ExtendWith(MockitoExtension.class)
-public class PasswordServiceUnitTest {
+public class PasswordServiceTest {
 	
 	@Mock UserRepository userRepository;
 	@Mock PasswordEncoder passwordEncoder;

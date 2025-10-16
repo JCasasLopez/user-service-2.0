@@ -26,7 +26,7 @@ import dev.jcasaslopez.user.repository.UserRepository;
 import dev.jcasaslopez.user.security.CustomUserDetails;
 
 @ExtendWith(MockitoExtension.class)
-public class AuthenticateUserUnitTest {
+public class AuthenticateUserTest {
 	
 	@Mock UserRepository userRepository;
 	@Mock UserMapper userMapper;
