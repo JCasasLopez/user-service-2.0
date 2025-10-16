@@ -40,7 +40,7 @@ import dev.jcasaslopez.user.utilities.Constants;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class CustomAuthenticationSuccessHandlerTest {
+public class AuthSuccessHandlerSystemIntegrationTest {
 	
 	@Value ("${auth.maxFailedAttempts}") int maxNumberFailedAttempts;
 	
