@@ -14,13 +14,12 @@ import dev.jcasaslopez.user.entity.Role;
 import dev.jcasaslopez.user.enums.RoleName;
 
 // Instead of loading the full context with @SpringBootTest, we initialize only  
-// UserMapper and the minimal required configuration.
+// RoleMapper and the minimal required configuration.
 @ExtendWith(SpringExtension.class)
 @Import(RoleMapper.class)
 public class RoleMapperTest {
 
-	@Autowired
-	private RoleMapper roleMapper;
+	@Autowired private RoleMapper roleMapper;
 	
 	@Test
 	@DisplayName("roleToRoleDtoMapper() should map Role to RoleDto correctly")
