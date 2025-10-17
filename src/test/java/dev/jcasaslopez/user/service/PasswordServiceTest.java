@@ -102,7 +102,7 @@ public class PasswordServiceTest {
 	    String newPassword = "Jorge22!";
 	    
 	    when(userAccountService.getAuthenticatedUser()).thenReturn(mockUser(passwordInDatabase));
-        when(passwordEncoder.matches(providedPassword, passwordInDatabase)).thenReturn(false);
+        when(passwordEncoder.matches(providedPassword, passwordInDatabase)).thenReturn(true);
         
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> {
