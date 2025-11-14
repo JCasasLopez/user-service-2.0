@@ -42,23 +42,25 @@ public class TestHelper {
 	@Autowired private EmailService emailService;
 	
 	public User createUser(UserTestBuilder builder) {
+        User user = builder.build();
+
 		Set<Role> roles = new HashSet<>();
 		roles = builder.getRoleNames()
 				.stream()
 				.map(roleName -> new Role(roleName))
 				.collect(Collectors.toSet());
-        User user = builder.build();
         user.setRoles(roles);
         return user;
     }
 	
 	public User createAndPersistUser(UserTestBuilder builder) {
+        User user = builder.build();
+
 		Set<Role> roles = new HashSet<>();
 		roles = builder.getRoleNames()
 				.stream()
 				.map(roleName -> roleRepository.findByRoleName(roleName).get())
 				.collect(Collectors.toSet());
-        User user = builder.build();
         user.setPassword(passwordEncoder.encode(user.getPassword())); 
         user.setRoles(roles);
         
