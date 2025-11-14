@@ -26,6 +26,8 @@ public class PasswordServiceTest {
 	@Mock UserAccountService userAccountService;
 	@InjectMocks PasswordServiceImpl passwordServiceImpl;
 	
+	private static final String VALID_OLD_PASSWORD_IN_DB = "Jorge22!";
+	
 	private User mockUser(String passwordInDatabase) {
 	    User user = new User();
 	    user.setUsername("testuser");
@@ -33,6 +35,10 @@ public class PasswordServiceTest {
 	    return user;
 	}
 	
+	// These tests verify passwordIsValid() behaviour, which is a completely different functionality that the DTO
+	// validations (tested in UserDtoValidationTest). 
+	// Both functionalities do essentially the same, but passwordIsValid() is called when we use the corresponding 
+	// endpoints to either reset or change the password, whereas the DTO validations are invoked when a user is registered.
 	@ParameterizedTest
 	@DisplayName("When password format is valid, should return true")
 	@CsvSource({
@@ -65,16 +71,16 @@ public class PasswordServiceTest {
 	@Test
     void resetPassword_WhenNewPasswordMatchesOld_ThrowsException() {
 		// Arrange
-		String providedPassword = "Jorge22!";
-		String passwordInDatabase = "Jorge22!";
+		String newPassword = VALID_OLD_PASSWORD_IN_DB;
+		String passwordInDatabase = VALID_OLD_PASSWORD_IN_DB;
         User user = mockUser(passwordInDatabase);
         
         // Act
-        when(passwordEncoder.matches(passwordInDatabase, providedPassword)).thenReturn(true);
+        when(passwordEncoder.matches(passwordInDatabase, newPassword)).thenReturn(true);
 
         // Assert
         assertThrows(IllegalArgumentException.class, () -> {
-        	passwordServiceImpl.resetPassword(providedPassword, user);
+        	passwordServiceImpl.resetPassword(newPassword, user);
         });
     }
 	
@@ -82,8 +88,8 @@ public class PasswordServiceTest {
     void changePassword_WhenProvidedPasswordDoesNotMatchOldOne_ThrowsException() {
 		// Arrange
 		String providedPassword = "newPass1!";
-	    String passwordInDatabase = "Jorge22!";	   
 	    String newPassword = "Qwerty22!";
+		String passwordInDatabase = VALID_OLD_PASSWORD_IN_DB;
 	    
         when(userAccountService.getAuthenticatedUser()).thenReturn(mockUser(passwordInDatabase));
         when(passwordEncoder.matches(providedPassword, passwordInDatabase)).thenReturn(false);
@@ -97,8 +103,8 @@ public class PasswordServiceTest {
 	@Test
     void changePassword_WhenNewPasswordMatchesOldOne_ThrowsException() {
 		// Arrange
-		String providedPassword = "Jorge22!";
-	    String passwordInDatabase = "Jorge22!";	   
+		String providedPassword = VALID_OLD_PASSWORD_IN_DB;
+		String passwordInDatabase = VALID_OLD_PASSWORD_IN_DB;
 	    String newPassword = "Jorge22!";
 	    
 	    when(userAccountService.getAuthenticatedUser()).thenReturn(mockUser(passwordInDatabase));
