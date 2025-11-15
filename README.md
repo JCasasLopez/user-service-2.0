@@ -40,7 +40,6 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
 - **Docker Compose** - Multi-service setup
 - **MySQL Container** - Database service
 - **Redis Container** - Cache service
-- **Environment Config** - Secure configuration
 
 ## Prerequisites  
 *Content for prerequisites...*
@@ -79,7 +78,17 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
 *Content for design decisions...*
 
 ## Tests
-*Content for tests...*
+Although this microservice contains more than 100 tests, achieving 100% coverage has never been a goal (coverage sits at 58% at the time of writing). Due to the microservice’s heavy reliance on frameworks (Spring Boot, Spring Security) and external tools (Redis, JJWT), most of the complexity lies in orchestration rather than in business logic.
+
+For this reason, unit tests are used selectively, only where they provide clear and isolated value —such as verifying username and email uniqueness, validating entity relationships, or enforcing password rules. The primary testing strategy, however, is based on integration tests.
+
+Integration tests are significantly more valuable in this context. They are designed to replicate real external behavior with minimal coupling to internal implementation details. This approach ensures meaningful, robust coverage that remains reliable during refactoring and avoids misleading false positives.
+
+Before running the tests, ensure that the required containers —MySQL and Redis— are up and running.
+
+To mimic a production-like environment, containerized services are used: a MySQL instance instead of an in-memory H2 database, and Redis containers managed through Testcontainers. The MySQL instance is initialized cleanly for each test run, retaining only the required preloaded user roles.
+
+**INSTRUCCIONES AQUÍ**
 
 ## Contribution and License
 *Content for contribution and license...*
