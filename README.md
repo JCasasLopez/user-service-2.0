@@ -12,8 +12,10 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
 5. [Key API Endpoints](#key-api-endpoints)
 6. [Security Features](#security-features)
 7. [Design Decisions](#design-decisions)
-8. [Tests](#tests)
-9. [Contribution and License](#contribution-and-license)
+8. [Planned Future Improvements](#planned-future-improvements)
+9. [Tests](#tests)
+10. [Contribution and License](#contribution-and-license)
+11. [Contact](#contact)
 
 
 ## Tech Stack
@@ -75,9 +77,7 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
 - Secure session management
 
 ## Design Decisions
-- HTTPS has not been implemented in the current version, as the focus was placed on core functionalities. However, it is planned for a future release to ensure secure data transmission, especially for sensitive operations such as authentication.
-  
-- There are three token types—verification, access, and refresh—with default lifetimes of 15 minutes, 5 minutes, and 24 hours respectively. The short lifespan of verification and access tokens largely guarantees the security of the system on its own. Refresh tokens, however, are complemented by an explicit blacklisting mechanism implemented through Redis. A fully comprehensive token-blacklisting solution is planned for a future iteration.
+- There are three token types—verification, access, and refresh—with default lifetimes of 15 minutes, 5 minutes, and 24 hours respectively. The short lifespan of verification and access tokens largely guarantees the security of the system on its own. Refresh tokens, however, are complemented by an explicit blacklisting mechanism implemented through Redis. 
 
 - To prevent the controllers from becoming bloated with business logic, an AccountOrchestrationService was introduced as an intermediate layer. This service coordinates the interaction between specialized services — such as those responsible for password management, token handling, email delivery, or notifications — ensuring that the controller remains thin and focused on request handling. This approach improves modularity, readability, and testability of the codebase.
   
@@ -89,6 +89,12 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
   
 - Standard validation rules are applied at the controller, DTO, and database levels to ensure data integrity and correctness.
 
+## Planned Future improvements
+- HTTPS has not been implemented in the current version, as the focus was placed on core functionalities. However, it is planned for a future release to ensure secure data transmission, especially for sensitive operations such as authentication.
+  
+- Event though the tokens short lifespan offers an adequate security baseline, a fully comprehensive token-blacklisting solution is planned for a future iteration.
+  
+- Hot-reloading of token lifetimes.
   
 ## Tests
 This microservice currently includes 106 tests and reaches a test coverage of 85%. Given its reliance on frameworks such as Spring Boot and Spring Security, as well as external tools like Redis and JJWT, most of the complexity lies in orchestration rather than in business logic.
@@ -106,4 +112,13 @@ In order for the integration tests to work correctly without needing external co
 **INSTRUCCIONES AQUÍ**
 
 ## Contribution and License
-*Content for contribution and license...*
+### Contributing
+As this project is intended as a personal demonstration, external contributions are not being accepted at this time.
+
+### License
+This project is licensed under the MIT License.  
+See the [LICENSE](./LICENSE) file for details.
+
+## Contact
+Created by Jorge Casas López.  
+Email: [jorgecasaslopez.dev]  
