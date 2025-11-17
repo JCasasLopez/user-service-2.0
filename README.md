@@ -84,47 +84,48 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
 ## Security Features
 ### Token types and lifetimes
 The system makes use of JWTs to achieve stateless authentication. These tokens are created and validated using Spring Security and the JJWT library.
-Token lifetimes are configurable in the application.properties file.
-- Access tokens: short-lived tokens for API authentication (default value: 15 minutes).
-- Verification tokens: purpose-specific tokens for email verification and similar operations (default value: 5 minutes).
-- Refresh Tokens: longer-lived tokens for obtaining new access tokens (default value: 24 hours).
+Token lifetimes are configurable in the *application.properties* file.
+- **Access** tokens: short-lived tokens for API authentication (default value: 15 minutes).
+- **Verification** tokens: purpose-specific tokens for email verification and similar operations (default value: 5 minutes).
+- **Refresh** Tokens: longer-lived tokens for obtaining new access tokens (default value: 24 hours).
   
 ### Account Protection
-- Account lockout mechanism to prevent brute-force attacks. Account is automatically unlocked after a pre-established period of time (Default values, set in apllication.properties: 3 failed attempts and 24 hours, respectively). The unlocking mechanism is outlined in the 'Authentication Flow Overview' section, located further down.
-- Email verification for 'Create Account' and 'Reset Password' functionalities.
+- Account lockout mechanism to prevent brute-force attacks. Account is automatically unlocked after a pre-established period of time (Default values, set in *apllication.properties*: 3 failed attempts and 24 hours, respectively). The unlocking mechanism is outlined in the 'Authentication Flow Overview' section, located further down.
+- Email verification for **Create Account** and **Reset Password** functionalities.
 - BCrypt password encryption.
 - Strong password policies enforcement (must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character).
 - Possible account atatus:
-**ACTIVE**
-**TEMPORARILY_BLOCKED**: The account has been blocked due to too many failed login attempts. It is automatically unlocked after a specified period of time (as verified via the corresponding Redis entry).
-**BLOCKED**: An administrator (with either admin or superadmin role) may manually block an account if it is suspected to be compromised or there is another reason to temporarily disable it. In this state, the account is **not** automatically unlocked, and only an administrator can reactivate it. 
-**PERMANENTLY_SUSPENDED**: This status can also only be assigned by an administrator. Once suspended, the account cannot be reactivated.
-For security reasons, following any change to the account status, the user will receive an email notification.
+| Status                | Description                                                                                                                            |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| ACTIVE                | Account fully functional                                                                                                               |
+| BLOCKED               | Manually suspended by an admin/superadmin. The account is **not** automatically unlocked, and only an administrator can reactivate it. |
+| TEMPORARILY_BLOCKED   | Auto-blocked after failed login attempts. It is automatically unlocked after a specified period of time entry).                        | 
+| PERMANENTLY_SUSPENDED | This status can also only be assigned by an administrator. Once suspended, the account cannot be reactivated.                          |
 
 ### Data Security
 - Unique username and email validation.
 - Standard validation rules are applied at the controller, DTO, and database levels to ensure data integrity and correctness.
 
 ### Access Control
-- The system differentiates three different roles: user, admin and super-admin. Only admin and super-admin users can change an account status. Only a super-admin user can update a user to admin.
+- The system differentiates three different roles: **USER**, **ADMIN** and **SUPER-ADMIN**. Only ADMIN and SUPER-ADMIN users can change an account status. Only a SUPER-ADMIN user can update a user to admin.
 - Role-based endpoint restrictions, using method-level authorization as opposed to SecurityFilterChain configuration.
 
 ### Authentication Flow Overview
 Spring Security filters and handlers are heavily customized, as JWTs often do not integrate well with the framework:
-- A custom UsernamePasswordAuthenticationFilter checks whether the account is locked before proceeding with the login process. If it is locked, the filter verifies whether a corresponding Redis entry exists for the user attempting authentication. If the entry is present, the lockout period is still active and the request is rejected. If the entry is missing, the lockout period has expired and the account status can safely be switched back to ACTIVE in the database.
-- The AuthenticationFilter is at the core of the authentication workflow. It extracts the JWT from the HTTP request header, identifies its type (verification, access, or refresh), and routes the request accordingly. This filter is designed to implement a deny-by-default policy, meaning it denies access whenever any validation step fails — such as an invalid token, an unsupported HTTP method, or an attempt to access a restricted path.
+- A custom *UsernamePasswordAuthenticationFilter* checks whether the account is locked before proceeding with the login process. If it is locked, the filter verifies whether a corresponding Redis entry exists for the user attempting authentication. If the entry is present, the lockout period is still active and the request is rejected. If the entry is missing, the lockout period has expired and the account status can safely be switched back to ACTIVE in the database.
+- The *AuthenticationFilter* is at the core of the authentication workflow. It extracts the JWT from the HTTP request header, identifies its type (verification, access, or refresh), and routes the request accordingly. This filter is designed to implement a deny-by-default policy, meaning it denies access whenever any validation step fails — such as an invalid token, an unsupported HTTP method, or an attempt to access a restricted path.
 - Custom login, authentication, and authorization handlers return HTTP responses that provide relevant information to the user without exposing sensitive details. For example, both an incorrect username and an incorrect password return “Bad Credentials” to avoid leaking information.
   
 ## Design Decisions
-- There are three token types—verification, access, and refresh—with default lifetimes of 15 minutes, 5 minutes, and 24 hours respectively. The short lifespan of verification and access tokens largely guarantees the security of the system on its own. Refresh tokens, however, are complemented by an explicit blacklisting mechanism implemented through Redis. 
+- The short lifespan of *verification* and *access* tokens largely guarantees the security of the system on its own. *Refresh* tokens, however, are complemented by an explicit blacklisting mechanism implemented through Redis. 
 
-- To prevent the controllers from becoming bloated with business logic, an AccountOrchestrationService was introduced as an intermediate layer. This service coordinates the interaction between specialized services — such as those responsible for password management, token handling, email delivery, or notifications — ensuring that the controller remains thin and focused on request handling. This approach improves modularity, readability, and testability of the codebase.
+- To prevent the controllers from becoming bloated with business logic, an *AccountOrchestrationService* was introduced as an intermediate layer. This service coordinates the interaction between specialized services — such as those responsible for password management, token handling, email delivery, or notifications — ensuring that the controller remains thin and focused on request handling. This approach improves modularity, readability, and testability of the codebase.
   
 - The first version of this microservice (see the user-service 1.0 repository) featured a different lockout mechanism: failed login attempts were stored in the users table in the database. The move to Redis represents a substantial improvement, both performance-wise, as Redis read/write operations are much faster than their database counterparts, and architecture-wise, as it cleanly decouples failed login tracking from the database user table. In addition, this version introduces a dedicated table to persist all login attempts — whether failed or successful. Although not yet actively used, these records lay the groundwork for improved scalability and advanced security features.
   
-- A GlobalExceptionHandler class has been implemented to centralize exception handling and return consistent, structured HTTP responses. This improves code maintainability and ensures clear, informative feedback to API clients. A class was also created to encapsulate and standardize HTTP responses. This proved extremely useful when integrating the backend with the frontend, as it ensures consistency and simplifies error handling.
+- A *GlobalExceptionHandler* class has been implemented to centralize exception handling and return consistent, structured HTTP responses. This improves code maintainability and ensures clear, informative feedback to API clients. A class was also created to encapsulate and standardize HTTP responses. This proved extremely useful when integrating the backend with the frontend, as it ensures consistency and simplifies error handling.
     
-- Token lifetime values (verification, access, and refresh) are not hardcoded but loaded from the application properties file. A configuration class maps these values to a Map, which is then wrapped in a TokensLifetimes bean and injected wherever needed. This promotes a clean separation between configuration and logic, and, more importantly, it opens the door to hot-reloading token lifetimes without requiring a service restart.
+- Token lifetime values (verification, access, and refresh) are not hardcoded but loaded from the application properties file. A configuration class maps these values to a Map, which is then wrapped in a *TokensLifetimes* bean and injected wherever needed. This promotes a clean separation between configuration and logic, and, more importantly, it opens the door to hot-reloading token lifetimes without requiring a service restart.
   
 ## Planned Future improvements
 - HTTPS has not been implemented in the current version, as the focus was placed on core functionalities. However, it is planned for a future release to ensure secure data transmission, especially for sensitive operations such as authentication.
@@ -144,7 +145,7 @@ Before running the tests, ensure that the required containers —MySQL and Redis
 
 To mimic a production-like environment, containerized services are used: a MySQL instance instead of an in-memory H2 database, and Redis containers managed through Testcontainers. The MySQL instance is initialized cleanly for each test run, retaining only the required preloaded user roles.
 
-In order for the integration tests to work correctly without needing external configuration files, a JWT secret key has been included directly in the tests application.properties file. This key is used only for signing and verifying tokens during test execution. Since this microservice is solely for demonstration purposes and this key is never used in production environments (where secrets are managed via environment variables), this direct inclusion does not pose a security risk.
+In order for the integration tests to work correctly without needing external configuration files, a JWT secret key has been included directly in the tests *application.properties* file. This key is used only for signing and verifying tokens during test execution. Since this microservice is solely for demonstration purposes and this key is never used in production environments (where secrets are managed via environment variables), this direct inclusion does not pose a security risk.
 
 **INSTRUCCIONES AQUÍ**
 
