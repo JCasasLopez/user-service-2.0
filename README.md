@@ -52,30 +52,69 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
 ## Build and Run
 *Content for build and run...*
 
-## Key API Endpoints
-*Content for API endpoints...*
+## API Endpoints
+### Authentication
+| Method | Endpoint      | Description             | Auth Required |
+|--------|---------------|-------------------------|---------------|
+| POST   | /login        | User authentication     | No            |
+| POST   | /logout       | User logout             | Yes           |
+| POST   | /refreshToken | Generate new token pair | Yes           |
+
+### User Management
+| Method | Endpoint                  | Description                | Auth Required |
+|--------|----------------------------|---------------------------|---------------|
+| POST   | /initiateUserRegistration | Start registration process | No            |
+| POST   | /userRegistration         | Complete user registration | Yes           |
+| DELETE | /deleteAccount            | Delete user account        | Yes           |
+
+### Password Management
+| Method | Endpoint        | Description               | Auth Required |
+| ------ | --------------- | ------------------------- | ------------- |
+| POST   | /forgotPassword | Request password reset    | No            |
+| PUT    | /resetPassword  | Reset password with token | Yes           |
+| PUT    | /changePassword | Change current password   | Yes           |
+
+### Administrative
+| Method | Endpoint             | Description            | Auth Required | Role             |
+| ------ | -------------------- | ---------------------- | ------------- | ---------------- |
+| PUT    | /upgradeUser         | Grant admin privileges | Yes           | SUPERADMIN       |
+| PUT    | /updateAccountStatus | Update account status  | Yes           | ADMIN/SUPERADMIN |
+| POST   | /sendNotification    | Send user notification | Yes           | Any              |
 
 ## Security Features
-### JWT Implementation
-- Short-lived access tokens (15-30 minutes)
-- Secure refresh token rotation
-- Purpose-specific tokens for different operations
-
+### Token types and lifetimes
+The system makes use of JWTs to achieve stateless authentication. These tokens are created and validated using Spring Security and the JJWT library.
+Token lifetimes are configurable in the application.properties file.
+- Access tokens: short-lived tokens for API authentication (default value: 15 minutes).
+- Verification tokens: purpose-specific tokens for email verification and similar operations (default value: 5 minutes).
+- Refresh Tokens: longer-lived tokens for obtaining new access tokens (default value: 24 hours).
+  
 ### Account Protection
-- Progressive account lockout after failed attempts
-- Automatic unlock after configurable time period
-- Brute-force attack prevention
+- Account lockout mechanism to prevent brute-force attacks. Account is automatically unlocked after a pre-established period of time (Default values, set in apllication.properties: 3 failed attempts and 24 hours, respectively). The unlocking mechanism is outlined in the 'Authentication Flow Overview' section, located further down.
+- Email verification for 'Create Account' and 'Reset Password' functionalities.
+- BCrypt password encryption.
+- Strong password policies enforcement (must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character).
+- Possible account atatus:
+**ACTIVE**
+**TEMPORARILY_BLOCKED**: The account has been blocked due to too many failed login attempts. It is automatically unlocked after a specified period of time (as verified via the corresponding Redis entry).
+**BLOCKED**: An administrator (with either admin or superadmin role) may manually block an account if it is suspected to be compromised or there is another reason to temporarily disable it. In this state, the account is **not** automatically unlocked, and only an administrator can reactivate it. 
+**PERMANENTLY_SUSPENDED**: This status can also only be assigned by an administrator. Once suspended, the account cannot be reactivated.
+For security reasons, following any change to the account status, the user will receive an email notification.
 
 ### Data Security
-- BCrypt password encryption
-- Unique username and email validation
-- Strong password policies enforcement
+- Unique username and email validation.
+- Standard validation rules are applied at the controller, DTO, and database levels to ensure data integrity and correctness.
 
 ### Access Control
-- Role-based endpoint restrictions
-- Principle of least privilege implementation
-- Secure session management
+- The system differentiates three different roles: user, admin and super-admin. Only admin and super-admin users can change an account status. Only a super-admin user can update a user to admin.
+- Role-based endpoint restrictions, using method-level authorization as opposed to SecurityFilterChain configuration.
 
+### Authentication Flow Overview
+Spring Security filters and handlers are heavily customized, as JWTs often do not integrate well with the framework:
+- A custom UsernamePasswordAuthenticationFilter checks whether the account is locked before proceeding with the login process. If it is locked, the filter verifies whether a corresponding Redis entry exists for the user attempting authentication. If the entry is present, the lockout period is still active and the request is rejected. If the entry is missing, the lockout period has expired and the account status can safely be switched back to ACTIVE in the database.
+- The AuthenticationFilter is at the core of the authentication workflow. It extracts the JWT from the HTTP request header, identifies its type (verification, access, or refresh), and routes the request accordingly. This filter is designed to implement a deny-by-default policy, meaning it denies access whenever any validation step fails — such as an invalid token, an unsupported HTTP method, or an attempt to access a restricted path.
+- Custom login, authentication, and authorization handlers return HTTP responses that provide relevant information to the user without exposing sensitive details. For example, both an incorrect username and an incorrect password return “Bad Credentials” to avoid leaking information.
+  
 ## Design Decisions
 - There are three token types—verification, access, and refresh—with default lifetimes of 15 minutes, 5 minutes, and 24 hours respectively. The short lifespan of verification and access tokens largely guarantees the security of the system on its own. Refresh tokens, however, are complemented by an explicit blacklisting mechanism implemented through Redis. 
 
@@ -87,12 +126,10 @@ The microservice prioritizes security through short-lived, purpose-specific JWTs
     
 - Token lifetime values (verification, access, and refresh) are not hardcoded but loaded from the application properties file. A configuration class maps these values to a Map, which is then wrapped in a TokensLifetimes bean and injected wherever needed. This promotes a clean separation between configuration and logic, and, more importantly, it opens the door to hot-reloading token lifetimes without requiring a service restart.
   
-- Standard validation rules are applied at the controller, DTO, and database levels to ensure data integrity and correctness.
-
 ## Planned Future improvements
 - HTTPS has not been implemented in the current version, as the focus was placed on core functionalities. However, it is planned for a future release to ensure secure data transmission, especially for sensitive operations such as authentication.
   
-- Event though the tokens short lifespan offers an adequate security baseline, a fully comprehensive token-blacklisting solution is planned for a future iteration.
+- Event though the tokens short lifespan offers an adequate security baseline, a fully comprehensive token-blacklisting solution is planned for a future iteration. If the backend receives an already blacklisted token, the account gets blocked automatically.
   
 - Hot-reloading of token lifetimes.
   
@@ -121,4 +158,4 @@ See the [LICENSE](./LICENSE) file for details.
 
 ## Contact
 Created by Jorge Casas López.  
-Email: [jorgecasaslopez.dev]  
+Email: [contact@jorgecasaslopez.dev](mailto:contact@jorgecasaslopez.dev) 
