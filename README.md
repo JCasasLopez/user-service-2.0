@@ -6,9 +6,9 @@ The microservice prioritizes security through short-lived, purpose-specific *JWT
 
 ## Table of Contents
 1. [Tech Stack](#tech-stack)
-2. [Prerequisites](#prerequisites)
-3. [Development Environment Setup](#development-environment-setup)
-4. [Build and Run](#build-and-run)
+2. [System Requirements](#system-requirements)
+3. [Local Deployment](#local-deployment)
+4. [Live Deployment](#live-deployment)
 5. [Key API Endpoints](#key-api-endpoints)
 6. [Security Features](#security-features)
 7. [Design Decisions](#design-decisions)
@@ -44,46 +44,19 @@ The microservice prioritizes security through short-lived, purpose-specific *JWT
 - **Redis Container** - Cache service
 
 ## Prerequisites  
-As mentioned in the 'Contribution' section, this project is intended as a personal demonstration, so external contributions are not being accepted at this time. Still, the following information may be useful for understanding or testing the project.
+As mentioned in the 'Contribution' section, this project is a personal demo, so external contributions are not being accepted. Still, the following information may be useful to understand the project structure.
 
-This project is divided into two main components: the **Backend** (developed with Spring Boot and Java) and the **Frontend** (developed with Angular). Below are the software requirements for each component and optional tools.
+The project consists of a Backend (Spring Boot + Java) and a Frontend (Angular). For local exploration (optional), you would need:
+- Java 17+ and Maven 3.9+ for the backend.
+- Node.js 18+ and Angular CLI for the frontend.
+- Docker only if you want to run container-based tests.
 
-### Backend (Spring Boot – Java)
-Ensure you have the following tools installed to compile and run the backend service.
+If you only want to preview the application in production, note that it uses MySQL and Redis, but all infrastructure is fully managed by Railway, so no local installation is required.
 
-| Tool | Required Version | Purpose | Verification Command |
-| :--- | :--- | :--- | :--- |
-| **Java Development Kit (JDK)** | 17+ | Essential for compiling and running the Spring Boot application. | `java -version` |
-| **Apache Maven** | 3.9+ | Used for dependency management, compilation, and project packaging. | `mvn -v` |
+## Local Deployment
+The application can be run locally for demonstration purposes if desired, but the live version is fully deployed on Railway with all infrastructure managed automatically.
 
-### Frontend (Angular)
-These tools are necessary for the development, build, and execution of the Angular web application.
-
-| Tool | Required Version | Purpose | Verification Command |
-| :--- | :--- | :--- | :--- |
-| **Node.js** | 18+ | Needed to run the development server, build tools, and npm runtime. | `node -v` and `npm -v` |
-| **Angular CLI** | (Latest Version) | The Angular command-line interface, used for initializing, developing, and maintaining Angular applications. | `ng version` |
-
-#### Angular CLI Installation
-To install the Angular command-line tool globally, use the following command:
-
-```bash
-npm install -g @angular/cli
-```
-
-### For tests
-If you plan to run tests that rely on isolated environments, you will need **Docker**.
-
-| Tool | Purpose | Verification Command |
-| :--- | :--- | :--- |
-| **Docker** | Required to run unit/integration tests that depend on containers (e.g., ephemeral databases). | `docker --version` |
-
-If you only want to test the application in production, note that it uses MySQL and Redis, but all infrastructure is fully managed by Railway, so no local installation is required.
-
-## Development Environment Setup
-*Content for development setup...*
-
-## Build and Run
+## Live Deployment
 *Content for build and run...*
 
 ## API Endpoints
@@ -214,7 +187,7 @@ In order for the integration tests to work correctly without needing external co
 
 ## Contribution and License
 ### Contributing
-As this project is intended as a personal demonstration, external contributions are not being accepted at this time.
+As this project is intended as a personal demo, external contributions are not being accepted at this time.
 
 ### License
 This project is licensed under the MIT License.  
