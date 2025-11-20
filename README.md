@@ -44,7 +44,41 @@ The microservice prioritizes security through short-lived, purpose-specific *JWT
 - **Redis Container** - Cache service
 
 ## Prerequisites  
-*Content for prerequisites...*
+As mentioned in the 'Contribution' section, this project is intended as a personal demonstration, so external contributions are not being accepted at this time. Still, the following information may be useful for understanding or testing the project.
+
+This project is divided into two main components: the **Backend** (developed with Spring Boot and Java) and the **Frontend** (developed with Angular). Below are the software requirements for each component and optional tools.
+
+### Backend (Spring Boot – Java)
+Ensure you have the following tools installed to compile and run the backend service.
+
+| Tool | Required Version | Purpose | Verification Command |
+| :--- | :--- | :--- | :--- |
+| **Java Development Kit (JDK)** | 17+ | Essential for compiling and running the Spring Boot application. | `java -version` |
+| **Apache Maven** | 3.9+ | Used for dependency management, compilation, and project packaging. | `mvn -v` |
+
+### Frontend (Angular)
+These tools are necessary for the development, build, and execution of the Angular web application.
+
+| Tool | Required Version | Purpose | Verification Command |
+| :--- | :--- | :--- | :--- |
+| **Node.js** | 18+ | Needed to run the development server, build tools, and npm runtime. | `node -v` and `npm -v` |
+| **Angular CLI** | (Latest Version) | The Angular command-line interface, used for initializing, developing, and maintaining Angular applications. | `ng version` |
+
+#### Angular CLI Installation
+To install the Angular command-line tool globally, use the following command:
+
+```bash
+npm install -g @angular/cli
+```
+
+### For tests
+If you plan to run tests that rely on isolated environments, you will need **Docker**.
+
+| Tool | Purpose | Verification Command |
+| :--- | :--- | :--- |
+| **Docker** | Required to run unit/integration tests that depend on containers (e.g., ephemeral databases). | `docker --version` |
+
+If you only want to test the application in production, note that it uses MySQL and Redis, but all infrastructure is fully managed by Railway, so no local installation is required.
 
 ## Development Environment Setup
 *Content for development setup...*
@@ -147,7 +181,7 @@ Token lifetimes are configurable in the *application.properties* file.
 - *Hot-reloading* of token lifetimes.
   
 ## Tests
-This microservice currently includes 106 tests and reaches a test coverage of 85%. All tests pass when run locally, but two failed (*updateAccountStatus_WhenUserAdmin_ShouldReturn200Ok* and *updateAccountStatus_WhenAccountIsPermanentlySuspended_ShouldThrowException*) in the Docker environment due to a timezone/datetime serialization mismatch, likely due to differences in timezone settings or Jackson configuration between local and containerized environments. This problem could not be fixed.
+This microservice currently includes 106 tests and reaches a test coverage of 85%. All tests pass when run locally, but two failed in the Docker environment due to a timezone/datetime serialization mismatch, likely due to differences in timezone settings or Jackson configuration between local and containerized environments. This problem could not be fixed.
 
 Given its reliance on frameworks such as *Spring Boot* and *Spring Security*, as well as external tools like *Redis* and *JJWT*, most of the complexity lies in orchestration rather than in business logic.
 
