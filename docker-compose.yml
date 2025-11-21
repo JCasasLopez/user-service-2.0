@@ -1,0 +1,50 @@
+services:
+  mysql-test:
+    image: mysql:8.0
+    container_name: mysql-test
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: userdb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpass
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./init/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./init/data-test.sql:/docker-entrypoint-initdb.d/02-data.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  user-tests:
+    build:
+      context: .
+      target: development
+    container_name: user-tests
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: test-prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-test:3306/userdb
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: userpass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    command: ["./mvnw", "test"]
