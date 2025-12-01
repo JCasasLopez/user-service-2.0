@@ -6,9 +6,9 @@ The microservice prioritizes security through short-lived, purpose-specific *JWT
 
 ## Table of Contents
 1. [Tech Stack](#tech-stack)
-2. [Prerequisites](#prerequisites)
-3. [Development Environment Setup](#development-environment-setup)
-4. [Build and Run](#build-and-run)
+2. [System Requirements](#system-requirements)
+3. [Local Deployment](#local-deployment)
+4. [Live Deployment](#live-deployment)
 5. [Key API Endpoints](#key-api-endpoints)
 6. [Security Features](#security-features)
 7. [Design Decisions](#design-decisions)
@@ -44,12 +44,19 @@ The microservice prioritizes security through short-lived, purpose-specific *JWT
 - **Redis Container** - Cache service
 
 ## Prerequisites  
-*Content for prerequisites...*
+As mentioned in the 'Contribution' section, this project is a personal demo, so external contributions are not being accepted. Still, the following information may be useful to understand the project structure.
 
-## Development Environment Setup
-*Content for development setup...*
+The project consists of a Backend (Spring Boot + Java) and a Frontend (Angular). For local exploration (optional), you would need:
+- Java 17+ and Maven 3.9+ for the backend.
+- Node.js 18+ and Angular CLI for the frontend.
+- Docker only if you want to run container-based tests.
 
-## Build and Run
+If you only want to preview the application in production, note that it uses MySQL and Redis, but all infrastructure is fully managed by Railway, so no local installation is required.
+
+## Local Deployment
+The application can be run locally for demonstration purposes if desired, but the live version is fully deployed on Railway with all infrastructure managed automatically.
+
+## Live Deployment
 *Content for build and run...*
 
 ## API Endpoints
@@ -118,7 +125,7 @@ Token lifetimes are configurable in the *application.properties* file.
 - Role-based endpoint restrictions, using method-level authorization as opposed to *SecurityFilterChain* configuration.
 
 ### Authentication Flow Overview
-Spring Security filters and handlers are heavily customized, as *JWT*s do not integrate well with the framework:
+*Spring Security* filters and handlers are heavily customized, as *JWT*s do not integrate well with the framework:
 
 - A custom *UsernamePasswordAuthenticationFilter* checks whether the account is locked before proceeding with the login process. If locked, the filter verifies whether a corresponding *Redis* entry exists for the user attempting authentication. If the entry is present, the lockout period is still active and the request is rejected. If the entry is missing, the lockout period has expired and the account status can be switched back to ACTIVE in the database.
   
@@ -147,23 +154,40 @@ Spring Security filters and handlers are heavily customized, as *JWT*s do not in
 - *Hot-reloading* of token lifetimes.
   
 ## Tests
-This microservice currently includes 106 tests and reaches a test coverage of 85%. Given its reliance on frameworks such as Spring Boot and Spring Security, as well as external tools like *Redis* and *JJWT*, most of the complexity lies in orchestration rather than in business logic.
+This microservice currently includes 106 tests and reaches a test coverage of 85%. All tests pass when run locally, but two failed in the Docker environment due to a timezone/datetime serialization mismatch, likely due to differences in timezone settings or Jackson configuration between local and containerized environments. This problem could not be fixed.
+
+Given its reliance on frameworks such as *Spring Boot* and *Spring Security*, as well as external tools like *Redis* and *JJWT*, most of the complexity lies in orchestration rather than in business logic.
 
 For this reason, unit tests are used selectively, only in areas where they provide clear and isolated value, such as verifying username and email uniqueness, validating entity relationships, or enforcing password constraints. The primary testing approach is based on integration tests, that are significantly more valuable in this context. Achieving 85% coverage demonstrates that this strategy has been effective.
 
 The tests have been designed to replicate real external behavior with minimal coupling to internal implementation details. This approach ensures meaningful, robust coverage that remains reliable during refactoring and avoids misleading false positives.
 
-Before running the tests, ensure that the required containers —MySQL and *Redis*— are up and running.
+Before running the tests, ensure that the required containers —*MySQL* and *Redis*— are up and running.
 
-To mimic a production-like environment, containerized services are used: a MySQL instance instead of an in-memory H2 database, and *Redis* containers managed through Testcontainers. The MySQL instance is initialized cleanly for each test run, retaining only the required preloaded user roles.
+To mimic a production-like environment, containerized services are used: a *MySQL* instance instead of an in-memory H2 database, and *Redis* containers managed through Testcontainers. The *MySQL* instance is initialized cleanly for each test run, retaining only the required preloaded user roles.
 
 In order for the integration tests to work correctly without needing external configuration files, a *JWT* secret key has been included directly in the tests *application.properties* file. This key is used only for signing and verifying tokens during test execution. Since this microservice is solely for demonstration purposes and this key is never used in production environments (where secrets are managed via environment variables), this direct inclusion does not pose a security risk.
 
-**INSTRUCCIONES AQUÍ**
+### Running the Tests
+1. **Clone the repository**
+```bash
+   git clone <repository-url>
+   cd <project-directory>
+```
+
+2. **Start the required containers**
+```bash
+   docker compose up -d
+```
+
+3. **Run the tests**
+```bash
+   docker compose run --rm user-tests
+```
 
 ## Contribution and License
 ### Contributing
-As this project is intended as a personal demonstration, external contributions are not being accepted at this time.
+As this project is intended as a personal demo, external contributions are not being accepted at this time.
 
 ### License
 This project is licensed under the MIT License.  
