@@ -5,7 +5,7 @@ RUN chmod +x ./mvnw
 RUN ./mvnw clean package -DskipTests=true
 
 # Production
-FROM eclipse-temurin:17-jdk as production
+FROM eclipse-temurin:17-jre-alpine as production
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
